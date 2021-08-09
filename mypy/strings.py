@@ -2,7 +2,18 @@ import re
 import typing
 
 
-def __argument_split_finish(s: str, tokens: list[str], start: int, remove_outer: dict[str, str], remove_empty_tokens):
+def unescape(s: str) -> str:
+    # removes one level of escape \s
+    i = 0
+    while i < len(s):
+        if s[i] == "\\":
+            s = s[:i] + s[i+1:]
+        # if there was an escape \, this skips over the character after it, in case it is an escaped \ i.e. \\, so only the first one is removed
+        i += 1
+    return s
+
+
+def __argument_split_finish(s: str, tokens: list[str], start: int, remove_outer: dict[str, str], remove_empty_tokens: bool, unescape_bool: bool):
     # last token
     tokens.append(s[start:])
     if remove_outer != None:
@@ -16,10 +27,12 @@ def __argument_split_finish(s: str, tokens: list[str], start: int, remove_outer:
         tokens = new_tokens
     if remove_empty_tokens:
         tokens = [t for t in tokens if t != ""]
+    if unescape_bool:
+        tokens = [unescape(t) for t in tokens]
     return tokens
 
 
-def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, remove_outer: dict[str, str] = {"\"": "\""}, remove_empty_tokens=True) -> list[str]:
+def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, remove_outer: dict[str, str] = {"\"": "\"", "'": "'"}, remove_empty_tokens=True, unescape=True) -> list[str]:
     """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds. Arguments for compound_pairs and ignore_internal_pairs are passed to find_pair. """
     sep_comp = re.compile(sep)
     tokens = []
@@ -27,7 +40,7 @@ def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] =
     while True:
         next_sep = sep_comp.search(s, start)
         if next_sep == None:
-            return __argument_split_finish(s, tokens, start,  remove_outer, remove_empty_tokens)
+            return __argument_split_finish(s, tokens, start,  remove_outer, remove_empty_tokens, unescape)
         # end just before next sep
         end = next_sep.start()
         # skip over compounds
@@ -39,7 +52,7 @@ def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] =
                 # find next sep after compound
                 next_sep = sep_comp.search(s, i)
                 if next_sep == None:
-                    return __argument_split_finish(s, tokens, start, remove_outer, remove_empty_tokens)
+                    return __argument_split_finish(s, tokens, start, remove_outer, remove_empty_tokens, unescape)
                 # end just before next sep
                 end = next_sep.start()
             except NoPairException:
@@ -113,3 +126,4 @@ if __name__ == "__main__":
         "@a[nbt={Inventory:[{Slot:-106b, id:\"minecraft:iron_ingot\",tag:{display:{Name:'{\"text\":\"Item Magnet\"}'},Enchantments:[{lvl:10s,id:\"minecraft:looting\"},{lvl:10s,id:\"minecraft:lure\"}]}}]}]", 2))
     print(argument_split(
         "type=minecraft:area_effect_cloud,tag=marker,limit=1,name=\\\"<marker name>\\\"", sep=","))
+    print(unescape("\'a\\\\sdf\'"))
