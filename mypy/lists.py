@@ -1,16 +1,16 @@
-from typing import Iterable
+from typing import Generator, Iterable
 
 
-def read_file_lists(filename: str, list_sep: str = "|", comment: str = "#") -> list:
+def read_file_lists(filename: str, list_sep: str = ",", comment: str = "#") -> Generator:
     with open(filename) as file:
         for line in file:
             line = line.strip()
-            if line == "" or line[0] == "#":
+            if line == "" or line[:len(comment)] == comment:
                 continue
             yield line.split(list_sep)
 
 
-def write_file_lists(filename: str, lists: Iterable[Iterable], list_sep: str = "|") -> None:
+def write_file_lists(filename: str, lists: Iterable[Iterable], list_sep: str = ",") -> None:
     with open(filename, "w", encoding="UTF-8") as f:
         for l in lists:
             first = True
