@@ -1,14 +1,12 @@
 import subprocess
 import os
-import re
 import shutil
-import time
 import typing
 from pathlib import Path
 
 
 def create_file(path: os.PathLike, **kwargs):
-    """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use makedirs). kwargs passed to open(). """
+    """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use makedirs). kwargs passed to open(), the result of which is returned. """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     return open(path, "w", **kwargs)
@@ -22,37 +20,45 @@ def ignore_dot_dirs(dirpath: str, dirnames: list[str], filenames: list[str]) -> 
 def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool]) -> tuple[str, list[str], list[str]]:
     for dirpath, dirnames, filenames in os.walk(root):
         # ignore folders not matching the condition
-        if not condition(dirpath=dirpath, dirnames=dirnames, filenames=filenames):
+        if not condition(dirpath, dirnames, filenames):
             # skip all subdirs too
             dirnames[:] = []
             continue
         yield (dirpath, dirnames, filenames)
 
 
-def move_by_dict(planned_moves: dict[os.PathLike, os.PathLike], *, overwrite=True, warn_if_exists=True) -> None:
-    for src in planned_moves:
-        dst = planned_moves[src]
+def __action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], *, overwrite: bool, warn_if_exists: bool, action_callable: typing.Callable):
+    for src in planned_actions:
+        dst = planned_actions[src]
         if src != dst:
             p = Path(dst)
             if not overwrite and p.exists():
                 if warn_if_exists:
-                    print(f"{dst} exists, not overwiting")
+                    print(f"Warn: {dst} exists, not overwiting")
             else:
+                if warn_if_exists and p.exists():
+                    print(f"Warn: {dst} exists and is being overwritten")
                 p.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(src, dst)
+                action_callable(src, dst)
+
+
+def move_by_dict(planned_moves: dict[os.PathLike, os.PathLike], *, overwrite=False, warn_if_exists=True) -> None:
+    __action_by_dict(planned_moves, overwrite=overwrite,
+                     warn_if_exists=warn_if_exists, action_callable=shutil.move)
 
 
 def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], *, overwrite=True, warn_if_exists=True) -> None:
-    for src in planned_copies:
-        dst = planned_copies[src]
-        if src != dst:
-            p = Path(dst)
-            if not overwrite and p.exists():
-                if warn_if_exists:
-                    print(f"{dst} exists, not overwiting")
-            else:
-                p.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy(src, dst)
+    __action_by_dict(planned_copies, overwrite=overwrite,
+                     warn_if_exists=warn_if_exists, action_callable=shutil.copy2)
+
+
+def delete(file: os.PathLike):
+    """Uses either os.remove or shutil.rmtree as appropriate."""
+    path = Path(file)
+    if path.is_dir():
+        shutil.rmtree(path)
+    else:
+        os.remove(path)
 
 
 class FileMismatchException(Exception):
@@ -70,7 +76,7 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False) -> None:
         if not dst.exists() or src.stat().st_mtime > dst.stat().st_mtime:
             # src is newer than dst
             if output:
-                print(f"Mirroring {src} -> {dst}")
+                print(f"Mirroring file {src} -> {dst}")
             shutil.copy2(src, dst)
     else:
         #src is dir
@@ -82,10 +88,7 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False) -> None:
             for f in to_delete:
                 if output:
                     print(f"Deleting {f}")
-                if f.is_dir():
-                    shutil.rmtree(f)
-                else:
-                    os.remove(f)
+                delete(f)
         else:
             dst.mkdir()
         # recursively update files remaining
@@ -103,7 +106,8 @@ def mirror_by_dict(mirror_dict: dict[os.PathLike, typing.Union[os.PathLike, typi
             mirror(src, destinations, output=output)
 
 
-def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], output_dir: os.PathLike = None, *, overwrite: bool = False):
+def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], *, overwrite: bool = False):
+    """Zip a set of files using 7-zip"""
     zip_path = Path(zip_path)
     if len(zip_path.name) < 4 or zip_path.name[-4:] != ".zip":
         zip_path = zip_path.parent.joinpath(zip_path.name+".zip")
