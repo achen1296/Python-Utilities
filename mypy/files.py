@@ -126,3 +126,13 @@ def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = [
         output_dir = zip_path.parent
     subprocess.run([f"{os.environ['HOMEPATH']}\\Programs\\7-zip\\7z.exe",
                     "x", "-tzip"]+(["-y"] if overwrite else [])+[f"-o{output_dir}", str(zip_path)]+[str(f) for f in files])
+
+
+def long_names(root: os.PathLike) -> set[str]:
+    long_set = set()
+    for dirpath, dirnames, filenames in os.walk(root):
+        for f in filenames:
+            full = dirpath+os.sep+f
+            if len(full) >= 260:
+                long_set.add(full)
+    return long_set
