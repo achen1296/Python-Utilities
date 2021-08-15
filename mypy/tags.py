@@ -72,3 +72,23 @@ def tag_all_in(root: os.PathLike, new_tags: set[str], visit_subdirs: bool = True
             break
 
     files.move_by_dict(planned_moves)
+
+
+def collect(root: os.PathLike) -> set[str]:
+    collected_tags = set()
+    for dirpath, dirnames, filenames in os.walk(root):
+        for f in filenames:
+            collected_tags |= get(f)
+    return collected_tags
+
+
+def map_to_folders(root: os.PathLike, tags: set[str]) -> dict[str, set[os.PathLike]]:
+    tags_to_folders = {}
+    for dirpath, dirnames, filenames in os.walk(root):
+        for d in dirnames:
+            for t in tags:
+                if t in d:
+                    if t not in tags_to_folders:
+                        tags_to_folders[t] = set()
+                    tags_to_folders[t].add(d)
+    return tags_to_folders
