@@ -1,13 +1,10 @@
 import os
-import urllib
-from os import popen
-from time import sleep
-from typing import Iterable
+import time
+import typing
 
 import requests
 from selenium import webdriver
-from selenium.common.exceptions import (ElementClickInterceptedException,
-                                        NoSuchElementException)
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.remote.webelement import WebElement
@@ -18,7 +15,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 
 
 def url_filename(url: str):
-    """ get ending filename in a URL """
+    """ Get ending filename in a URL pointing to a file"""
     last_slash = url.rfind("/")
     last_q = url.rfind("?")
     if last_q > last_slash:
@@ -37,14 +34,14 @@ def download_url(url: str, file: os.PathLike = None,  **kwargs):
         f.write(req.content)
 
 
-def download_urls(urls: Iterable[str], files: dict[str, os.PathLike] = None, wait: int = 15, **kwargs):
-    """ urls should be a list defining the order to download, files a dictionary from none/some/all of the urls to the file names """
+def download_urls(urls: typing.Iterable[str], files: dict[str, os.PathLike] = None, wait: int = 15, **kwargs):
+    """ urls should be a list defining the order to download, files a dictionary from none/some/all of the urls to the file names. kwargs passed to requests.get. """
     for url in urls:
         if files == None or url not in files:
             download_url(url, **kwargs)
         else:
             download_url(url, files[url], **kwargs)
-        sleep(wait)
+        time.sleep(wait)
 
 
 def firefox_driver(**kwargs) -> webdriver.Firefox:
@@ -54,10 +51,11 @@ def firefox_driver(**kwargs) -> webdriver.Firefox:
 
 
 def tor_driver(**kwargs) -> webdriver.Firefox:
-    torexe = popen(
-        r'C:\Users\RhQNS\Programs\Tor Browser\TorBrowser\Tor\tor.exe')
+    tor = r'C:\Users\RhQNS\Programs\Tor Browser\TorBrowser'
+    torexe = os.popen(
+        tor+r'\Tor\tor.exe')
     profile = FirefoxProfile(
-        r'C:\Users\RhQNS\Programs\Tor Browser\TorBrowser\Data\Browser\profile.default')
+        tor+r'\Data\Browser\profile.default')
     profile.set_preference('network.proxy.type', 1)
     profile.set_preference('network.proxy.socks', '127.0.0.1')
     profile.set_preference('network.proxy.socks_port', 9050)
@@ -111,7 +109,7 @@ def scroll_all_elements(driver: webdriver.Firefox, css_selector: str, *, interac
                 elements[0].send_keys(Keys.END)
             else:
                 interactable_element.send_keys(Keys.END)
-            sleep(1)
+            time.sleep(1)
         else:
             break
 
