@@ -1,3 +1,4 @@
+import typing
 from os import write
 from typing import Union, Iterable
 import re
@@ -58,14 +59,18 @@ def read_file_dict(filename: str, *, encoding=None, entry_separator="\n", **kwar
     return d
 
 
-def write_iterable_dict(dictionary: dict[str, Union[str, Iterable[str]]], *, key_value_separator: str = ">", value_list_separator: str = "|") -> list[str]:
+def write_iterable_dict(dictionary: dict[typing.Any, Union[typing.Any, Iterable[typing.Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|") -> list[str]:
     """Default separators > and |, same as reading dictionaries. """
     l = []
     for key in sorted(dictionary):
         val = dictionary[key]
-        if val == None or len(val) == 0:
-            l.append(key)
-            continue
+        try:
+            if val == None or len(val) == 0:
+                l.append(str(key))
+                continue
+        except TypeError:
+            # no length
+            pass
         string = f"{key}{key_value_separator}"
         if isinstance(val, Iterable) and not isinstance(val, str):
             first = True
