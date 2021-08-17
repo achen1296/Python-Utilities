@@ -1,3 +1,4 @@
+import typing
 import os
 from builtins import set as bset
 from mypy import files
@@ -18,12 +19,12 @@ def name_and_ext(filename: str) -> tuple[str, str]:
     return (name, ext)
 
 
-def add(filename: str, new_tags: bset[str]) -> str:
-    return set(filename, get(filename) | new_tags)
+def add(filename: str, new_tags: typing.Iterable[str]) -> str:
+    return set(filename, get(filename) | bset(new_tags))
 
 
-def remove(filename: str, remove_tags: bset[str]) -> str:
-    return set(filename, get(filename) - remove_tags)
+def remove(filename: str, remove_tags: typing.Iterable[str]) -> str:
+    return set(filename, get(filename) - bset(remove_tags))
 
 
 def get(filename: str) -> bset[str]:
@@ -44,7 +45,8 @@ def set_name(filename: str, new_name: str) -> str:
     return new_name + filename[len(name):]
 
 
-def tag_all_in(root: os.PathLike, new_tags: bset[str], visit_subdirs: bool = True) -> None:
+def tag_all_in(root: os.PathLike, new_tags: typing.Iterable[str], visit_subdirs: bool = True) -> None:
+    new_tags = bset(new_tags)
     planned_moves = {}
 
     for dirpath, dirnames, filenames in os.walk(root):
@@ -59,7 +61,9 @@ def tag_all_in(root: os.PathLike, new_tags: bset[str], visit_subdirs: bool = Tru
     files.move_by_dict(planned_moves)
 
 
-def untag_all_in(root: os.PathLike, remove_tags: bset[str], visit_subdirs: bool = True) -> None:
+def untag_all_in(root: os.PathLike, remove_tags: typing.Iterable[str], visit_subdirs: bool = True) -> None:
+    remove_tags = bset(remove_tags)
+
     planned_moves = {}
 
     for dirpath, dirnames, filenames in os.walk(root):
@@ -82,7 +86,7 @@ def collect(root: os.PathLike) -> bset[str]:
     return collected_tags
 
 
-def map_to_folders(root: os.PathLike, tags: bset[str]) -> dict[str, bset[os.PathLike]]:
+def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, bset[os.PathLike]]:
     tags_to_folders = {}
     for dirpath, dirnames, filenames in os.walk(root):
         for d in dirnames:
@@ -94,7 +98,8 @@ def map_to_folders(root: os.PathLike, tags: bset[str]) -> dict[str, bset[os.Path
     return tags_to_folders
 
 
-def set(filename: str, tags: bset[str]) -> str:
+def set(filename: str, tags: typing.Iterable[str]) -> str:
+    tags = bset(tags)
     name, ext = name_and_ext(filename)
     if len(tags) == 0:
         return name + ext
