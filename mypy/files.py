@@ -14,7 +14,7 @@ def create_file(path: os.PathLike, **kwargs):
 
 def ignore_dot_dirs(dirpath: str, dirnames: list[str], filenames: list[str]) -> bool:
     """ For use with conditional_walk as a condition """
-    return os.basename(dirpath)[0] != "."
+    return Path(dirpath).name[0] != "."
 
 
 def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool]) -> tuple[str, list[str], list[str]]:
