@@ -2,6 +2,7 @@ import typing
 import os
 from builtins import set as bset
 from mypy import files
+from pathlib import Path
 
 
 def name_and_ext(filename: str) -> tuple[str, str]:
@@ -94,7 +95,7 @@ def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, b
                 if t in d:
                     if t not in tags_to_folders:
                         tags_to_folders[t] = bset()
-                    tags_to_folders[t].add(d)
+                    tags_to_folders[t].add(Path(dirpath, d))
     return tags_to_folders
 
 
