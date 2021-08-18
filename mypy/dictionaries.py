@@ -1,3 +1,4 @@
+import os
 import typing
 from os import write
 from typing import Union, Iterable
@@ -33,7 +34,7 @@ def read_string_dict(string_dict: str, *, entry_separator="\n", **kwargs) -> dic
     return read_iterable_dict(re.split(entry_separator, string_dict), **kwargs)
 
 
-def read_file_dict(filename: str, *, encoding=None, entry_separator="\n", **kwargs) -> dict[str, Union[str, list[str]]]:
+def read_file_dict(filename: os.PathLike, *, encoding=None, entry_separator="\n", **kwargs) -> dict[str, Union[str, list[str]]]:
     """ Reads a dictionary from a file, converting it to a string and using read_string_dict. All string parameters except filename are used as regular expressions. """
     if filename == None:
         return {}
@@ -90,8 +91,8 @@ def write_string_dict(dictionary: dict[str, Union[str, Iterable[str]]], *, entry
     return entry_separator.join(write_iterable_dict(dictionary, **kwargs))
 
 
-def write_file_dict(file_name: str, dictionary: dict[str, Union[str, list[str]]], **kwargs) -> None:
-    with open(file_name, "w", encoding="utf-8") as f:
+def write_file_dict(filename: os.PathLike, dictionary: dict[str, Union[str, list[str]]], **kwargs) -> None:
+    with open(filename, "w", encoding="utf-8") as f:
         f.write(write_string_dict(dictionary, **kwargs))
 
 
