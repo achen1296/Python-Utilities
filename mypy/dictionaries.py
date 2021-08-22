@@ -1,7 +1,6 @@
 import os
 import re
 import typing
-from os import write
 from typing import Iterable, Union
 
 from mypy import files
