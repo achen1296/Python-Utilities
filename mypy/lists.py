@@ -1,4 +1,3 @@
-from dictionaries import read_file_dict
 import typing
 import re
 
