@@ -1,10 +1,11 @@
-import typing
+import os
 import re
+import typing
 
 from mypy import files
 
 
-def read_file_lists(filename: str, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#") -> typing.Generator:
+def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#") -> typing.Generator:
     """Read a file as a list of lists. Use comment="" for no comments."""
     for list_str in files.re_split(filename, list_separator):
         if comment != "" and re.match(comment, list_str):
@@ -12,7 +13,7 @@ def read_file_lists(filename: str, *, list_separator="\s*\n\s*", list_item_separ
         yield re.split(list_item_separator, list_str)
 
 
-def write_file_lists(filename: str, lists: typing.Iterable[typing.Iterable], *, list_item_separator: str = ",", list_separator: str = "\n") -> None:
+def write_file_lists(filename: os.PathLike, lists: typing.Iterable[typing.Iterable], *, list_item_separator: str = ",", list_separator: str = "\n") -> None:
     """Write a list of lists to a file."""
     with open(filename, "w", encoding="UTF-8") as f:
         for l in lists:
@@ -24,6 +25,16 @@ def write_file_lists(filename: str, lists: typing.Iterable[typing.Iterable], *, 
                     f.write(list_item_separator)
                 f.write(i)
             f.write(list_separator)
+
+
+def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*") -> typing.Generator:
+    return files.re_split(filename, separator)
+
+
+def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str = "\n"):
+    with open(filename, "w") as f:
+        for i in l:
+            f.write(i + separator)
 
 
 def remove_duplicates_in_place(l: list) -> list:
