@@ -1,8 +1,10 @@
 import os
+import re
 import typing
 from os import write
-from typing import Union, Iterable
-import re
+from typing import Iterable, Union
+
+from mypy import files
 
 
 def read_iterable_dict(list_dict: Iterable[str], *, key_value_separator: str = "\s*>\s*", value_list_separator: str = "\s*\|\s*",  comment: str = "\s*#", all_lists: bool = False) -> dict[str, Union[str, list[str]]]:
@@ -29,35 +31,16 @@ def read_iterable_dict(list_dict: Iterable[str], *, key_value_separator: str = "
     return d
 
 
-def read_string_dict(string_dict: str, *, entry_separator="\n", **kwargs) -> dict[str, Union[str, list[str]]]:
+def read_string_dict(string_dict: str, *, entry_separator="\s*\n\s*", **kwargs) -> dict[str, Union[str, list[str]]]:
     """ Reads a dictionary from a string, splitting on entry_separator and then using read_iterable_dict. All string parameters except the string to read are used as regular expressions. """
     return read_iterable_dict(re.split(entry_separator, string_dict), **kwargs)
 
 
-def read_file_dict(filename: os.PathLike, *, encoding=None, entry_separator="\n", **kwargs) -> dict[str, Union[str, list[str]]]:
+def read_file_dict(filename: os.PathLike, *, encoding=None, entry_separator="\s*\n\s*", **kwargs) -> dict[str, Union[str, list[str]]]:
     """ Reads a dictionary from a file, converting it to a string and using read_string_dict. All string parameters except filename are used as regular expressions. """
     if filename == None:
         return {}
-    d = {}
-    with open(filename, encoding=encoding) as file:
-        # used like a buffer
-        unprocessed = ""
-        for line in file:
-            unprocessed += line
-            try:
-                last_terminator = unprocessed.rindex(entry_separator)
-            except ValueError:
-                # continue reading the file until an entry terminator is found
-                pass
-            else:
-                # process up to the last terminator
-                d.update(read_string_dict(
-                    unprocessed[:last_terminator], entry_separator=entry_separator, **kwargs))
-                unprocessed = unprocessed[last_terminator+1:]
-        # last update after reading the whole file, in case it doesn't end with a final terminator
-        d.update(read_string_dict(
-            unprocessed, entry_separator=entry_separator, **kwargs))
-    return d
+    return read_iterable_dict(files.re_split(filename, entry_separator, encoding=encoding), **kwargs)
 
 
 def write_iterable_dict(dictionary: dict[typing.Any, Union[typing.Any, Iterable[typing.Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|") -> list[str]:

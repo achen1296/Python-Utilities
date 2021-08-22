@@ -1,17 +1,20 @@
+from dictionaries import read_file_dict
 import typing
 import re
 
-
-def read_file_lists(filename: str, list_sep: str = "\s*,\s*", comment: str = "\s*#") -> typing.Generator:
-    with open(filename) as file:
-        for line in file:
-            line = line.strip()
-            if line.isspace() or re.match(comment, line):
-                continue
-            yield line.split(list_sep)
+from mypy import files
 
 
-def write_file_lists(filename: str, lists: typing.Iterable[typing.Iterable], list_sep: str = ",") -> None:
+def read_file_lists(filename: str, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#") -> typing.Generator:
+    """Read a file as a list of lists. Use comment="" for no comments."""
+    for list_str in files.re_split(filename, list_separator):
+        if comment != "" and re.match(comment, list_str):
+            continue
+        yield re.split(list_item_separator, list_str)
+
+
+def write_file_lists(filename: str, lists: typing.Iterable[typing.Iterable], *, list_item_separator: str = ",", list_separator: str = "\n") -> None:
+    """Write a list of lists to a file."""
     with open(filename, "w", encoding="UTF-8") as f:
         for l in lists:
             first = True
@@ -19,9 +22,9 @@ def write_file_lists(filename: str, lists: typing.Iterable[typing.Iterable], lis
                 if first:
                     first = False
                 else:
-                    f.write(list_sep)
+                    f.write(list_item_separator)
                 f.write(i)
-            f.write("\n")
+            f.write(list_separator)
 
 
 def remove_duplicates_in_place(l: list) -> list:
