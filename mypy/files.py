@@ -35,10 +35,11 @@ def __action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], *, overwri
             p = Path(dst)
             if not overwrite and p.exists():
                 if warn_if_exists:
-                    print(f"Warn: {dst} exists, not overwiting")
+                    print(f"Warn: {dst} exists, not overwiting with {src}")
             else:
                 if warn_if_exists and p.exists():
-                    print(f"Warn: {dst} exists and is being overwritten")
+                    print(
+                        f"Warn: {dst} exists and is being overwritten with {src}")
                 p.parent.mkdir(parents=True, exist_ok=True)
                 action_callable(src, dst)
 
