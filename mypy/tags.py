@@ -101,6 +101,8 @@ def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, b
 
 def set(filename: str, tags: typing.Iterable[str]) -> str:
     tags = bset(tags)
+    if "" in tags:
+        tags.remove("")
     name, ext = name_and_ext(filename)
     if len(tags) == 0:
         return name + ext
