@@ -20,6 +20,9 @@ class SetGroup:
             else:
                 self.__new_set(obj1, obj2)
 
+    def joined(self, obj1: Hashable, obj2: Hashable) -> bool:
+        return obj1 in self.internal_dict and obj2 in self.internal_dict and obj2 in self.internal_dict[obj1]
+
     def __len__(self):
         return len(self.internal_dict)
 
