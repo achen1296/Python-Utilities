@@ -40,7 +40,7 @@ class ImageDataPathMismatchException(ImageDataLoadException):
 
 
 class ImageData:
-    def __init__(self, img_path: str, saved_data_dir: str = None, horiz_divs: int = 8, vert_divs: int = 8, buckets: int = 8):
+    def __init__(self, img_path: str, *, saved_data_dir: str = None, horiz_divs: int = 8, vert_divs: int = 8, buckets: int = 8):
         self.path = img_path
         self.img = PIL.Image.open("\\\\?\\"+img_path)
         if self.img.mode != "RGB":
