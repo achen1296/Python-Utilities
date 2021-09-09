@@ -53,6 +53,9 @@ class SetGroup:
         self.internal_dict[new] = self.internal_dict[target]
 
     def __join_sets(self, obj1: Hashable, obj2: Hashable) -> None:
+        if self.joined(obj1, obj2):
+            return
+
         set1 = self.internal_dict[obj1]
         set2 = self.internal_dict[obj2]
 
