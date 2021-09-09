@@ -124,10 +124,11 @@ class ImageData:
                 json.dump({"path": self.path, "horiz": self.horiz_divs,
                            "vert": self.vert_divs, "buckets": self.buckets, "hist": self.section_hists}, f)
 
-    def load_image_data_file(self, dir: str, filename: str = None) -> None:
+    def load_image_data_file(self, dir: os.PathLike, filename: str = None) -> None:
         if filename == None:
             filename = f"{self.img_hash}.json"
-        with open(dir + os.sep + filename) as f:
+        dir = Path(dir)
+        with open(dir.joinpath(filename)) as f:
             self.loaded_from = dir+os.sep+filename
             j = json.load(f)
             j_path = j["path"]
