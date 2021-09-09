@@ -40,6 +40,10 @@ class ImageDataPathMismatchException(ImageDataLoadException):
 
 
 class ImageData:
+    pass
+
+
+class ImageData:
     def __init__(self, img_path: str, *, saved_data_dir: str = None, horiz_divs: int = 8, vert_divs: int = 8, buckets: int = 8):
         self.path = img_path
         img = PIL.Image.open("\\\\?\\"+img_path)
@@ -102,7 +106,7 @@ class ImageData:
             hasher.update(img_b.read())
         return hasher.hexdigest()
 
-    def hist_diff_score(self, other: "ImageData") -> float:
+    def hist_diff_score(self, other: ImageData) -> float:
         if self.horiz_divs != other.horiz_divs or self.vert_divs != other.vert_divs or self.buckets != other.buckets:
             raise ImageDataComparisonException
 
