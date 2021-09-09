@@ -42,13 +42,14 @@ class ImageDataPathMismatchException(ImageDataLoadException):
 class ImageData:
     def __init__(self, img_path: str, *, saved_data_dir: str = None, horiz_divs: int = 8, vert_divs: int = 8, buckets: int = 8):
         self.path = img_path
-        self.img = PIL.Image.open("\\\\?\\"+img_path)
-        if self.img.mode != "RGB":
-            self.img = self.img.convert(mode="RGB")
+        img = PIL.Image.open("\\\\?\\"+img_path)
+        if img.mode != "RGB":
+            img = img.convert(mode="RGB")
         self.img_hash = self.__img_hash()
 
         try:
             if saved_data_dir == None:
+                # skip to normal construction from parameters
                 raise FileNotFoundError
             self.load_image_data_file(saved_data_dir)
         except FileNotFoundError:
@@ -56,7 +57,7 @@ class ImageData:
             self.vert_divs = vert_divs
             self.buckets = buckets
             self.bucket_size = 256//self.buckets
-            self.section_hists = self.__section_hists()
+            self.section_hists = self.__section_hists(img)
             self.loaded_from = None
 
     def __combine_buckets(self, hist: list[int]) -> list[int]:
@@ -66,12 +67,13 @@ class ImageData:
         hsum = sum(hist)
         return [3 * h / hsum for h in hist]
 
-    def __section_hists(self) -> None:
-        width = self.img.width
-        height = self.img.height
+    def __section_hists(self, img: PIL.Image) -> None:
+        width = img.width
+        height = img.height
         sect_width = width // self.horiz_divs
         sect_height = height // self.vert_divs
 
+        # calculate division bounds and store as tuple pairs; whole pixels only/floor division, so last section in each row/col is smallesr by up to self.horiz_divs - 1 or self.vert_divs - 1 pixels respectively to stay in-bounds
         h_div_bounds = []
         for h in range(0, self.horiz_divs - 1):
             h_div_bounds.append((h * sect_width, (h + 1) * sect_width))
@@ -82,12 +84,15 @@ class ImageData:
             v_div_bounds.append((v * sect_height, (v + 1) * sect_height))
         v_div_bounds.append(((self.vert_divs - 1) * sect_height, height))
 
+        # get histograms
         hists = []
         for h in h_div_bounds:
             for v in v_div_bounds:
                 box = (h[0], v[0],
                        h[1], v[1])
-                hists.append(self.img.crop(box).histogram())
+                hists.append(img.crop(box).histogram())
+
+        # combine buckets to reduce memory use and normalize for comparison
         return [self.__normalize_hist(
             self.__combine_buckets(h)) for h in hists]
 
