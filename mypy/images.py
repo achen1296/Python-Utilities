@@ -46,17 +46,16 @@ class ImageData:
 class ImageData:
     def __init__(self, img_path: str, *, saved_data_dir: str = None, horiz_divs: int = 8, vert_divs: int = 8, buckets: int = 8):
         self.path = img_path
-        img = PIL.Image.open("\\\\?\\"+img_path)
-        if img.mode != "RGB":
-            img = img.convert(mode="RGB")
         self.img_hash = self.__img_hash()
-
         try:
             if saved_data_dir == None:
                 # skip to normal construction from parameters
                 raise FileNotFoundError
             self.load_image_data_file(saved_data_dir)
         except FileNotFoundError:
+            img = PIL.Image.open("\\\\?\\"+img_path)
+            if img.mode != "RGB":
+                img = img.convert(mode="RGB")
             self.horiz_divs = horiz_divs
             self.vert_divs = vert_divs
             self.buckets = buckets
