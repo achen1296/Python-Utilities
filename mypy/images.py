@@ -54,7 +54,7 @@ class ImageData:
                 raise FileNotFoundError
             self.load_image_data_file(saved_data_dir)
         except FileNotFoundError:
-            img = Image.open("\\\\?\\"+img_path)
+            img = Image.open(img_path)
             if img.mode != "RGB":
                 img = img.convert(mode="RGB")
             self.horiz_divs = horiz_divs
@@ -102,7 +102,7 @@ class ImageData:
 
     def __img_hash(self) -> str:
         hasher = hashlib.md5()
-        with open("\\\\?\\"+self.path, "rb") as img_b:
+        with open(self.path, "rb") as img_b:
             hasher.update(img_b.read())
         return hasher.hexdigest()
 
