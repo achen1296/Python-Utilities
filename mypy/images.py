@@ -2,6 +2,7 @@ import json
 import hashlib
 import os
 import PIL
+from PIL import Image
 import math
 from pathlib import Path
 from mypy import tags
@@ -10,7 +11,7 @@ from mypy import tags
 def upscale(file: str, min_dim: int = 512, output: str = None) -> str:
     """ Returns name of upscaled image which is the original name with the calculated scale factor and with the tag "scaled" added, or None if image was not upscaled """
     try:
-        img = PIL.Image.open(file)
+        img = Image.open(file)
     except (PIL.UnidentifiedImageError, PIL.PermissionError):
         # probably not an image file
         return None
@@ -18,7 +19,7 @@ def upscale(file: str, min_dim: int = 512, output: str = None) -> str:
         return None
     scale = math.ceil(min_dim / min(img.width, img.height))
     scaled_img = img.resize(
-        (img.width*scale, img.height*scale), resample=PIL.Image.NEAREST)
+        (img.width*scale, img.height*scale), resample=Image.NEAREST)
     if output == None:
         name, ext = tags.name_and_ext(file)
         output = tags.add_tags(tags.set_name(
@@ -53,7 +54,7 @@ class ImageData:
                 raise FileNotFoundError
             self.load_image_data_file(saved_data_dir)
         except FileNotFoundError:
-            img = PIL.Image.open("\\\\?\\"+img_path)
+            img = Image.open("\\\\?\\"+img_path)
             if img.mode != "RGB":
                 img = img.convert(mode="RGB")
             self.horiz_divs = horiz_divs
@@ -70,7 +71,7 @@ class ImageData:
         hsum = sum(hist)
         return [3 * h / hsum for h in hist]
 
-    def __section_hists(self, img: PIL.Image) -> None:
+    def __section_hists(self, img: Image) -> None:
         width = img.width
         height = img.height
         sect_width = width // self.horiz_divs
