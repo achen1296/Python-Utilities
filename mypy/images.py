@@ -120,7 +120,7 @@ class ImageData:
         # return sum([sum([abs(s-o) for s, o in zip(s_h, o_h)]) for s_h, o_h in zip(self.section_hists, other.section_hists)])
         return diff / max_diff
 
-    def exact_match(self, other: "ImageData") -> bool:
+    def exact_match(self, other: ImageData) -> bool:
         return self.img_hash == other.img_hash
 
     def save_image_data_file(self, dir: str, filename: str = None) -> None:
