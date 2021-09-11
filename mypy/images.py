@@ -45,8 +45,8 @@ class ImageData:
 
 
 class ImageData:
-    def __init__(self, img_path: str, *, saved_data_dir: str = None, horiz_divs: int = 8, vert_divs: int = 8, buckets: int = 8):
-        self.path = img_path
+    def __init__(self, img_path: os.PathLike, *, saved_data_dir: os.PathLike = None, horiz_divs: int = 8, vert_divs: int = 8, buckets: int = 8):
+        self.path = Path(img_path)
         self.img_hash = self.__img_hash()
         try:
             if saved_data_dir == None:
@@ -126,22 +126,22 @@ class ImageData:
     def save_image_data_file(self, dir: str, filename: str = None) -> None:
         if filename == None:
             filename = f"{self.img_hash}.json"
-        full_path = dir+os.sep+filename
+        full_path = Path(dir, filename)
         if self.loaded_from != full_path:
             # if loaded from same file, then this is pointless as it will write the same data back
-            with open(dir + os.sep + filename, "w") as f:
-                json.dump({"path": self.path, "horiz": self.horiz_divs,
+            with open(full_path, "w") as f:
+                json.dump({"path": str(self.path), "horiz": self.horiz_divs,
                            "vert": self.vert_divs, "buckets": self.buckets, "hist": self.section_hists}, f)
 
     def load_image_data_file(self, dir: os.PathLike, filename: str = None) -> None:
         if filename == None:
             filename = f"{self.img_hash}.json"
-        dir = Path(dir)
-        with open(dir.joinpath(filename)) as f:
-            self.loaded_from = dir+os.sep+filename
+        full_path = Path(dir, filename)
+        with open(full_path) as f:
+            self.loaded_from = Path(dir, filename)
             j = json.load(f)
-            j_path = j["path"]
-            if self.path != j_path:
+            j_path = Path(j["path"])
+            if self.path.resolve() != j_path.resolve():
                 if Path(j_path).exists():
                     raise ImageDataPathMismatchException(j_path)
                 else:
