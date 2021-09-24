@@ -24,19 +24,26 @@ def url_filename(url: str):
         return url[last_slash + 1:]
 
 
-def download_url(url: str, file: os.PathLike = None,  **kwargs):
+def download_url(url: str, file: os.PathLike = None,  *, output=True, **kwargs):
     """ kwargs forwarded to requests.get. If file = None, the name is inferred from the last piece of the URL """
     if file == None:
         file = url_filename(url)
     req = requests.get(url, **kwargs)
-    print(f"Downloading {url} -> {file}")
+    if output:
+        print(f"Downloading <{url}> -> <{file}>")
     with open(file, "wb") as f:
         f.write(req.content)
 
 
-def download_urls(urls: typing.Iterable[str], files: dict[str, os.PathLike] = None, wait: int = 15, **kwargs):
+def download_urls(urls: typing.Iterable[str], files: dict[str, os.PathLike] = None, *, output=True, wait: int = 15, **kwargs):
     """ urls should be a list defining the order to download, files a dictionary from none/some/all of the urls to the file names. kwargs passed to requests.get. """
+    if output:
+        counter = 0
+        total = len(urls)
     for url in urls:
+        if output:
+            counter += 1
+            print(f"{counter}/{total}: ", end="")
         if files == None or url not in files:
             download_url(url, **kwargs)
         else:
