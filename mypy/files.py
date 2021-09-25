@@ -7,18 +7,19 @@ from pathlib import Path
 
 
 def create_file(path: os.PathLike, **kwargs):
-    """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use makedirs). kwargs passed to open(), the result of which is returned. """
+    """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use os.makedirs). kwargs passed to open(), the result of which is returned. """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     return open(path, "w", **kwargs)
 
 
-def ignore_dot_dirs(dirpath: str, dirnames: list[str], filenames: list[str]) -> bool:
-    """ For use with conditional_walk as a condition """
+def ignore_dot(dirpath: str, dirnames: list[str], filenames: list[str]) -> bool:
+    """ For use with conditional_walk as a condition. Ignores directories/files that start with a ., the Unix hidden file convention. """
     return Path(dirpath).name[0] != "."
 
 
 def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool]) -> tuple[str, list[str], list[str]]:
+    """ Wraps os.walk, only returning the directory information that passes the condition (when the provided function returns true), skipping children of those that fail. """
     for dirpath, dirnames, filenames in os.walk(root):
         # ignore folders not matching the condition
         if not condition(dirpath, dirnames, filenames):
@@ -109,7 +110,7 @@ def mirror_by_dict(mirror_dict: dict[os.PathLike, typing.Union[os.PathLike, typi
 
 
 def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], *, overwrite: bool = False):
-    """Zip a set of files using 7-zip"""
+    """ Zip a set of files using 7-zip. If the path doesn't end with .zip, the extension is added automatically for convenience. """
     zip_path = Path(zip_path)
     if len(zip_path.name) < 4 or zip_path.name[-4:] != ".zip":
         zip_path = zip_path.parent.joinpath(zip_path.name+".zip")
@@ -124,6 +125,7 @@ def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], *, overwrite
 
 def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = [
 ],  output_dir: os.PathLike = None, *, overwrite: bool = False):
+    """ Unzip a set of files using 7-zip. If the path doesn't end with .zip, the extension is added automatically for convenience. """
     zip_path = Path(zip_path)
     if len(zip_path.name) < 4 or zip_path.name[-4:] != ".zip":
         zip_path = zip_path.parent.joinpath(zip_path.name+".zip")
@@ -135,6 +137,10 @@ def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = [
 
 
 def long_names(root: os.PathLike) -> set[str]:
+    """ Returns a set of files whose absolute paths are >= 260 characters, which means they are too long for some Windows applications. Not > 260 because, as the page linked below describes, Windows includes the NUL character at the end in the count, while Python strings do not.
+
+    docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation """
+    root = Path(root).resolve()
     long_set = set()
     for dirpath, dirnames, filenames in os.walk(root):
         for f in filenames:
