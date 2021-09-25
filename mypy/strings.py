@@ -33,7 +33,7 @@ def __argument_split_finish(s: str, tokens: list[str], start: int, remove_outer:
 
 
 def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, remove_outer: dict[str, str] = {"\"": "\"", "'": "'"}, remove_empty_tokens=True, unescape=True) -> list[str]:
-    """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds. Arguments for compound_pairs and ignore_internal_pairs are passed to find_pair. """
+    """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, perhaps spaces in quoted strings should not result in a split). Arguments for compound_pairs and ignore_internal_pairs are passed to find_pair. """
     sep_comp = re.compile(sep)
     tokens = []
     start = 0
@@ -72,7 +72,7 @@ def find_pair(s: str, start: int = 0, *, pairs: dict[str, str] = None, ignore_in
 
     Raises NoPairException if a pair is not found.
 
-    For example, find_pair("[ex(am)\"{\"p\\]le]", 0) should return the index of the last character. The () pair was considered, and the { inside the quotation marks was ignored as well as the escaped ]. If pairs is none, defaults to ", ', (, [, { with corresponding matches and all ignoring if escaped. ignore_internal_pairs defaults to just " and ' (also ignores if escaped, because a match is not attempted if the quote was not considered as pair start first). """
+    For example, find_pair("[ex(am)\"{\"p\\]le]", 0) should return the index of the last character. The () pair was considered, and the { inside the quotation marks was ignored as well as the escaped ]. If pairs is none, defaults to ", ', (, [, { with corresponding matches and all ignoring if escaped. ignore_internal_pairs defaults to just " and ' (also ignores if escaped, because a match is not attempted if the quote was not considered as pair start first) to avoid attempting to pair compound delimiters inside strings. """
     if pairs == None:
         pairs = {"(?<!\\\\)\"": "(?<!\\\\)\"", "(?<!\\\\)'": "(?<!\\\\)'", "(?<!\\\\)\(": "(?<!\\\\)\)",
                  "(?<!\\\\)\[": "(?<!\\\\)\]", "(?<!\\\\){": "(?<!\\\\)}"}
@@ -86,6 +86,7 @@ def find_pair(s: str, start: int = 0, *, pairs: dict[str, str] = None, ignore_in
         if match != None:
             start_str = s[match.start():match.end()]
             start_re = re_str
+            break
     if start_str == None:
         raise NoPairException(
             f"No pair start at index {start} found in <{s}>")
@@ -105,7 +106,7 @@ def find_pair(s: str, start: int = 0, *, pairs: dict[str, str] = None, ignore_in
             # print(f"{start}-{i}")
             return i
         if ignore_internal:
-            # skip if internal pairs are not being considered
+            # simply continue if internal pairs are not being considered
             i += 1
         else:
             # skip internal pairs
@@ -120,10 +121,10 @@ def find_pair(s: str, start: int = 0, *, pairs: dict[str, str] = None, ignore_in
 
 
 if __name__ == "__main__":
-    string = "\"{asd[ pow ]f pootis}\" ([]   A ) {pow} \{\{\{ \"asdf\"\n"
-    print(argument_split(string, remove_outer={"\"": "\""}))
-    print(find_pair(
-        "@a[nbt={Inventory:[{Slot:-106b, id:\"minecraft:iron_ingot\",tag:{display:{Name:'{\"text\":\"Item Magnet\"}'},Enchantments:[{lvl:10s,id:\"minecraft:looting\"},{lvl:10s,id:\"minecraft:lure\"}]}}]}]", 2))
-    print(argument_split(
-        "type=minecraft:area_effect_cloud,tag=marker,limit=1,name=\\\"<marker name>\\\"", sep=","))
-    print(unescape("\'a\\\\sdf\'"))
+    assert argument_split("\"{asd[ pow ]f pootis}\" ([]   A ) {pow} \{\{\{ \"asdf\"\n") == [
+        "{asd[ pow ]f pootis}", "([]   A )", "{pow}", "{{{", "asdf"]
+    assert find_pair(
+        "@a[nbt={Inventory:[{Slot:-106b, id:\"minecraft:iron_ingot\",tag:{display:{Name:'{\"text\":\"Item Magnet\"}'},Enchantments:[{lvl:10s,id:\"minecraft:looting\"},{lvl:10s,id:\"minecraft:lure\"}]}}]}]", 2) == 184
+    assert argument_split(
+        "type=minecraft:area_effect_cloud,tag=marker,limit=1,name=\\\"<marker name>\\\"", sep=",") == ["type=minecraft:area_effect_cloud", "tag=marker", "limit=1", "name=\"<marker name>\""]
+    assert unescape("\'a\\\\sdf\'") == "\'a\\sdf\'"
