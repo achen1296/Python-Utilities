@@ -9,10 +9,10 @@ from mypy import tags
 
 
 def upscale(file: str, min_dim: int = 512, output: str = None) -> str:
-    """ Returns name of upscaled image which is the original name with the calculated scale factor and with the tag "scaled" added, or None if image was not upscaled """
+    """ Returns name of upscaled image (located in the current working directory), which is the original name with the calculated scale factor and with the tag "scaled" added, or None if the image was not upscaled (including if PIL fails to open the file as an image). """
     try:
         img = Image.open(file)
-    except (PIL.UnidentifiedImageError, PIL.PermissionError):
+    except PIL.UnidentifiedImageError:
         # probably not an image file
         return None
     if img.width >= min_dim and img.height >= min_dim:
@@ -21,7 +21,7 @@ def upscale(file: str, min_dim: int = 512, output: str = None) -> str:
     scaled_img = img.resize(
         (img.width*scale, img.height*scale), resample=Image.NEAREST)
     if output == None:
-        name, ext = tags.name_and_ext(file)
+        name, _ = tags.name_and_ext(file)
         output = tags.add_tags(tags.set_name(
             file, f"{name}x{scale}"), {"scaled"})
     scaled_img.save(output)
