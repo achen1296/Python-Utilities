@@ -142,7 +142,7 @@ def long_names(root: os.PathLike) -> set[str]:
     docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation """
     root = Path(root).resolve()
     long_set = set()
-    for dirpath, dirnames, filenames in os.walk(root):
+    for dirpath, _, filenames in os.walk(root):
         for f in filenames:
             full = dirpath+os.sep+f
             if len(full) >= 260:
