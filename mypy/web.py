@@ -36,7 +36,11 @@ def download_url(url: str, file: os.PathLike = None,  *, output=True, **kwargs):
 
 
 def download_urls(urls: typing.Iterable[str], files: dict[str, os.PathLike] = None, *, output=True, wait: int = 15, **kwargs):
-    """ urls should be a list defining the order to download, files a dictionary from none/some/all of the urls to the file names. kwargs passed to requests.get. """
+    """ urls should be a list defining the order to download, files a dictionary from none/some/all of the urls to the file names. 
+
+    Waits for the specified number of seconds, 15 by default, in between downloads to avoid pressuring the server.
+
+    kwargs passed to requests.get. """
     if output:
         counter = 0
         total = len(urls)
@@ -45,9 +49,9 @@ def download_urls(urls: typing.Iterable[str], files: dict[str, os.PathLike] = No
             counter += 1
             print(f"{counter}/{total}: ", end="")
         if files == None or url not in files:
-            download_url(url, **kwargs)
+            download_url(url, output=output,**kwargs)
         else:
-            download_url(url, files[url], **kwargs)
+            download_url(url, files[url], output=output, **kwargs)
         time.sleep(wait)
 
 
