@@ -6,17 +6,15 @@ from pathlib import Path
 import re
 
 
-class TagException(Exception):
-    pass
+NAME_TAGS_EXT_RE = re.compile("^(.*?)(\[.*\])?(\..*)?$")
 
 
 def name_and_ext(filename: str) -> tuple[str, str]:
-    match = re.match("(.*?)(\[.*\])?(\..*)", filename)
-    if not match:
-        raise TagException("Filename was not of correct format")
+    match = NAME_TAGS_EXT_RE.match(filename)
     name = match.group(1)
     ext = match.group(3)
-    return (name, ext)
+    # ext can be None
+    return (name, ext if ext else "")
 
 
 def add(filename: str, new_tags: typing.Iterable[str]) -> str:
@@ -28,9 +26,9 @@ def remove(filename: str, remove_tags: typing.Iterable[str]) -> str:
 
 
 def get(filename: str) -> bset[str]:
-    match = re.match("(.*?)(\[.*\])?\.(.*)", filename)
+    match = NAME_TAGS_EXT_RE.match(filename)
     if not match:
-        raise TagException("Filename was not in correct format")
+        return bset()
     tags = match.group(2)
     if tags == None:
         return bset()
@@ -101,12 +99,8 @@ if __name__ == "__main__":
     assert result == ("file", ".txt"), result
     result = name_and_ext("file[tag1 tag2].txt")
     assert result == ("file", ".txt"), result
-    try:
-        name_and_ext("asdf")
-        assert False, "expected this to fail"
-    except TagException:
-        pass
-
+    result = name_and_ext("asdf")
+    assert result == bset(), result
     result = get("file.txt")
     assert result == bset(), result
     result = get("file[tag1].txt")
