@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 
 
-NAME_TAGS_EXT_RE = re.compile("^(.*?)(\[.*\])?(\..*)?$")
+NAME_TAGS_EXT_RE = re.compile("^(.*?)(\[.*\])?(\.\w+)?$")
 
 
 def name_and_ext(filename: str) -> tuple[str, str]:
