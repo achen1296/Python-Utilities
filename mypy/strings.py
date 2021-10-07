@@ -47,8 +47,8 @@ def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] =
         i = start
         while i < end:
             try:
-                i = find_pair(s, i, pairs=compound_pairs,
-                              ignore_internal_pairs=ignore_internal_pairs) + 1
+                i = find_pairs(s, i, pairs=compound_pairs,
+                               ignore_internal_pairs=ignore_internal_pairs) + 1
                 # find next sep after compound
                 next_sep = sep_comp.search(s, i)
                 if next_sep == None:
@@ -67,12 +67,18 @@ class NoPairException(Exception):
     pass
 
 
-def find_pair(s: str, start: int = 0, *, pairs: dict[str, str] = None, ignore_internal_pairs=None) -> int:
-    """ Finds the index of the pair of the specified character, considering internal pairs. 
+def find_pairs(s: str, start: int = 0, *, pairs: dict[str, str] = None, ignore_internal_pairs=None) -> list[tuple[int, int]]:
+    """ Finds pairs in the string of the specified characters and returns start/end indices.
 
     Raises NoPairException if a pair is not found.
 
-    For example, find_pair("[ex(am)\"{\"p\\]le]", 0) should return the index of the last character. The () pair was considered, and the { inside the quotation marks was ignored as well as the escaped ]. If pairs is none, defaults to ", ', (, [, { with corresponding matches and all ignoring if escaped. ignore_internal_pairs defaults to just " and ' (also ignores if escaped, because a match is not attempted if the quote was not considered as pair start first) to avoid attempting to pair compound delimiters inside strings. """
+    For example, `find_pairs("[ex(am)\\"{\\"p\\\\]le]")`:
+
+    First, the [ is found. Then ( is found, before matching immediately with ). Then the quote is found. Since it is inside quotes, the { is ignored. The next matching quote is found. The next escaped \] is ignored, and finally the first [ is paired. Thus the complete return value is `[(0,15),(8,9),(3,6)]`, with the pairs noted down in the opposite order they are completed. 
+
+    If the `pairs` and `ignore_internal_pairs` parameters are left as None, this is the behavior. However, `pairs` can be specified as a dictionary, with the regular expression for a pair start mapping to the regular expression for the corresponding paired character. The ignoring of escaped characters is part of the default regular expressions for `pairs`. `ignore_internal_pairs` is a set of pair starter regular expressions and is only used if `pairs` matches a piece of the string first. 
+
+    Any unbalanced pairs result in a NoPairException. """
     if pairs == None:
         pairs = {"(?<!\\\\)\"": "(?<!\\\\)\"", "(?<!\\\\)'": "(?<!\\\\)'", "(?<!\\\\)\(": "(?<!\\\\)\)",
                  "(?<!\\\\)\[": "(?<!\\\\)\]", "(?<!\\\\){": "(?<!\\\\)}"}
@@ -111,7 +117,7 @@ def find_pair(s: str, start: int = 0, *, pairs: dict[str, str] = None, ignore_in
         else:
             # skip internal pairs
             try:
-                i = find_pair(s, i, pairs=pairs)+1
+                i = find_pairs(s, i, pairs=pairs)+1
                 continue
             except NoPairException:
                 i += 1
@@ -123,8 +129,8 @@ def find_pair(s: str, start: int = 0, *, pairs: dict[str, str] = None, ignore_in
 if __name__ == "__main__":
     assert argument_split("\"{asd[ pow ]f pootis}\" ([]   A ) {pow} \{\{\{ \"asdf\"\n") == [
         "{asd[ pow ]f pootis}", "([]   A )", "{pow}", "{{{", "asdf"]
-    assert find_pair(
-        "@a[nbt={Inventory:[{Slot:-106b, id:\"minecraft:iron_ingot\",tag:{display:{Name:'{\"text\":\"Item Magnet\"}'},Enchantments:[{lvl:10s,id:\"minecraft:looting\"},{lvl:10s,id:\"minecraft:lure\"}]}}]}]", 2) == 184
+    result = find_pairs("[ex(am)\"{\"p\\]le]")
+    assert result == [(0, 15), (8, 9), (3, 6)], result
     assert argument_split(
         "type=minecraft:area_effect_cloud,tag=marker,limit=1,name=\\\"<marker name>\\\"", sep=",") == ["type=minecraft:area_effect_cloud", "tag=marker", "limit=1", "name=\"<marker name>\""]
     assert unescape("\'a\\\\sdf\'") == "\'a\\sdf\'"
