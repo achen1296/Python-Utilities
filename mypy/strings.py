@@ -2,11 +2,11 @@ import re
 import typing
 
 
-def unescape(s: str) -> str:
+def unescape(s: str, *, escape_char="\\") -> str:
     # removes one level of escape \s
     i = 0
     while i < len(s):
-        if s[i] == "\\":
+        if s[i] == escape_char:
             s = s[:i] + s[i+1:]
         # if there was an escape \, this skips over the character after it, in case it is an escaped \ i.e. \\, so only the first one is removed
         i += 1
