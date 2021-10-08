@@ -65,6 +65,8 @@ def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] =
 
 def next_match(regular_expressions: typing.Iterable[str], s: str, *, flags=0):
     """ Generates tuples containing the regular expression that next matches earliest in the string (if start indicies tie, earliest end is first) and the match object it produces. """
+def next_match(regular_expressions: typing.Iterable[str], s: str, *, no_overlap=False, flags=0) -> typing.Generator[tuple[str, re.Match], None, None]:
+    """ Generates tuples containing the regular expression that next matches earliest in the string (if start indices tie, earliest end is first) and the match object it produces. """
     # initialize iters
     iters = {}
     for r in regular_expressions:
@@ -81,10 +83,13 @@ def next_match(regular_expressions: typing.Iterable[str], s: str, *, flags=0):
     for r in empty_iters:
         del iters[r]
 
+    prev_end = -1
     while len(iters) > 0:
         # length of s is max possible value
         first_start = len(s)+1
         first_end = len(s)+1
+        next_start = len(s)+1
+        next_end = len(s)+1
         # find earliest match
         for r, match in matches.items():
             m_start, m_end = match.span()
@@ -93,14 +98,58 @@ def next_match(regular_expressions: typing.Iterable[str], s: str, *, flags=0):
                 first_end = m_end
                 first_r = r
                 first_match = match
+            if m_start < next_start or (m_start == next_start and m_end < next_end):
+                next_start = m_start
+                next_end = m_end
+                next_r = r
+                next_match = match
         try:
             matches[first_r] = next(iters[first_r])
+            matches[next_r] = next(iters[next_r])
         except StopIteration:
             del matches[first_r]
             del iters[first_r]
         # skip empty matches
         if first_start < first_end:
             yield (first_r, first_match)
+            del matches[next_r]
+            del iters[next_r]
+        # first condition skips empty matches
+        if next_start < next_end and (not no_overlap or prev_end <= next_start):
+            prev_end = next_end
+            yield (next_r, next_match)
+
+
+def last_match(regular_expressions: typing.Iterable[str], s: str, *, no_overlap=False, flags=0) -> typing.Generator[tuple[str, re.Match], None, None]:
+    """ Generates tuples containing the regular expression that next matches latest in the string (if end indices tie, latest start is first) and the match object it produces. Unlike next_match, must store all matches at once, since regular expressions are usually evaluated left to right. """
+    matches = {}
+    for r in regular_expressions:
+        l = list(re.finditer(r, s, flags))
+        list.reverse(l)
+        if l != []:
+            matches[r] = l
+
+    prev_start = len(s)+1
+    while len(matches) > 0:
+        last_start = -1
+        last_end = -1
+        for r, match_list in matches.items():
+            match = match_list[0]
+            m_start, m_end = match.span()
+            if m_end > last_end or (m_end == last_end and m_start > last_start):
+                last_start = m_start
+                last_end = m_end
+                last_r = r
+                last_match = match
+
+        last_list = matches[last_r]
+        if len(last_list) <= 1:
+            del matches[last_r]
+        else:
+            matches[last_r] = last_list[1:]
+        if last_start < last_end and (not no_overlap or last_end <= prev_start):
+            prev_start = last_start
+            yield(last_r, last_match)
 
 
 class NoPairException(Exception):
