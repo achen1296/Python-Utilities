@@ -63,6 +63,46 @@ def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] =
         start = next_sep.end()
 
 
+def next_match(regular_expressions: typing.Iterable[str], s: str, *, flags=0):
+    """ Generates tuples containing the regular expression that next matches earliest in the string (if start indicies tie, earliest end is first) and the match object it produces. """
+    # initialize iters
+    iters = {}
+    for r in regular_expressions:
+        iters[r] = re.finditer(r, s, flags)
+
+    empty_iters = set()
+    # get first element from each iter
+    matches = {}
+    for r in iters:
+        try:
+            matches[r] = next(iters[r])
+        except StopIteration:
+            empty_iters.add(r)
+    for r in empty_iters:
+        del iters[r]
+
+    while len(iters) > 0:
+        # length of s is max possible value
+        first_start = len(s)+1
+        first_end = len(s)+1
+        # find earliest match
+        for r, match in matches.items():
+            m_start, m_end = match.span()
+            if m_start < first_start or (m_start == first_start and m_end < first_end):
+                first_start = m_start
+                first_end = m_end
+                first_r = r
+                first_match = match
+        try:
+            matches[first_r] = next(iters[first_r])
+        except StopIteration:
+            del matches[first_r]
+            del iters[first_r]
+        # skip empty matches
+        if first_start < first_end:
+            yield (first_r, first_match)
+
+
 class NoPairException(Exception):
     pass
 
