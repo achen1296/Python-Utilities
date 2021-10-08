@@ -168,9 +168,13 @@ def find_pairs(s: str, start: int = 0, *, pairs: dict[str, str] = None, ignore_i
     If the `pairs` and `ignore_internal_pairs` parameters are left as None, this is the behavior. However, `pairs` can be specified as a dictionary, with the regular expression for a pair start mapping to the regular expression for the corresponding paired character. The ignoring of escaped characters is part of the default regular expressions for `pairs`. `ignore_internal_pairs` is a set of pair starter regular expressions and is only used if `pairs` matches a piece of the string first. 
 
     Any unbalanced pairs result in a NoPairException. """
+
+    # negative look behind for \
+    NO_ESCAPE = "(?<!\\\\)"
+
     if pairs == None:
-        pairs = {"(?<!\\\\)\"": "(?<!\\\\)\"", "(?<!\\\\)'": "(?<!\\\\)'", "(?<!\\\\)\(": "(?<!\\\\)\)",
-                 "(?<!\\\\)\[": "(?<!\\\\)\]", "(?<!\\\\){": "(?<!\\\\)}"}
+        pairs = {NO_ESCAPE+"\"": NO_ESCAPE+"\"", NO_ESCAPE+"'": NO_ESCAPE+"'", NO_ESCAPE+"\(": NO_ESCAPE+"\)",
+                 NO_ESCAPE+"\[": NO_ESCAPE+"\]", NO_ESCAPE+"{": NO_ESCAPE+"}"}
     if ignore_internal_pairs == None:
         ignore_internal_pairs = {"\"", "\'"}
 
