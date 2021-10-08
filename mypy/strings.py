@@ -63,8 +63,6 @@ def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] =
         start = next_sep.end()
 
 
-def next_match(regular_expressions: typing.Iterable[str], s: str, *, flags=0):
-    """ Generates tuples containing the regular expression that next matches earliest in the string (if start indicies tie, earliest end is first) and the match object it produces. """
 def next_match(regular_expressions: typing.Iterable[str], s: str, *, no_overlap=False, flags=0) -> typing.Generator[tuple[str, re.Match], None, None]:
     """ Generates tuples containing the regular expression that next matches earliest in the string (if start indices tie, earliest end is first) and the match object it produces. """
     # initialize iters
@@ -86,32 +84,19 @@ def next_match(regular_expressions: typing.Iterable[str], s: str, *, no_overlap=
     prev_end = -1
     while len(iters) > 0:
         # length of s is max possible value
-        first_start = len(s)+1
-        first_end = len(s)+1
         next_start = len(s)+1
         next_end = len(s)+1
         # find earliest match
         for r, match in matches.items():
             m_start, m_end = match.span()
-            if m_start < first_start or (m_start == first_start and m_end < first_end):
-                first_start = m_start
-                first_end = m_end
-                first_r = r
-                first_match = match
             if m_start < next_start or (m_start == next_start and m_end < next_end):
                 next_start = m_start
                 next_end = m_end
                 next_r = r
                 next_match = match
         try:
-            matches[first_r] = next(iters[first_r])
             matches[next_r] = next(iters[next_r])
         except StopIteration:
-            del matches[first_r]
-            del iters[first_r]
-        # skip empty matches
-        if first_start < first_end:
-            yield (first_r, first_match)
             del matches[next_r]
             del iters[next_r]
         # first condition skips empty matches
