@@ -2,13 +2,27 @@ import re
 import typing
 
 
-def unescape(s: str, *, escape_char="\\") -> str:
+def unescape(s: str, *, escape_char: str = "\\") -> str:
     # removes one level of escape \s
     i = 0
     while i < len(s):
         if s[i] == escape_char:
             s = s[:i] + s[i+1:]
         # if there was an escape \, this skips over the character after it, in case it is an escaped \ i.e. \\, so only the first one is removed
+        i += 1
+    return s
+
+
+def escape(s: str, special_chars: typing.Iterable[str], *, escape_char: str = "\\") -> str:
+    """Adds one level of escape characters. Only supports single characters."""
+    for c in special_chars:
+        if len(c) != 1:
+            raise Exception("Only single characters allowed")
+    i = 0
+    while i < len(s):
+        if s[i] in special_chars:
+            s = s[:i]+"\\"+s[i:]
+            i += 1
         i += 1
     return s
 
@@ -227,6 +241,12 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
 
 
 if __name__ == "__main__":
+    result = unescape("\\a\\b\\\\c")
+    assert result == "ab\\c", result
+
+    result = escape("abc", ["b"])
+    assert result == "a\\bc", result
+
     result = [m[1].span() for m in next_match(
         ["[ab]*", "[bc]*"], "abcbc", no_overlap=False)]
     assert result == [(0, 2), (1, 5), (3, 4)], result
