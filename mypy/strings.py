@@ -179,6 +179,10 @@ class Pair:
         self.internal_pairs.append(internal)
 
 
+def __span_include(greater: tuple[int, int], lesser: tuple[int, int]):
+    return greater[0] <= lesser[0] and greater[1] >= lesser[1]
+
+
 def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None) -> list[tuple[int, int]]:
     """ Finds pairs in the string of the specified expressions and returns the indices of the start and end of each pair (the first index of the matches).
 
@@ -230,13 +234,13 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
             popped_start = start_stack.pop()
         except IndexError:
             # pair match failed; attempt to interpret next end as a start instead (e.g. quotes by default)
-            if next_start[1].span() == next_end[1].span():
+            if __span_include(next_start[1].span(), next_end[1].span()):
                 continue
             raise NoPairException(
                 f"Ran out of pair starts to match with {next_end[1]}. {pair_list} {start_stack}")
         if pairs[popped_start[0]] != next_end[0]:
             # pair match failed; attempt to interpret next end as a start instead (e.g. quotes by default)
-            if next_start[1].span() == next_end[1].span():
+            if __span_include(next_start[1].span(), next_end[1].span()):
                 # return popped pair start to stack
                 start_stack.append(popped_start)
                 continue
