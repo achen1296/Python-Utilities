@@ -167,16 +167,22 @@ class Pair:
 
 
 class Pair:
-    def __init__(self, original_str: str, start_str: str, end_str: str, start_index: int, end_index: int, internal_pairs: list[Pair] = []):
+    def __init__(self, original_str: str, start_span: tuple[int, int], end_span: tuple[int, int], internal_pairs: list[Pair] = []):
+        if not (self.start_span[0] < self.start_span[1] and self.start_span[1] < self.end_span[0] and self.end_span[0] < self.end_span[1]) or self.start_span[0] < 0 or self.end_span[1] > len(original_str):
+            raise Exception(f"Invalid start/end spans {start_span} {end_span}")
         self.original_str = original_str
-        self.start_str = start_str
-        self.end_str = end_str
-        self.start_index = start_index
-        self.end_index = end_index
+        self.start_span = start_span
+        self.end_span = end_span
         self.internal_pairs = internal_pairs
 
     def add_internal(self, internal: Pair):
         self.internal_pairs.append(internal)
+
+    def __str__(self):
+        return self.original_str[self.start_span[0]:self.end_span[1]]
+
+    def __eq__(self, other: Pair):
+        return self.original_str == other.original_str and self.start_span == other.start_span and self.end_span == other.end_span and self.internal_pairs == other.internal_pairs
 
 
 def __span_include(greater: tuple[int, int], lesser: tuple[int, int]):
