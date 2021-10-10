@@ -162,6 +162,23 @@ class NoPairException(Exception):
     pass
 
 
+class Pair:
+    pass
+
+
+class Pair:
+    def __init__(self, original_str: str, start_str: str, end_str: str, start_index: int, end_index: int, internal_pairs: list[Pair] = []):
+        self.original_str = original_str
+        self.start_str = start_str
+        self.end_str = end_str
+        self.start_index = start_index
+        self.end_index = end_index
+        self.internal_pairs = internal_pairs
+
+    def add_internal(self, internal: Pair):
+        self.internal_pairs.append(internal)
+
+
 def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None) -> list[tuple[int, int]]:
     """ Finds pairs in the string of the specified expressions and returns the indices of the start and end of each pair (the first index of the matches).
 
