@@ -289,7 +289,12 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
             raise NoPairException(
                 f"Pair starting {popped_start[1]} did not match with a {pairs[popped_start[0]]}, {next_end[1]} found instead. {pair_list} {start_stack}")
         # pair matched
-        pair_list.append(Pair(s, popped_start[1].span(), next_end[1].span()))
+        new_pair = Pair(s, popped_start[1].span(), next_end[1].span())
+        # nest prior pairs inside the new one if they are included inside it
+        while len(pair_list) > 0 and span_include_exclusive(new_pair.span(), pair_list[-1].span()):
+            new_pair.add_internal(pair_list[-1])
+            pair_list = pair_list[:-1]
+        pair_list.append(new_pair)
         ignoring_internal = False
         # if end was also counted as a start, skip it
         if next_start != None and next_start[1].span() == next_end[1].span():
@@ -298,14 +303,6 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
     if next_start != None:
         raise NoPairException(
             f"Pair starting {next_start[1]} did not match with a {pairs[next_start[0]]}, ran out of pair ends instead. {pair_list} {start_stack}")
-    # nest the pairs properly; if a pair is directly inside another, it must be the after it in the list, since the list is in the order the end sequence was found; however, must traverse from left in case of multiple nesting
-    # TODO fix nesting
-    i = 0
-    while i < len(pair_list)-1:
-        if span_include_exclusive(pair_list[i+1].span(), pair_list[i].span()):
-            pair_list[i+1].add_internal(pair_list[i])
-            pair_list = pair_list[:i] + pair_list[i+1:]
-        i -= 1
     return pair_list
 
 
