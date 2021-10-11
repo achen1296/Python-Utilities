@@ -167,26 +167,61 @@ class Pair:
 
 
 class Pair:
-    def __init__(self, original_str: str, start_span: tuple[int, int], end_span: tuple[int, int], internal_pairs: list[Pair] = []):
-        if not (self.start_span[0] < self.start_span[1] and self.start_span[1] < self.end_span[0] and self.end_span[0] < self.end_span[1]) or self.start_span[0] < 0 or self.end_span[1] > len(original_str):
+    def __init__(self, original_str: str, start_span: tuple[int, int], end_span: tuple[int, int], internal_pairs: typing.Iterable[Pair] = None):
+        # no zero length start/end strings, therefore <, but they can be directly adjacent, therefore <=
+        if not (start_span[0] < start_span[1] <= end_span[0] < end_span[1]) or start_span[0] < 0 or end_span[1] > len(original_str):
             raise Exception(f"Invalid start/end spans {start_span} {end_span}")
         self.original_str = original_str
         self.start_span = start_span
         self.end_span = end_span
-        self.internal_pairs = internal_pairs
+        if internal_pairs == None:
+            self.internal_pairs = []
+        else:
+            self.internal_pairs = internal_pairs
 
     def add_internal(self, internal: Pair):
         self.internal_pairs.append(internal)
+        list.sort(self.internal_pairs)
 
-    def __str__(self):
-        return self.original_str[self.start_span[0]:self.end_span[1]]
+    def span(self) -> tuple[int, int]:
+        return (self.start_span[0], self.end_span[1])
+
+    def __repr__(self) -> str:
+        return "Pair("+repr(self.original_str) + "," + repr(self.start_span) + "," + repr(self.end_span) + (","+repr(self.internal_pairs) if self.internal_pairs != [] else "") + ")"
+
+    def __str__(self) -> str:
+        return "Pair " + str(self.start_span) + "-" + str(self.end_span) + " \"" + self.original_str[self.start_span[0]:self.start_span[1]] + "\" \"" + self.original_str[self.end_span[0]:self.end_span[1]] + "\"" + (","+str(self.internal_pairs) if self.internal_pairs != [] else "") + ")"
+
+    def __lt__(self, other: Pair):
+        if self.start_span[0] != other.start_span[0]:
+            return self.start_span[0] < other.start_span[0]
+        elif self.start_span[1] != other.start_span[1]:
+            return self.start_span[1] < other.start_span[1]
+        elif self.end_span[0] != other.end_span[0]:
+            return self.end_span[0] < other.end_span[0]
+        else:
+            return self.end_span[1] < other.end_span[1]
+
+    def __gt__(self, other: Pair):
+        if self.start_span[0] != other.start_span[0]:
+            return self.start_span[0] > other.start_span[0]
+        elif self.start_span[1] != other.start_span[1]:
+            return self.start_span[1] > other.start_span[1]
+        elif self.end_span[0] != other.end_span[0]:
+            return self.end_span[0] > other.end_span[0]
+        else:
+            return self.end_span[1] > other.end_span[1]
 
     def __eq__(self, other: Pair):
         return self.original_str == other.original_str and self.start_span == other.start_span and self.end_span == other.end_span and self.internal_pairs == other.internal_pairs
 
 
-def __span_include(greater: tuple[int, int], lesser: tuple[int, int]):
+def span_include_inclusive(greater: tuple[int, int], lesser: tuple[int, int]):
     return greater[0] <= lesser[0] and greater[1] >= lesser[1]
+
+
+def span_include_exclusive(greater: tuple[int, int], lesser: tuple[int, int]):
+    return greater[0] < lesser[0] and greater[1] > lesser[1]
 
 
 def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None) -> list[tuple[int, int]]:
@@ -240,13 +275,13 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
             popped_start = start_stack.pop()
         except IndexError:
             # pair match failed; attempt to interpret next end as a start instead (e.g. quotes by default)
-            if __span_include(next_start[1].span(), next_end[1].span()):
+            if span_include_inclusive(next_start[1].span(), next_end[1].span()):
                 continue
             raise NoPairException(
                 f"Ran out of pair starts to match with {next_end[1]}. {pair_list} {start_stack}")
         if pairs[popped_start[0]] != next_end[0]:
             # pair match failed; attempt to interpret next end as a start instead (e.g. quotes by default)
-            if __span_include(next_start[1].span(), next_end[1].span()):
+            if span_include_inclusive(next_start[1].span(), next_end[1].span()):
                 # return popped pair start to stack
                 start_stack.append(popped_start)
                 continue
@@ -254,8 +289,7 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
             raise NoPairException(
                 f"Pair starting {popped_start[1]} did not match with a {pairs[popped_start[0]]}, {next_end[1]} found instead. {pair_list} {start_stack}")
         # pair matched
-        pair_list = [(popped_start[1].start(),
-                      next_end[1].start())] + pair_list
+        pair_list.append(Pair(s, popped_start[1].span(), next_end[1].span()))
         ignoring_internal = False
         # if end was also counted as a start, skip it
         if next_start != None and next_start[1].span() == next_end[1].span():
@@ -264,6 +298,14 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
     if next_start != None:
         raise NoPairException(
             f"Pair starting {next_start[1]} did not match with a {pairs[next_start[0]]}, ran out of pair ends instead. {pair_list} {start_stack}")
+    # nest the pairs properly; if a pair is directly inside another, it must be the after it in the list, since the list is in the order the end sequence was found; however, must traverse from left in case of multiple nesting
+    # TODO fix nesting
+    i = 0
+    while i < len(pair_list)-1:
+        if span_include_exclusive(pair_list[i+1].span(), pair_list[i].span()):
+            pair_list[i+1].add_internal(pair_list[i])
+            pair_list = pair_list[:i] + pair_list[i+1:]
+        i -= 1
     return pair_list
 
 
@@ -287,17 +329,39 @@ if __name__ == "__main__":
     result = [m[1].span() for m in last_match(
         ["[ab]*", "[bc]*"], "abcbc", no_overlap=True)]
     assert result == [(1, 5)], result
+
     result = find_pairs("abcdefghi")
     assert result == [], result
-    result = find_pairs("csdf(asdf)bsdf")
-    assert result == [(4, 9)], result
-    result = find_pairs("c(a[])")
-    assert result == [(1, 5), (3, 4)], result
-    result = find_pairs("c(a[]{})")
-    assert result == [(1, 7), (5, 6), (3, 4)], result
-    result = find_pairs("123\"asdf\"")
-    assert result == [(3, 8)], result
-    result = find_pairs("123\"a{{f\"")
-    assert result == [(3, 8)], result
-    result = find_pairs("(\"a{{f\"absd) {()  []}")
-    assert result == [(13, 20), (18, 19), (14, 15), (0, 11), (1, 6)], result
+    s = "csdf(asdf)bsdf"
+    result = find_pairs(s)
+    assert result == [Pair(s, (4, 5), (9, 10))], result
+    s = "c(a[])"
+    result = find_pairs(s)
+    assert result == [
+        Pair(s, (1, 2), (5, 6), [Pair(s, (3, 4), (4, 5))])], result
+    s = "c(a[]{})"
+    result = find_pairs(s)
+    assert result == [
+        Pair(s, (1, 2), (7, 8), [
+            Pair(s, (3, 4), (4, 5)), Pair(s, (5, 6), (6, 7))
+        ])
+    ], result
+    s = "123\"asdf\""
+    result = find_pairs(s)
+    assert result == [Pair(s, (3, 4), (8, 9))], result
+    s = "123\"a{{f\""
+    result = find_pairs(s)
+    assert result == [Pair(s, (3, 4), (8, 9))], result
+    s = "(\"a{{f\"absd) {()  [{}]}"
+    result = find_pairs(s)
+    assert result == [
+        Pair(s, (0, 1), (11, 12), [
+            Pair(s, (1, 2), (6, 7))
+        ]),
+        Pair(s, (13, 14), (22, 23), [
+            Pair(s, (14, 15), (15, 16)),
+            Pair(s, (18, 19), (21, 22), [
+                Pair(s, (19, 20), (20, 21))
+            ])
+        ])
+    ], result
