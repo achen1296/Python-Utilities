@@ -21,7 +21,7 @@ def escape(s: str, special_chars: typing.Iterable[str], *, escape_char: str = "\
     i = 0
     while i < len(s):
         if s[i] in special_chars:
-            s = s[:i]+"\\"+s[i:]
+            s = s[:i]+escape_char+s[i:]
             i += 1
         i += 1
     return s
