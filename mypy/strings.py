@@ -27,54 +27,58 @@ def escape(s: str, special_chars: typing.Iterable[str], *, escape_char: str = "\
     return s
 
 
-def __argument_split_finish(s: str, tokens: list[str], start: int, remove_outer: dict[str, str], remove_empty_tokens: bool, unescape_bool: bool):
-    # last token
-    tokens.append(s[start:])
-    if remove_outer != None:
-        new_tokens = []
-        for t in tokens:
-            for start in remove_outer:
-                match = re.match(f"{start}(.*?){remove_outer[start]}$", t)
-                if match != None:
-                    t = match.group(1)
-            new_tokens.append(t)
-        tokens = new_tokens
+def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, remove_outer: dict[str, str] = {"\"": "\"", "'": "'"}, remove_empty_tokens=True, unescape_char="\\", re_flags: int = 0) -> list[str]:
+    """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Arguments for `pairs` and `ignore_internal_pairs` are passed to `find_pairs`. """
+
+    # spans that match the separator and that are not also inside of pairs
+    splits: list[tuple[int, int]] = []
+
+    found_pairs = find_pairs(
+        s, pairs=pairs, ignore_internal_pairs=ignore_internal_pairs)
+
+    def in_any_pair(span: tuple[int, int]):
+        # only outermost pairs matter
+        for p in found_pairs:
+            if span_include_inclusive(p.span(), span):
+                return True
+        return False
+
+    for m in re.finditer(sep, s, re_flags):
+        if not in_any_pair(m.span()):
+            splits.append(m.span())
+
+    # convert splits, i.e. slices to exclude, into slices to include
+    slices = [0]
+    for sp in splits:
+        slices.append(sp[0])
+        slices.append(sp[1])
+    slices.append(len(s))
+
+    tokens = [s[slices[i]:slices[i+1]] for i in range(0, len(slices), 2)]
     if remove_empty_tokens:
         tokens = [t for t in tokens if t != ""]
-    if unescape_bool:
-        tokens = [unescape(t) for t in tokens]
+    if unescape_char != None:
+        tokens = [unescape(t, escape_char=unescape_char) for t in tokens]
+    if remove_outer != None and len(remove_outer) > 0:
+        new_tokens = []
+        for t in tokens:
+            for o in remove_outer:
+                m = re.match(o, t)
+                if m != None:
+                    # remove start
+                    t = t[m.end():]
+                    # remove end (last occurence)
+                    for m in re.finditer(remove_outer[o], t):
+                        last_match = m
+                    if last_match.end() < len(t):
+                        raise Exception(
+                            f"While removing outer pair, pair end{last_match} was not actually last found at the end of the token {t}")
+                    t = t[:m.start()]
+                    # only remove one outer pair
+                    break
+            new_tokens.append(t)
+        tokens = new_tokens
     return tokens
-
-
-def argument_split(s: str, *, sep: str = "\s+", compound_pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, remove_outer: dict[str, str] = {"\"": "\"", "'": "'"}, remove_empty_tokens=True, unescape=True) -> list[str]:
-    """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, perhaps spaces in quoted strings should not result in a split). Arguments for compound_pairs and ignore_internal_pairs are passed to find_pair. """
-    sep_comp = re.compile(sep)
-    tokens = []
-    start = 0
-    while True:
-        next_sep = sep_comp.search(s, start)
-        if next_sep == None:
-            return __argument_split_finish(s, tokens, start,  remove_outer, remove_empty_tokens, unescape)
-        # end just before next sep
-        end = next_sep.start()
-        # skip over compounds
-        i = start
-        while i < end:
-            try:
-                i = find_pairs(s, i, pairs=compound_pairs,
-                               ignore_internal_pairs=ignore_internal_pairs) + 1
-                # find next sep after compound
-                next_sep = sep_comp.search(s, i)
-                if next_sep == None:
-                    return __argument_split_finish(s, tokens, start, remove_outer, remove_empty_tokens, unescape)
-                # end just before next sep
-                end = next_sep.start()
-            except NoPairException:
-                i += 1
-        # reached a separator without finding another compound first
-        tokens.append(s[start:end])
-        # start after the next sep
-        start = next_sep.end()
 
 
 def next_match(regular_expressions: typing.Iterable[str], s: str, *, no_overlap=False, flags=0) -> typing.Generator[tuple[str, re.Match], None, None]:
@@ -362,3 +366,18 @@ if __name__ == "__main__":
             ])
         ])
     ], result
+
+    result = argument_split("asdf bsdf")
+    assert result == ["asdf", "bsdf"], result
+    result = argument_split("(asdf bsdf)")
+    assert result == ["(asdf bsdf)"], result
+    result = argument_split("\"as\\\"d{[(f\"")
+    assert result == ["as\"d{[(f"], result
+    result = argument_split("\"as\\\"d{[(f\" { a s \\d f }")
+    assert result == ["as\"d{[(f", "{ a s d f }"], result
+    result = argument_split(
+        "/give @s minecraft:diamond_sword{display:{Name:'\"Super Slasher\"'}}")
+    assert result == [
+        "/give", "@s", "minecraft:diamond_sword{display:{Name:'\"Super Slasher\"'}}"], result
+    result = argument_split("get 1-31 \"minecraft worlds 2\"")
+    assert result == ["get", "1-31", "minecraft worlds 2    "], result
