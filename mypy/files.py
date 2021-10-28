@@ -68,7 +68,7 @@ class FileMismatchException(Exception):
     pass
 
 
-def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False) -> None:
+def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_file_action: typing.Callable[[os.PathLike], None] = delete) -> None:
     src = Path(src)
     dst = Path(dst)
     if src.exists() and dst.exists() and src.is_dir() ^ dst.is_dir():
@@ -90,8 +90,8 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False) -> None:
             ) if f.name not in src_filenames]
             for f in to_delete:
                 if output:
-                    print(f"Deleting {f}")
-                delete(f)
+                    print(f"{f} was deleted")
+                deleted_file_action(f)
         else:
             dst.mkdir()
         # recursively update files remaining
