@@ -68,7 +68,7 @@ class FileMismatchException(Exception):
     pass
 
 
-def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_file_action: typing.Callable[[os.PathLike], None] = delete) -> None:
+def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_file_action: typing.Callable[[os.PathLike], None] = delete, output_prefix="") -> None:
     src = Path(src)
     dst = Path(dst)
     if src.exists() and dst.exists() and src.is_dir() ^ dst.is_dir():
@@ -79,7 +79,7 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
         if not dst.exists() or src.stat().st_mtime > dst.stat().st_mtime:
             # src is newer than dst
             if output:
-                print(f"Mirroring file {src} -> {dst}")
+                print(f"{output_prefix}Mirroring file <{src}> -> <{dst}>")
             shutil.copy2(src, dst)
     else:
         #src is dir
@@ -90,13 +90,14 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
             ) if f.name not in src_filenames]
             for f in to_delete:
                 if output:
-                    print(f"{f} was deleted")
+                    print(f"{output_prefix}<{f}> was deleted")
                 deleted_file_action(f)
         else:
             dst.mkdir()
         # recursively update files remaining
         for f in src.iterdir():
-            mirror(f, dst.joinpath(f.name), output=output)
+            mirror(f, dst.joinpath(f.name), output=output,
+                   output_prefix=output_prefix+"    ")
 
 
 def mirror_by_dict(mirror_dict: dict[os.PathLike, typing.Union[os.PathLike, typing.Iterable[os.PathLike]]], *, output=False):
