@@ -106,7 +106,7 @@ if __name__ == "__main__":
     result = name_and_ext("file[tag1 tag2].txt")
     assert result == ("file", ".txt"), result
     result = name_and_ext("asdf")
-    assert result == bset(), result
+    assert result == ("asdf", ""), result
     result = get("file.txt")
     assert result == bset(), result
     result = get("file[tag1].txt")
