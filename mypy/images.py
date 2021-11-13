@@ -8,6 +8,33 @@ from pathlib import Path
 from mypy import tags
 
 
+def rgb_diff(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> int:
+    r1, g1, b1 = rgb1
+    r2, g2, b2 = rgb2
+    return abs(r1-r2)+abs(g1-g2)+abs(b1-b2)
+
+
+def edge_detection(file: os.PathLike, threshold: int = 60, output: os.PathLike = None):
+    file = Path(file)
+    with Image.open(file).convert(mode="RGB") as img:
+        new = Image.new(img.mode, img.size)
+        for x in range(1, img.width):
+            for y in range(1, img.height):
+                current = img.getpixel((x, y))
+                neighbors = [img.getpixel(
+                    (x-1, y)), img.getpixel((x-1, y-1)), img.getpixel((x, y-1))]
+                if not x == img.width - 1:
+                    neighbors.append(img.getpixel((x+1, y-1)))
+                for n in neighbors:
+                    if rgb_diff(current, n) > threshold:
+                        new.putpixel((x, y), (255, 255, 255))
+                        break
+    if output != None:
+        output = Path(output)
+        new.save(output)
+    return new
+
+
 def upscale(file: str, min_dim: int = 512, output: str = None) -> str:
     """ Returns name of upscaled image (located in the current working directory), which is the original name with the calculated scale factor and with the tag "scaled" added, or None if the image was not upscaled (including if PIL fails to open the file as an image). """
     try:
