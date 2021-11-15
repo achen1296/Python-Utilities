@@ -1,11 +1,10 @@
-import json
 import hashlib
+import json
 import os
-import PIL
-from PIL import Image
-import math
+import typing
 from pathlib import Path
-from mypy import tags
+
+from PIL import Image
 
 
 def rgb_diff(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> int:
@@ -14,10 +13,24 @@ def rgb_diff(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> int:
     return abs(r1-r2)+abs(g1-g2)+abs(b1-b2)
 
 
-def edge_detection(file: os.PathLike, threshold: int = 60, output: os.PathLike = None):
-    file = Path(file)
-    with Image.open(file).convert(mode="RGB") as img:
-        new = Image.new(img.mode, img.size)
+def image_from_file_or_image(img: typing.Union[os.PathLike, Image.Image]):
+    if isinstance(img, os.PathLike) or isinstance(img, str):
+        return Image.open(img)
+    elif isinstance(img, Image.Image):
+        return img
+    else:
+        raise TypeError
+
+
+def optional_save(img: Image.Image, output: os.PathLike):
+    if output != None:
+        output = Path(output)
+        img.save(output)
+
+
+def edge_detect(img: typing.Union[os.PathLike, Image.Image], threshold: int = 60, output: os.PathLike = None):
+    with image_from_file_or_image(img).convert(mode="RGB") as img:
+        new = Image.new("RGB", img.size)
         for x in range(1, img.width):
             for y in range(1, img.height):
                 current = img.getpixel((x, y))
@@ -29,30 +42,35 @@ def edge_detection(file: os.PathLike, threshold: int = 60, output: os.PathLike =
                     if rgb_diff(current, n) > threshold:
                         new.putpixel((x, y), (255, 255, 255))
                         break
-    if output != None:
-        output = Path(output)
-        new.save(output)
+    optional_save(new, output)
     return new
 
 
-def upscale(file: str, min_dim: int = 512, output: str = None) -> str:
-    """ Returns name of upscaled image (located in the current working directory), which is the original name with the calculated scale factor and with the tag "scaled" added, or None if the image was not upscaled (including if PIL fails to open the file as an image). """
-    try:
-        img = Image.open(file)
-    except PIL.UnidentifiedImageError:
-        # probably not an image file
-        return None
-    if img.width >= min_dim and img.height >= min_dim:
-        return None
-    scale = math.ceil(min_dim / min(img.width, img.height))
-    scaled_img = img.resize(
-        (img.width*scale, img.height*scale), resample=Image.NEAREST)
-    if output == None:
-        name, _ = tags.name_and_ext(file)
-        output = tags.add_tags(tags.set_name(
-            file, f"{name}x{scale}"), {"scaled"})
-    scaled_img.save(output)
-    return output
+def scale(img: typing.Union[os.PathLike, Image.Image], scale: float, output: os.PathLike = None) -> str:
+    """Uses NEAREST to increase size or BICUBIC to decrease."""
+    with image_from_file_or_image(img) as img:
+        new_size = (int(img.width * scale), int(img.height * scale))
+        if scale == 1:
+            return img
+        elif scale > 1:
+            new = img.resize(new_size, resample=Image.NEAREST)
+        else:
+            new = img.resize(new_size, resample=Image.BICUBIC)
+    optional_save(new, output)
+    return new
+
+
+def resize(img: typing.Union[os.PathLike, Image.Image], size: tuple[int, int], output: os.PathLike = None):
+    """Uses NEAREST to increase size (if either dimension is larger than the original) or BICUBIC to decrease."""
+    with image_from_file_or_image(img) as img:
+        img_width, img_height = img.size
+        new_width, new_height = size
+        if new_width > img_width or new_height > img_height:
+            new = img.resize(size, resample=Image.NEAREST)
+        else:
+            new = img.resize(size, resample=Image.BICUBIC)
+    optional_save(new, output)
+    return new
 
 
 class ImageDataComparisonException(Exception):
