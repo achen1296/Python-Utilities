@@ -9,3 +9,5 @@ import selenium
 
 from mypy import (dictionaries, files, ftp, images, lists, sets, strings, tags,
                   web)
+
+from importlib import reload
