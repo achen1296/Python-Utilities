@@ -1,3 +1,4 @@
+import hashlib
 import os
 import re
 import shutil
@@ -187,3 +188,9 @@ def id(file: os.PathLike):
 
 def size(file: os.PathLike):
     return os.stat(file).st_size
+
+
+def hash(file: os.PathLike, size: int = -1, hex: bool = True) -> int:
+    with open(file, "rb") as f:
+        h = hashlib.sha3_256(f.read(size))
+        return h.hexdigest() if hex else h.digest()
