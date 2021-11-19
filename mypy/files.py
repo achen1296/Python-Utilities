@@ -179,3 +179,11 @@ def re_split(file: os.PathLike, separator: str = "\s*\n\s*", *, exclude_empty: b
             if exclude_empty and s == "":
                 continue
             yield s
+
+
+def id(file: os.PathLike):
+    return os.stat(file).st_ino
+
+
+def size(file: os.PathLike):
+    return os.stat(file).st_size
