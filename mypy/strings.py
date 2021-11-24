@@ -228,10 +228,23 @@ def span_include_exclusive(greater: tuple[int, int], lesser: tuple[int, int]):
     return greater[0] < lesser[0] and greater[1] > lesser[1]
 
 
-def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None) -> list[tuple[int, int]]:
+def find_pair(s: str, start: int, **kwargs):
+    pairs = find_pairs(s, **kwargs)
+    i = 0
+    while i < len(pairs):
+        p = pairs[i]
+        if p.start_span[0] == start:
+            return p.end_span[0]
+        pairs.extend(p.internal_pairs)
+        i += 1
+    raise NoPairException(
+        f"Didn't find a pair beginning at index {start} of {s}")
+
+
+def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, require_balanced_pairs=True) -> list[Pair]:
     """ Finds pairs in the string of the specified expressions and returns the indices of the start and end of each pair (the first index of the matches).
 
-    Any unbalanced pairs result in a NoPairException. The expressions for pair starts and ends should not allow overlap with themselves (although pair starts and ends can be the same character, like quotes), otherwise the results are undefined.
+    Any unbalanced pairs result in a NoPairException unless require_balanced_pairs is set to False. The expressions for pair starts and ends should not allow overlap with themselves (although pair starts and ends can be the same character, like quotes), otherwise the results are undefined.
 
     For example, `find_pairs("[ex(am)\\"{\\"p\\\\]le]")`:
 
@@ -239,10 +252,9 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
 
     If the `pairs` and `ignore_internal_pairs` parameters are left as None, unescaped {, [, (, ", and ' characters are matched with their opposites. However, `pairs` can be specified as a dictionary, with the regular expression for a pair start mapping to the regular expression for the corresponding paired character. The ignoring of escaped characters (those preceded by an \\ character) is part of the default regular expressions for `pairs`. `ignore_internal_pairs` is a set of pair starter regular expressions and is only used if `pairs` matches a piece of the string first. """
 
-    # negative look behind for \
-    NO_ESCAPE = "(?<!\\\\)"
-
     if pairs == None:
+        # negative look behind for \
+        NO_ESCAPE = "(?<!\\\\)"
         pairs = {NO_ESCAPE+"\"": NO_ESCAPE+"\"", NO_ESCAPE+"'": NO_ESCAPE+"'", NO_ESCAPE+"\(": NO_ESCAPE+"\)",
                  NO_ESCAPE+"\[": NO_ESCAPE+"\]", NO_ESCAPE+"{": NO_ESCAPE+"}"}
     if ignore_internal_pairs == None:
@@ -267,7 +279,7 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
             # exhausted all pair ends
             break
         # push all starts before that onto the stack, which may be none (and should be sometimes)
-        while next_start != None and next_end != None and next_start[1].end() <= next_end[1].start():
+        while next_start != None and next_start[1].end() <= next_end[1].start():
             if not ignoring_internal:
                 start_stack.append(next_start)
             if matches_any(ignore_internal_pairs, next_start[1].group()):
@@ -279,19 +291,36 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
             popped_start = start_stack.pop()
         except IndexError:
             # pair match failed; attempt to interpret next end as a start instead (e.g. quotes by default)
+            if next_start == None:
+                if require_balanced_pairs:
+                    raise NoPairException(
+                        "Ran out of starts, could not reinterpret and end")
+                else:
+                    return pair_list
             if span_include_inclusive(next_start[1].span(), next_end[1].span()):
                 continue
-            raise NoPairException(
-                f"Ran out of pair starts to match with {next_end[1]}. {pair_list} {start_stack}")
+            if require_balanced_pairs:
+                raise NoPairException(
+                    f"Ran out of pair starts to match with {next_end[1]}. {pair_list} {start_stack}")
+            else:
+                return pair_list
         if pairs[popped_start[0]] != next_end[0]:
+            if ignoring_internal:
+                # try to find the internal-ignore terminating match
+                # return popped pair start to stack
+                start_stack.append(popped_start)
+                continue
             # pair match failed; attempt to interpret next end as a start instead (e.g. quotes by default)
             if span_include_inclusive(next_start[1].span(), next_end[1].span()):
                 # return popped pair start to stack
                 start_stack.append(popped_start)
                 continue
-            # not also a start
-            raise NoPairException(
-                f"Pair starting {popped_start[1]} did not match with a {pairs[popped_start[0]]}, {next_end[1]} found instead. {pair_list} {start_stack}")
+            # not ignoring and not also a start
+            if require_balanced_pairs:
+                raise NoPairException(
+                    f"Pair starting {popped_start[1]} did not match with a {pairs[popped_start[0]]}, {next_end[1]} found instead\nPairs so far: {pair_list}\nStart stack: {start_stack}\nIn string: {s}")
+            else:
+                return pair_list
         # pair matched
         new_pair = Pair(s, popped_start[1].span(), next_end[1].span())
         # nest prior pairs inside the new one if they are included inside it
@@ -304,7 +333,7 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
         if next_start != None and next_start[1].span() == next_end[1].span():
             next_start = next(pair_starts_gen, None)
     # did not also exhaust all pair starts
-    if next_start != None:
+    if next_start != None and require_balanced_pairs:
         raise NoPairException(
             f"Pair starting {next_start[1]} did not match with a {pairs[next_start[0]]}, ran out of pair ends instead. {pair_list} {start_stack}")
     return pair_list
