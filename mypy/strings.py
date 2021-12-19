@@ -294,7 +294,7 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
             if next_start == None:
                 if require_balanced_pairs:
                     raise NoPairException(
-                        "Ran out of starts, could not reinterpret and end")
+                        "Ran out of starts, could not reinterpret as end")
                 else:
                     return pair_list
             if span_include_inclusive(next_start[1].span(), next_end[1].span()):
