@@ -194,3 +194,13 @@ def hash(file: os.PathLike, size: int = -1, hex: bool = True) -> int:
     with open(file, "rb") as f:
         h = hashlib.sha3_256(f.read(size))
         return h.hexdigest() if hex else h.digest()
+
+
+def remove_empty_folders(root: os.PathLike):
+    root = Path(root)
+    for f in root.iterdir():
+        try:
+            f.rmdir()
+        except OSError:
+            #not empty
+            pass
