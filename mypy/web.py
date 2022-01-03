@@ -26,7 +26,7 @@ def url_filename(url: str):
 
 def download_url(url: str, file: os.PathLike = None,  *, output=True, **kwargs):
     """ kwargs forwarded to requests.get. If file = None, the name is inferred from the last piece of the URL """
-    if file == None:
+    if file is None:
         file = url_filename(url)
     req = requests.get(url, **kwargs)
     if output:
@@ -35,24 +35,20 @@ def download_url(url: str, file: os.PathLike = None,  *, output=True, **kwargs):
         f.write(req.content)
 
 
-def download_urls(urls: typing.Iterable[str], files: dict[str, os.PathLike] = None, *, output=True, wait: int = 15, **kwargs):
-    """ urls should be a list defining the order to download, files a dictionary from none/some/all of the urls to the file names. 
+def download_urls(src_dst: dict[str, os.PathLike], *, output=True, **kwargs):
+    """ src_dst should be a dictionary defining the order to download and the destination filenames. For None values, the filename is determined from the URL.
 
     Waits for the specified number of seconds, 15 by default, in between downloads to avoid pressuring the server.
 
     kwargs passed to requests.get. """
     if output:
         counter = 0
-        total = len(urls)
-    for url in urls:
+        total = len(src_dst)
+    for url in src_dst:
         if output:
             counter += 1
             print(f"{counter}/{total}: ", end="")
-        if files == None or url not in files:
-            download_url(url, output=output,**kwargs)
-        else:
-            download_url(url, files[url], output=output, **kwargs)
-        time.sleep(wait)
+        download_url(url, src_dst[url], output=output, **kwargs)
 
 
 def firefox_driver(**kwargs) -> webdriver.Firefox:
@@ -93,7 +89,7 @@ def wait_element(driver: WebDriver, css_selector: str):
         expected_conditions.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
 
 
-def scroll_all_elements(driver: webdriver.Firefox, css_selector: str, *, interactable_selector: str = None, last_selector: str = None, wait=1) -> list[WebElement]:
+def scroll_all_elements(driver: WebDriver, css_selector: str, *, interactable_selector: str = None, last_selector: str = None, wait=1) -> list[WebElement]:
     """Scrolls until no more new elements found by css_selector load or until last_selector is found and returns those elements"""
     last_len = 0
     if interactable_selector != None:
@@ -125,3 +121,75 @@ def scroll_all_elements(driver: webdriver.Firefox, css_selector: str, *, interac
             break
 
     return elements
+
+
+class PageReader:
+    """Reads a webpage to search for links to download or open."""
+
+    def can_read(self, driver: WebDriver):
+        """Whether or not the current page is readable by this PageReader."""
+        return True
+
+    def to_download(self, driver: WebDriver):
+        """Returns a dictionary with URLs from the current page to download as keys and the destination filenames as values . The default implementation returns all img element src attributes."""
+        images: list[WebElement] = driver.find_elements_by_css_selector(
+            "img")
+        download_dict = {}
+        for i in images:
+            if i is not None:
+                src = i.get_attribute("src")
+                # use default
+                download_dict[src] = None
+        return download_dict
+
+    def to_open(self, driver: WebDriver):
+        """Returns a list of URLs from the current page to open next. The default implemenation returns all a element href attributes."""
+        links: list[WebElement] = driver.find_elements_by_css_selector(
+            "a")
+        urls = [l.get_attribute("href") for l in links]
+        return [u for u in urls if u is not None]
+
+
+class PageBrowser:
+    """Uses a set of PageReaders to browse."""
+
+    def __init__(self, driver: WebDriver, readers: typing.Iterable[PageReader]):
+        self.driver = driver
+        self.readers = set(readers)
+
+    def open(self):
+        """Open all links found on the current page by any PageReader. Returns the number of links opened."""
+        count = 0
+        current = self.driver.current_window_handle
+        for r in self.readers:
+            if r.can_read(self.driver):
+                for url in r.to_open(self.driver):
+                    count += 1
+                    self.driver.execute_script("window.open('')")
+                    # switch to last, i.e. newest, window
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    self.driver.get(url)
+            self.driver.switch_to.window(current)
+        return count
+
+    def download(self, output=True):
+        """Download everything on the current page found by any PageReader. Returns the number of downloads."""
+        count = 0
+        for r in self.readers:
+            if r.can_read(self.driver):
+                d = r.to_download(self.driver)
+                download_urls(d, output=output)
+                count += len(d)
+        return count
+
+    def download_all(self, output=True, close_tabs: bool = True):
+        """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads."""
+        current = self.driver.current_window_handle
+        for handle in self.driver.window_handles:
+            self.driver.switch_to.window(handle)
+            self.download(output)
+            if close_tabs:
+                self.driver.close()
+        if current in self.driver.window_handles:
+            self.driver.switch_to.window(current)
