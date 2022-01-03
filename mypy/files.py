@@ -2,9 +2,10 @@ import hashlib
 import os
 import re
 import shutil
-import subprocess
 import typing
 from pathlib import Path
+import zipfile
+from zipfile import ZipFile
 
 
 def create_file(path: os.PathLike, **kwargs):
@@ -111,31 +112,40 @@ def mirror_by_dict(mirror_dict: dict[os.PathLike, typing.Union[os.PathLike, typi
             mirror(src, destinations, output=output)
 
 
+def __add_zip_ext(zip_path: os.PathLike):
+    zip_path = Path(zip_path)
+    if len(zip_path.name) < 4 or zip_path.name[-4:] != ".zip":
+        zip_path = zip_path.with_name(zip_path.name+".zip")
+    return zip_path
+
+
 def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], *, overwrite: bool = False):
-    """ Zip a set of files using 7-zip. If the path doesn't end with .zip, the extension is added automatically for convenience. """
-    zip_path = Path(zip_path)
-    if len(zip_path.name) < 4 or zip_path.name[-4:] != ".zip":
-        zip_path = zip_path.parent.joinpath(zip_path.name+".zip")
-    if zip_path.exists():
-        if overwrite:
-            os.remove(zip_path)
-        else:
-            raise FileExistsError
-    subprocess.run([f"{os.environ['HOMEPATH']}\\Programs\\7-zip\\7z.exe",
-                    "a", "-tzip", str(zip_path)]+[str(f) for f in files])
+    """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience. """
+    zip_path = __add_zip_ext(zip_path)
+    if overwrite:
+        mode = "w"
+    else:
+        mode = "a"
+
+    # use LZMA like 7-zip
+    with ZipFile(zip_path, mode, zipfile.ZIP_LZMA) as zip:
+        for f in files:
+            zip.write(f)
 
 
-def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = [
-],  output_dir: os.PathLike = None, *, overwrite: bool = False):
-    """ Unzip a set of files using 7-zip. If the path doesn't end with .zip, the extension is added automatically for convenience. """
-    zip_path = Path(zip_path)
-    if len(zip_path.name) < 4 or zip_path.name[-4:] != ".zip":
-        zip_path = zip_path.parent.joinpath(zip_path.name+".zip")
+def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = None,  output_dir: os.PathLike = None, *, overwrite: bool = False):
+    """ Unzip a set of files using 7-zip. If the path doesn't end with .zip, the extension is added automatically for convenience. If a set of files is not specified, all of them are extracted."""
+    zip_path = __add_zip_ext(zip_path)
     if output_dir == None:
         # controls unzip destination
         output_dir = zip_path.parent
-    subprocess.run([f"{os.environ['HOMEPATH']}\\Programs\\7-zip\\7z.exe",
-                    "x", "-tzip"]+(["-y"] if overwrite else [])+[f"-o{output_dir}", str(zip_path)]+[str(f) for f in files])
+    output_dir = Path(output_dir)
+    with ZipFile(zip_path, "r") as zip:
+        if not overwrite:
+            if files is None:
+                files = zip.namelist()
+            files = [f for f in files if not output_dir.joinpath(f).exists()]
+        zip.extractall(output_dir, files)
 
 
 def long_names(root: os.PathLike) -> set[str]:
