@@ -183,6 +183,26 @@ class PageBrowser:
                 count += len(d)
         return count
 
+    def open_and_download(self, output=True, **kwargs) -> int:
+        """Open each link found on the current page, downloads, and closes the tab before moving on to the next one. Returns the number of downloads. kwargs passed to requests.get."""
+        count = 0
+        current = self.driver.current_window_handle
+        for r in self.readers:
+            if r.can_read(self.driver):
+                for url in r.to_open(self.driver):
+                    self.driver.execute_script("window.open('')")
+                    # switch to last, i.e. newest, window
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+                    self.driver.get(url)
+                    count += self.download(output, **kwargs)
+                    self.driver.close()
+                    # switch to new last window for next script execution
+                    self.driver.switch_to.window(
+                        self.driver.window_handles[-1])
+            self.driver.switch_to.window(current)
+        return count
+
     def download_all(self, output=True, close_tabs: bool = True, **kwargs) -> int:
         """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads. kwargs passed to requests.get"""
         try:
