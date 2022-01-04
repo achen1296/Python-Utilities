@@ -189,7 +189,7 @@ class PageBrowser:
         for handle in self.driver.window_handles:
             self.driver.switch_to.window(handle)
             self.download(output)
-            if close_tabs:
+            if close_tabs and len(self.driver.window_handles) > 1:
                 self.driver.close()
         if current in self.driver.window_handles:
             self.driver.switch_to.window(current)
