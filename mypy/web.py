@@ -126,11 +126,11 @@ def scroll_all_elements(driver: WebDriver, css_selector: str, *, interactable_se
 class PageReader:
     """Reads a webpage to search for links to download or open."""
 
-    def can_read(self, driver: WebDriver):
+    def can_read(self, driver: WebDriver) -> bool:
         """Whether or not the current page is readable by this PageReader."""
         return True
 
-    def to_download(self, driver: WebDriver):
+    def to_download(self, driver: WebDriver) -> dict[str, os.PathLike]:
         """Returns a dictionary with URLs from the current page to download as keys and the destination filenames as values . The default implementation returns all img element src attributes."""
         images: list[WebElement] = driver.find_elements_by_css_selector(
             "img")
@@ -142,7 +142,7 @@ class PageReader:
                 download_dict[src] = None
         return download_dict
 
-    def to_open(self, driver: WebDriver):
+    def to_open(self, driver: WebDriver) -> list[str]:
         """Returns a list of URLs from the current page to open next. The default implemenation returns all a element href attributes."""
         links: list[WebElement] = driver.find_elements_by_css_selector(
             "a")
