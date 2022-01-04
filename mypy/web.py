@@ -157,7 +157,7 @@ class PageBrowser:
         self.driver = driver
         self.readers = set(readers)
 
-    def open(self):
+    def open(self) -> int:
         """Open all links found on the current page by any PageReader. Returns the number of links opened."""
         count = 0
         current = self.driver.current_window_handle
@@ -173,7 +173,7 @@ class PageBrowser:
             self.driver.switch_to.window(current)
         return count
 
-    def download(self, output=True, **kwargs):
+    def download(self, output=True, **kwargs) -> int:
         """Download everything on the current page found by any PageReader. Returns the number of downloads. kwargs passed to requests.get."""
         count = 0
         for r in self.readers:
@@ -183,17 +183,20 @@ class PageBrowser:
                 count += len(d)
         return count
 
-    def download_all(self, output=True, close_tabs: bool = True, **kwargs):
+    def download_all(self, output=True, close_tabs: bool = True, **kwargs) -> int:
         """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads. kwargs passed to requests.get"""
         try:
             current = self.driver.current_window_handle
         except NoSuchWindowException:
             # window being controlled was closed
             current = None
+        count = 0
         for handle in self.driver.window_handles:
             self.driver.switch_to.window(handle)
-            self.download(output, **kwargs)
-            if close_tabs and len(self.driver.window_handles) > 1:
+            current_count = self.download(output, **kwargs)
+            if current_count > 0 and close_tabs and len(self.driver.window_handles) > 1:
                 self.driver.close()
+            count += current_count
         if current in self.driver.window_handles:
             self.driver.switch_to.window(current)
+        return count
