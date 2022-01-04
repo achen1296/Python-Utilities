@@ -25,7 +25,7 @@ def url_filename(url: str):
 
 
 def download_url(url: str, file: os.PathLike = None,  *, output=True, **kwargs):
-    """ kwargs forwarded to requests.get. If file = None, the name is inferred from the last piece of the URL """
+    """ If file = None, the name is inferred from the last piece of the URL. kwargs passed to requests.get. """
     if file is None:
         file = url_filename(url)
     req = requests.get(url, **kwargs)
@@ -173,18 +173,18 @@ class PageBrowser:
             self.driver.switch_to.window(current)
         return count
 
-    def download(self, output=True):
-        """Download everything on the current page found by any PageReader. Returns the number of downloads."""
+    def download(self, output=True, **kwargs):
+        """Download everything on the current page found by any PageReader. Returns the number of downloads. kwargs passed to requests.get."""
         count = 0
         for r in self.readers:
             if r.can_read(self.driver):
                 d = r.to_download(self.driver)
-                download_urls(d, output=output)
+                download_urls(d, output=output, **kwargs)
                 count += len(d)
         return count
 
-    def download_all(self, output=True, close_tabs: bool = True):
-        """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads."""
+    def download_all(self, output=True, close_tabs: bool = True, **kwargs):
+        """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads. kwargs passed to requests.get"""
         try:
             current = self.driver.current_window_handle
         except NoSuchWindowException:
@@ -192,7 +192,7 @@ class PageBrowser:
             current = None
         for handle in self.driver.window_handles:
             self.driver.switch_to.window(handle)
-            self.download(output)
+            self.download(output, **kwargs)
             if close_tabs and len(self.driver.window_handles) > 1:
                 self.driver.close()
         if current in self.driver.window_handles:
