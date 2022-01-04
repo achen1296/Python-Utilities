@@ -4,7 +4,7 @@ import typing
 
 import requests
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, NoSuchWindowException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.remote.webelement import WebElement
@@ -185,7 +185,11 @@ class PageBrowser:
 
     def download_all(self, output=True, close_tabs: bool = True):
         """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads."""
-        current = self.driver.current_window_handle
+        try:
+            current = self.driver.current_window_handle
+        except NoSuchWindowException:
+            # window being controlled was closed
+            current = None
         for handle in self.driver.window_handles:
             self.driver.switch_to.window(handle)
             self.download(output)
