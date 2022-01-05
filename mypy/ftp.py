@@ -20,6 +20,7 @@ class SimpleFTP(FTP):
 
     def simple_delete(self, file: os.PathLike):
         """Tries deleting as a file, then as a directory, then recursively."""
+        file = str(file)
         try:
             self.delete(file)
             return
