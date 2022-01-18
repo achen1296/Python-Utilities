@@ -45,28 +45,15 @@ def edge_detect(img: typing.Union[os.PathLike, Image.Image], threshold: int = 60
 
 
 def scale(img: typing.Union[os.PathLike, Image.Image], scale: float, output: os.PathLike = None) -> str:
-    """Uses NEAREST to increase size or BICUBIC to decrease."""
     with image_from_file_or_image(img) as img:
-        new_size = (int(img.width * scale), int(img.height * scale))
-        if scale == 1:
-            return img
-        elif scale > 1:
-            new = img.resize(new_size, resample=Image.NEAREST)
-        else:
-            new = img.resize(new_size, resample=Image.BICUBIC)
+        new = img.resize(
+            (int(img.width * scale), int(img.height * scale)), resample=Image.BOX)
     optional_save(new, output)
     return new
 
 
 def resize(img: typing.Union[os.PathLike, Image.Image], size: tuple[int, int], output: os.PathLike = None):
-    """Uses NEAREST to increase size (if either dimension is larger than the original) or BICUBIC to decrease."""
     with image_from_file_or_image(img) as img:
-        img_width, img_height = img.size
-        new_width, new_height = size
-        if new_width > img_width or new_height > img_height:
-            new = img.resize(size, resample=Image.NEAREST)
-        else:
-            new = img.resize(size, resample=Image.BICUBIC)
+        new = img.resize(size, resample=Image.BOX)
     optional_save(new, output)
     return new
-
