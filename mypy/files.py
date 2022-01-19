@@ -31,7 +31,8 @@ def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[st
         yield (dirpath, dirnames, filenames)
 
 
-def __action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], *, overwrite: bool, warn_if_exists: bool, action_callable: typing.Callable):
+def __action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], *, overwrite: bool, warn_if_exists: bool, action_callable: typing.Callable) -> int:
+    count = 0
     for src in planned_actions:
         dst = planned_actions[src]
         if src != dst:
@@ -45,16 +46,21 @@ def __action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], *, overwri
                         f"Warn: {dst} exists and is being overwritten with {src}")
                 p.parent.mkdir(parents=True, exist_ok=True)
                 action_callable(src, dst)
+                count += 1
+    return count
 
 
-def move_by_dict(planned_moves: dict[os.PathLike, os.PathLike], *, overwrite=False, warn_if_exists=True) -> None:
-    __action_by_dict(planned_moves, overwrite=overwrite,
-                     warn_if_exists=warn_if_exists, action_callable=shutil.move)
+def move_by_dict(planned_moves: dict[os.PathLike, os.PathLike], *,
+                 overwrite=False, warn_if_exists=True) -> int:
+    """Returns the number of items moved."""
+    return __action_by_dict(planned_moves, overwrite=overwrite,
+                            warn_if_exists=warn_if_exists, action_callable=shutil.move)
 
 
 def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], *, overwrite=True, warn_if_exists=True) -> None:
-    __action_by_dict(planned_copies, overwrite=overwrite,
-                     warn_if_exists=warn_if_exists, action_callable=shutil.copy2)
+    """Returns the number of items copied."""
+    return __action_by_dict(planned_copies, overwrite=overwrite,
+                            warn_if_exists=warn_if_exists, action_callable=shutil.copy2)
 
 
 def delete(file: os.PathLike):
@@ -70,7 +76,9 @@ class FileMismatchException(Exception):
     pass
 
 
-def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_file_action: typing.Callable[[os.PathLike], None] = delete, output_prefix="") -> None:
+def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_file_action: typing.Callable[[os.PathLike], None] = delete, output_prefix="") -> int:
+    """Returns the number of files changed (empty directories do not increase the count)."""
+    count = 0
     src = Path(src)
     dst = Path(dst)
     if src.exists() and dst.exists() and src.is_dir() ^ dst.is_dir():
@@ -83,6 +91,7 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
             if output:
                 print(f"{output_prefix}Mirroring file <{src}> -> <{dst}>")
             shutil.copy2(src, dst)
+            count += 1
     else:
         #src is dir
         if dst.exists():
@@ -94,34 +103,32 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
                 if output:
                     print(f"{output_prefix}<{f}> was deleted")
                 deleted_file_action(f)
+                count += 1
         else:
             dst.mkdir()
         # recursively update files remaining
         for f in src.iterdir():
-            mirror(f, dst.joinpath(f.name), output=output,
-                   output_prefix=output_prefix+"    ")
+            count += mirror(f, dst.joinpath(f.name), output=output,
+                            output_prefix=output_prefix+"    ")
+    return count
 
 
 def mirror_by_dict(mirror_dict: dict[os.PathLike, typing.Union[os.PathLike, typing.Iterable[os.PathLike]]], *, output=False):
+    """Returns the number of files changed (empty directories do not increase the count)."""
+    count = 0
     for src in mirror_dict:
         destinations = mirror_dict[src]
         if isinstance(destinations, typing.Iterable):
             for dst in destinations:
-                mirror(src, dst, output=output)
+                count += mirror(src, dst, output=output)
         else:
-            mirror(src, destinations, output=output)
-
-
-def __add_zip_ext(zip_path: os.PathLike):
-    zip_path = Path(zip_path)
-    if len(zip_path.name) < 4 or zip_path.name[-4:] != ".zip":
-        zip_path = zip_path.with_name(zip_path.name+".zip")
-    return zip_path
+            count += mirror(src, destinations, output=output)
+    return count
 
 
 def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], *, overwrite: bool = False):
     """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience. """
-    zip_path = __add_zip_ext(zip_path)
+    zip_path = Path(zip_path).with_suffix(".zip")
     if overwrite:
         mode = "w"
     else:
@@ -135,7 +142,7 @@ def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], *, overwrite
 
 def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = None,  output_dir: os.PathLike = None, *, overwrite: bool = False):
     """ Unzip a set of files using 7-zip. If the path doesn't end with .zip, the extension is added automatically for convenience. If a set of files is not specified, all of them are extracted."""
-    zip_path = __add_zip_ext(zip_path)
+    zip_path = Path(zip_path).with_suffix(".zip")
     if output_dir == None:
         # controls unzip destination
         output_dir = zip_path.parent
