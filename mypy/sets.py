@@ -1,13 +1,24 @@
-from typing import Hashable
+import typing
 
 
 class SetGroup:
     """Represents a group of sets whose elements and provides the join operation. This is intended for constructing representations of elements that are related to each other if they are both related to another element. self[key] returns the set containing the key. Objects can also be deleted."""
 
-    def __init__(self):
+    def __init__(self, initial_sets=None):
         self.internal_dict = {}
+        if initial_sets is not None:
+            self.merge(initial_sets)
 
-    def join(self, obj1: Hashable, obj2: Hashable) -> None:
+    def merge(self, other_sets: typing.Iterable[typing.Iterable[typing.Hashable]]):
+        for s in other_sets:
+            first = None
+            for item in s:
+                if first is None:
+                    first = item
+                else:
+                    self.join(first, item)
+
+    def join(self, obj1: typing.Hashable, obj2: typing.Hashable) -> None:
         """Sets in the group can be joined together by calling join on one element from each. If an object is joined into a set but is not already part of another set in the group, it is simply added to that set. If both objects that are joined together are not in an existing set, they form a new set together. """
         if obj1 in self.internal_dict:
             if obj2 in self.internal_dict:
@@ -20,20 +31,20 @@ class SetGroup:
             else:
                 self.__new_set(obj1, obj2)
 
-    def joined(self, obj1: Hashable, obj2: Hashable) -> bool:
+    def joined(self, obj1: typing.Hashable, obj2: typing.Hashable) -> bool:
         return obj1 in self.internal_dict and obj2 in self.internal_dict and obj2 in self.internal_dict[obj1]
 
     def __len__(self):
         return len(self.internal_dict)
 
-    def __getitem__(self, obj: Hashable) -> set:
+    def __getitem__(self, obj: typing.Hashable) -> set:
         return self.internal_dict[obj]
 
-    def __delitem__(self, obj: Hashable):
+    def __delitem__(self, obj: typing.Hashable):
         self.internal_dict[obj].remove(obj)
         del self.internal_dict[obj]
 
-    def __contains__(self, obj: Hashable) -> bool:
+    def __contains__(self, obj: typing.Hashable) -> bool:
         return obj in self.internal_dict
 
     def __iter__(self):
@@ -44,15 +55,15 @@ class SetGroup:
             found |= self.internal_dict[key]
             yield self.internal_dict[key]
 
-    def __new_set(self, obj1: Hashable, obj2: Hashable) -> None:
+    def __new_set(self, obj1: typing.Hashable, obj2: typing.Hashable) -> None:
         self.internal_dict[obj1] = {obj1, obj2}
         self.internal_dict[obj2] = self.internal_dict[obj1]
 
-    def __add_to_set(self, target: Hashable, new: Hashable) -> None:
+    def __add_to_set(self, target: typing.Hashable, new: typing.Hashable) -> None:
         self.internal_dict[target].add(new)
         self.internal_dict[new] = self.internal_dict[target]
 
-    def __join_sets(self, obj1: Hashable, obj2: Hashable) -> None:
+    def __join_sets(self, obj1: typing.Hashable, obj2: typing.Hashable) -> None:
         if self.joined(obj1, obj2):
             return
 
@@ -69,3 +80,6 @@ class SetGroup:
         large_set |= small_set
         for o in small_set:
             self.internal_dict[o] = large_set
+
+    def __str__(self):
+        return "SetGroup([" + ",".join([str(s) for s in self]) + "])"
