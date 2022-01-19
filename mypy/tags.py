@@ -81,7 +81,7 @@ def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, b
     for dirpath, dirnames, _ in os.walk(root):
         for d in dirnames:
             for t in tags:
-                if t in d:
+                if t in d.split(" "):
                     if t not in tags_to_folders:
                         tags_to_folders[t] = bset()
                     tags_to_folders[t].add(Path(dirpath, d))
