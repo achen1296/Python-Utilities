@@ -6,7 +6,7 @@ from typing import Iterable, Union
 from mypy import files
 
 
-def read_iterable_dict(list_dict: Iterable[str], *, key_value_separator: str = "\s*>\s*", value_list_separator: str = "\s*\|\s*",  comment: str = "\s*#", all_lists: bool = False) -> dict[str, Union[str, list[str]]]:
+def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\s*>\s*", value_list_separator: str = "\s*\|\s*",  comment: str = "\s*#", all_lists: bool = False) -> dict[str, Union[str, list[str]]]:
     """ Reads a dictionary from a list of string entries.
 
     By default each is interpreted as key>value or key>val1|val2|... 
@@ -16,7 +16,7 @@ def read_iterable_dict(list_dict: Iterable[str], *, key_value_separator: str = "
 
     Entries that are one element long are not turned into lists by default. """
     d = {}
-    for entry in list_dict:
+    for entry in iterable_dict:
         # skip whitespace and comments
         if entry.strip() == "" or (comment != "" and re.match(comment, entry) != None):
             continue
