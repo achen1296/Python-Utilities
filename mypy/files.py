@@ -227,6 +227,6 @@ def remove_empty_folders(root: os.PathLike):
 
 def list_files(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool] = None):
     result = []
-    for dirpath, dirnames, filenames in os.walk(root):
+    for dirpath, dirnames, filenames in conditional_walk(root, condition):
         result += [dirpath + os.sep + f for f in filenames]
     return result
