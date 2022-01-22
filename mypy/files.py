@@ -20,8 +20,10 @@ def ignore_dot(dirpath: str, dirnames: list[str], filenames: list[str]) -> bool:
     return Path(dirpath).name[0] != "."
 
 
-def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool]) -> tuple[str, list[str], list[str]]:
+def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool] = None) -> tuple[str, list[str], list[str]]:
     """ Wraps os.walk, only returning the directory information that passes the condition (when the provided function returns true), skipping children of those that fail. """
+    if condition is None:
+        def condition(dp, dns, fns): return True
     for dirpath, dirnames, filenames in os.walk(root):
         # ignore folders not matching the condition
         if not condition(dirpath, dirnames, filenames):
@@ -223,7 +225,7 @@ def remove_empty_folders(root: os.PathLike):
             pass
 
 
-def list_files(root: os.PathLike):
+def list_files(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool] = None):
     result = []
     for dirpath, dirnames, filenames in os.walk(root):
         result += [dirpath + os.sep + f for f in filenames]
