@@ -175,7 +175,7 @@ def re_split(file: os.PathLike, separator: str = "\s*\n\s*", *, exclude_empty: b
     with open(file, **kwargs) as f:
         for line in f:
             unprocessed += line
-            seps = list(re.finditer(separator, unprocessed))
+            seps = list_files(re.finditer(separator, unprocessed))
             # no separators found yet
             if len(seps) == 0:
                 continue
@@ -223,7 +223,7 @@ def remove_empty_folders(root: os.PathLike):
             pass
 
 
-def list(root: os.PathLike):
+def list_files(root: os.PathLike):
     result = []
     for dirpath, dirnames, filenames in os.walk(root):
         result += [dirpath + os.sep + f for f in filenames]
