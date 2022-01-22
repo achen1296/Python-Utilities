@@ -221,3 +221,10 @@ def remove_empty_folders(root: os.PathLike):
         except OSError:
             #not empty
             pass
+
+
+def list(root: os.PathLike):
+    result = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        result += [dirpath + os.sep + f for f in filenames]
+    return result
