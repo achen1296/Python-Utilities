@@ -177,7 +177,7 @@ def re_split(file: os.PathLike, separator: str = "\s*\n\s*", *, exclude_empty: b
     with open(file, **kwargs) as f:
         for line in f:
             unprocessed += line
-            seps = list_files(re.finditer(separator, unprocessed))
+            seps = list(re.finditer(separator, unprocessed))
             # no separators found yet
             if len(seps) == 0:
                 continue
