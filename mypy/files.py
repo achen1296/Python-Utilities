@@ -128,6 +128,59 @@ def mirror_by_dict(mirror_dict: dict[os.PathLike, typing.Union[os.PathLike, typi
     return count
 
 
+def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, output_prefix=""):
+    """Recursively compares the two paths specified. Newer files overwrite old ones, and files that don't exist on one side are copied from the other. Therefore does not handle deletions. Returns the number of files copied."""
+    """Returns the number of files changed (empty directories do not increase the count)."""
+    count = 0
+    path1 = Path(path1)
+    path2 = Path(path2)
+    if path1.exists() and path2.exists() and path1.is_dir() ^ path2.is_dir():
+        raise FileMismatchException(
+            f"One of {path1} and {path2} is a file, the other a directory")
+    if path1.exists() and path1.is_file():
+        if path2.exists() and path2.is_file():
+            time1 = path1.stat().st_mtime
+            time2 = path2.stat().st_mtime
+            if time1 > time2:
+                if output:
+                    print(f"{output_prefix}Updating file <{path1}> -> <{path2}>")
+                shutil.copy2(path1, path2)
+                count += 1
+            elif time2 > time1:
+                if output:
+                    print(f"{output_prefix}Updating file <{path2}> -> <{path1}>")
+                shutil.copy2(path2, path1)
+                count += 1
+            # time may be the same, in which case nothing happens
+        else:
+            if output:
+                print(f"{output_prefix}Creating file <{path1}> -> <{path2}>")
+            shutil.copy2(path1, path2)
+            count += 1
+    elif path2.exists() and path2.is_file():
+        #assert not path1.exists()
+        if output:
+            print(f"{output_prefix}Creating file <{path2}> -> <{path1}>")
+        shutil.copy2(path2, path1)
+        count += 1
+    else:
+        # directories
+        # recursively update files remaining
+        names = set()
+        if path1.exists():
+            names |= {f.name for f in path1.iterdir()}
+        else:
+            path1.mkdir(parents=True, exist_ok=True)
+        if path2.exists():
+            names |= {f.name for f in path2.iterdir()}
+        else:
+            path2.mkdir(parents=True, exist_ok=True)
+        for n in names:
+            count += two_way(path1.joinpath(n), path2.joinpath(n), output=output,
+                             output_prefix=output_prefix+"    ")
+    return count
+
+
 def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], *, overwrite: bool = False):
     """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience. """
     zip_path = Path(zip_path).with_suffix(".zip")
