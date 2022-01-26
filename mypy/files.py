@@ -88,7 +88,8 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
             f"One of {src} and {dst} is a file, the other a directory")
     if src.is_file():
         # copy file if newer
-        if not dst.exists() or src.stat().st_mtime > dst.stat().st_mtime:
+        # round to decrease precision to seconds (different file systems may save different precision)
+        if not dst.exists() or int(src.stat().st_mtime) > int(dst.stat().st_mtime):
             # src is newer than dst
             if output:
                 print(f"{output_prefix}Mirroring file <{src}> -> <{dst}>")
@@ -139,8 +140,9 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
             f"One of {path1} and {path2} is a file, the other a directory")
     if path1.exists() and path1.is_file():
         if path2.exists() and path2.is_file():
-            time1 = path1.stat().st_mtime
-            time2 = path2.stat().st_mtime
+            # round to decrease precision to seconds (different file systems may save different precision)
+            time1 = int(path1.stat().st_mtime)
+            time2 = int(path2.stat().st_mtime)
             if time1 > time2:
                 if output:
                     print(f"{output_prefix}Updating file <{path1}> -> <{path2}>")
