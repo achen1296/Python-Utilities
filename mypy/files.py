@@ -89,10 +89,15 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
     if src.is_file():
         # copy file if newer
         # round to decrease precision to seconds (different file systems may save different precision)
-        if not dst.exists() or int(src.stat().st_mtime) > int(dst.stat().st_mtime):
+        if not dst.exists():
+            if output:
+                print(f"{output_prefix}Creating file <{src}> -> <{dst}>")
+            shutil.copy2(src, dst)
+            count += 1
+        elif int(src.stat().st_mtime) > int(dst.stat().st_mtime):
             # src is newer than dst
             if output:
-                print(f"{output_prefix}Mirroring file <{src}> -> <{dst}>")
+                print(f"{output_prefix}Updating file <{src}> -> <{dst}>")
             shutil.copy2(src, dst)
             count += 1
     else:
