@@ -86,7 +86,7 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
     if src.exists() and dst.exists() and src.is_dir() ^ dst.is_dir():
         raise FileMismatchException(
             f"One of {src} and {dst} is a file, the other a directory")
-    if not src.is_dir():
+    if src.is_file():
         # copy file if newer
         if not dst.exists() or src.stat().st_mtime > dst.stat().st_mtime:
             # src is newer than dst
