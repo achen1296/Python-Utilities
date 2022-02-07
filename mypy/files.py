@@ -136,7 +136,6 @@ def mirror_by_dict(mirror_dict: dict[os.PathLike, typing.Union[os.PathLike, typi
 
 def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, output_prefix=""):
     """Recursively compares the two paths specified. Newer files overwrite old ones, and files that don't exist on one side are copied from the other. Therefore does not handle deletions. Returns the number of files copied."""
-    """Returns the number of files changed (empty directories do not increase the count)."""
     count = 0
     path1 = Path(path1)
     path2 = Path(path2)
