@@ -13,7 +13,7 @@ def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_it
         yield re.split(list_item_separator, list_str)
 
 
-def write_file_lists(filename: os.PathLike, lists: typing.Iterable[typing.Iterable], *, list_item_separator: str = ",", list_separator: str = "\n", text_mode="w",**open_kwargs) -> None:
+def write_file_lists(filename: os.PathLike, lists: typing.Iterable[typing.Iterable], *, list_item_separator: str = ",", list_separator: str = "\n", text_mode="w", **open_kwargs) -> None:
     """Write a list of lists to a file."""
     with open(filename, text_mode, encoding="UTF-8", **open_kwargs) as f:
         for l in lists:
@@ -35,6 +35,11 @@ def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str
     with open(filename, text_mode, encoding="UTF-8", **open_kwargs) as f:
         for i in l:
             f.write(i + separator)
+
+
+def sort_file(filename: os.PathLike, **kwargs):
+    l = read_file_list(filename, **kwargs)
+    write_file_list(filename, sorted(l), **kwargs)
 
 
 def remove_duplicates_in_place(l: list) -> list:
