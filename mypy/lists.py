@@ -42,6 +42,11 @@ def sort_file(filename: os.PathLike, **kwargs):
     write_file_list(filename, sorted(l), **kwargs)
 
 
+def remove_duplicates_file(filename: os.PathLike, **kwargs):
+    l = read_file_list(filename, **kwargs)
+    write_file_list(filename, sorted(set(l)), **kwargs)
+
+
 def remove_duplicates_in_place(l: list) -> list:
     """Still uses sets, but preserves the order of the remaining elements, which turning into a set and then back would not."""
     unique = set()
