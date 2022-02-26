@@ -204,7 +204,7 @@ def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_roo
         mode = "a"
     files = [Path(f) for f in files]
     # use LZMA like 7-zip
-    with ZipFile(zip_path, mode, zipfile.ZIP_LZMA) as zip:
+    with ZipFile(zip_path, mode, zipfile.ZIP_DEFLATED) as zip:
         _recursive_zip(files, zip, relative_root)
 
 
