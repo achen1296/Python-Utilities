@@ -3,8 +3,8 @@ import os
 import re
 import shutil
 import typing
-from pathlib import Path
 import zipfile
+from pathlib import Path
 from zipfile import ZipFile
 
 
@@ -187,18 +187,25 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
     return count
 
 
-def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], *, overwrite: bool = False):
+def _recursive_zip(files: typing.Iterable[Path], zip: ZipFile, relative_root: os.PathLike):
+    for f in files:
+        if f.is_file():
+            zip.write(f, arcname=f.relative_to(relative_root))
+        else:
+            _recursive_zip(f.iterdir(), zip, relative_root)
+
+
+def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_root: os.PathLike, *, overwrite: bool = False):
     """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience. """
     zip_path = Path(zip_path).with_suffix(".zip")
     if overwrite:
         mode = "w"
     else:
         mode = "a"
-
+    files = [Path(f) for f in files]
     # use LZMA like 7-zip
     with ZipFile(zip_path, mode, zipfile.ZIP_LZMA) as zip:
-        for f in files:
-            zip.write(f)
+        _recursive_zip(files, zip, relative_root)
 
 
 def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = None,  output_dir: os.PathLike = None, *, overwrite: bool = False):
