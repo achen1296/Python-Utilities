@@ -11,7 +11,7 @@ def rgb_diff(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> int:
     return abs(r1-r2)+abs(g1-g2)+abs(b1-b2)
 
 
-def image_from_file_or_image(img: typing.Union[os.PathLike, Image.Image]):
+def _image_from_file_or_image(img: typing.Union[os.PathLike, Image.Image]):
     if isinstance(img, os.PathLike) or isinstance(img, str):
         return Image.open(img)
     elif isinstance(img, Image.Image):
@@ -20,14 +20,14 @@ def image_from_file_or_image(img: typing.Union[os.PathLike, Image.Image]):
         raise TypeError
 
 
-def optional_save(img: Image.Image, output: os.PathLike):
+def _optional_save(img: Image.Image, output: os.PathLike):
     if output != None:
         output = Path(output)
         img.save(output)
 
 
 def edge_detect(img: typing.Union[os.PathLike, Image.Image], threshold: int = 60, output: os.PathLike = None):
-    with image_from_file_or_image(img).convert(mode="RGB") as img:
+    with _image_from_file_or_image(img).convert(mode="RGB") as img:
         new = Image.new("RGB", img.size)
         for x in range(1, img.width):
             for y in range(1, img.height):
@@ -40,29 +40,29 @@ def edge_detect(img: typing.Union[os.PathLike, Image.Image], threshold: int = 60
                     if rgb_diff(current, n) > threshold:
                         new.putpixel((x, y), (255, 255, 255))
                         break
-    optional_save(new, output)
+    _optional_save(new, output)
     return new
 
 
 def scale(img: typing.Union[os.PathLike, Image.Image], scale: float, output: os.PathLike = None) -> str:
-    with image_from_file_or_image(img) as img:
+    with _image_from_file_or_image(img) as img:
         new = img.resize(
             (int(img.width * scale), int(img.height * scale)), resample=Image.BOX)
-    optional_save(new, output)
+    _optional_save(new, output)
     return new
 
 
 def resize(img: typing.Union[os.PathLike, Image.Image], size: tuple[int, int], output: os.PathLike = None):
-    with image_from_file_or_image(img) as img:
+    with _image_from_file_or_image(img) as img:
         new = img.resize(size, resample=Image.BOX)
-    optional_save(new, output)
+    _optional_save(new, output)
     return new
 
 
 def rgb_image_diff(img1: typing.Union[os.PathLike, Image.Image], img2: typing.Union[os.PathLike, Image.Image]) -> tuple[int, int]:
     """Returns a pair of ints. The first is the total RGB difference (each pixel pair's difference is always given as the absolute value). The second is the maximum possible RGB difference given the size of the images."""
-    with image_from_file_or_image(img1).convert(mode="RGB") as img1:
-        with image_from_file_or_image(img2).convert(mode="RGB") as img2:
+    with _image_from_file_or_image(img1).convert(mode="RGB") as img1:
+        with _image_from_file_or_image(img2).convert(mode="RGB") as img2:
             if img1.size != img2.size:
                 raise TypeError
             width, height = img1.size
