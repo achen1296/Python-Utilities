@@ -27,8 +27,8 @@ def write_file_lists(filename: os.PathLike, lists: typing.Iterable[typing.Iterab
             f.write(list_separator)
 
 
-def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*") -> typing.Generator:
-    return files.re_split(filename, separator)
+def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", **kwargs) -> typing.Generator:
+    return files.re_split(filename, separator, **kwargs)
 
 
 def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str = "\n", text_mode="w", **open_kwargs):
