@@ -6,6 +6,8 @@ _cache = {}
 
 
 def set(name: str, value: str):
+    name = name.replace("\"", "")
+    value = value.replace("\"", "")
     _cache[name] = value
     subprocess.run(f"setx \"{name}\" \"{value}\"", shell=True)
 
