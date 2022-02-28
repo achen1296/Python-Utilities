@@ -7,7 +7,7 @@ _cache = {}
 
 def set(name: str, value: str):
     _cache[name] = value
-    subprocess.run(f"setx {name} {value}", shell=True)
+    subprocess.run(f"setx \"{name}\" \"{value}\"", shell=True)
 
 
 def get(name: str):
@@ -15,3 +15,9 @@ def get(name: str):
         return _cache[name]
     except KeyError:
         return os.environ[name]
+
+
+def list_append(name: str, value: str):
+    lst = get(name).split(";")
+    lst.append(value)
+    set(name, ";".join(lst))
