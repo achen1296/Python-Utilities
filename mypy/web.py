@@ -84,8 +84,8 @@ def chrome_driver(profile: str) -> webdriver.Chrome:
     return driver
 
 
-def wait_element(driver: WebDriver, css_selector: str) -> WebElement:
-    return WebDriverWait(driver, 10).until(
+def wait_element(driver: WebDriver, css_selector: str, timeout: int = 10) -> WebElement:
+    return WebDriverWait(driver, timeout).until(
         expected_conditions.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
 
 
