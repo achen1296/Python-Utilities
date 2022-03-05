@@ -4,7 +4,7 @@ import typing
 
 import requests
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, NoSuchWindowException
+from selenium.common.exceptions import NoSuchElementException, NoSuchWindowException, TimeoutException
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.remote.webelement import WebElement
@@ -87,6 +87,11 @@ def chrome_driver(profile: str) -> webdriver.Chrome:
 def wait_element(driver: WebDriver, css_selector: str, timeout: int = 10) -> WebElement:
     return WebDriverWait(driver, timeout).until(
         expected_conditions.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
+
+
+def wait_url(driver: WebDriver, url_contains: str, timeout: int = 10):
+    return WebDriverWait(driver, timeout).until(
+        expected_conditions.url_contains(url=url_contains))
 
 
 def scroll_all_elements(driver: WebDriver, css_selector: str, *, interactable_selector: str = None, last_selector: str = None, wait=1) -> list[WebElement]:
