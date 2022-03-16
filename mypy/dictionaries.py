@@ -1,7 +1,7 @@
 import os
 import re
 import typing
-from typing import Iterable, Union
+from typing import Callable, Iterable, Union
 
 from mypy import files
 
@@ -49,14 +49,14 @@ def read_file_dict(filename: os.PathLike, *, encoding=None, entry_separator="\s*
     return read_iterable_dict(files.re_split(filename, entry_separator, encoding=encoding), **kwargs)
 
 
-def write_iterable_dict(dictionary: dict[typing.Any, Union[typing.Any, Iterable[typing.Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|") -> list[str]:
+def write_iterable_dict(dictionary: dict[typing.Any, Union[typing.Any, Iterable[typing.Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|", sort_key: Callable = None) -> list[str]:
     """ Default separators > and |, same as reading dictionaries. 
 
     Keys and values can be of any type and are converted to strings using str(). For iterable values, they are converted one at a time with the separator inserted. 
 
     Keys with None or empty string values do not get the k/v separator. """
     l = []
-    for key in sorted(dictionary):
+    for key in sorted(dictionary, key=sort_key):
         val = dictionary[key]
         try:
             if val == None or len(val) == 0:
