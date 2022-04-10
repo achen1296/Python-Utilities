@@ -65,6 +65,28 @@ def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], *, overwrite=Tr
                             warn_if_exists=warn_if_exists, action_callable=shutil.copy2)
 
 
+def hard_link(existing: os.PathLike, new: os.PathLike):
+    # catch file existence problems early to distinguish them from permission problems
+    if not Path(existing).exists():
+        raise OSError(f"File {existing} does not exist to hard link to")
+    if not Path(existing).is_file():
+        raise OSError(f"{existing} is not a file")
+
+    if Path(new).exists():
+        raise OSError(f"File {new} already exists")
+
+    result = os.system(f"mklink /h \"{new}\" \"{existing}\"")
+
+    if result != 0:
+        raise PermissionError(
+            "Run programs that use this function as administrator")
+
+
+def hard_link_by_dict(planned_links: dict[os.PathLike, os.PathLike], *, overwrite=True, warn_if_exists=True):
+    """Returns the number of hard links created"""
+    return __action_by_dict(planned_links, overwrite=overwrite, warn_if_exists=warn_if_exists, action_callable=hard_link)
+
+
 def delete(file: os.PathLike):
     """Uses either os.remove or shutil.rmtree as appropriate."""
     path = Path(file)
@@ -296,15 +318,3 @@ def list_files(root: os.PathLike, condition: typing.Callable[[str, list[str], li
     for dirpath, dirnames, filenames in conditional_walk(root, condition):
         result += [dirpath + os.sep + f for f in filenames]
     return result
-
-
-def hard_link(new: os.PathLike, existing: os.PathLike):
-    # catch file existence problems early to distinguish them from permission problems
-    if not Path(existing).exists():
-        raise OSError(f"File {existing} does not exist to hard link to")
-    if Path(new).exists():
-        raise OSError(f"File {new} already exists")
-    result = os.system(f"mklink /h {new} {existing}")
-    if result != 0:
-        raise PermissionError(
-            "Must run programs that use this function as administrator")
