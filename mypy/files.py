@@ -296,3 +296,15 @@ def list_files(root: os.PathLike, condition: typing.Callable[[str, list[str], li
     for dirpath, dirnames, filenames in conditional_walk(root, condition):
         result += [dirpath + os.sep + f for f in filenames]
     return result
+
+
+def hard_link(new: os.PathLike, existing: os.PathLike):
+    # catch file existence problems early to distinguish them from permission problems
+    if not Path(existing).exists():
+        raise OSError(f"File {existing} does not exist to hard link to")
+    if Path(new).exists():
+        raise OSError(f"File {new} already exists")
+    result = os.system(f"mklink /h {new} {existing}")
+    if result != 0:
+        raise PermissionError(
+            "Must run programs that use this function as administrator")
