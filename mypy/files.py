@@ -33,22 +33,26 @@ def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[st
         yield (dirpath, dirnames, filenames)
 
 
-def __action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], *, overwrite: bool, warn_if_exists: bool, action_callable: typing.Callable) -> int:
+def __action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], *, overwrite: bool, warn_if_exists: bool, action_callable: typing.Callable[[os.PathLike, os.PathLike], None]) -> int:
     count = 0
     for src in planned_actions:
-        dst = planned_actions[src]
-        if src != dst:
-            p = Path(dst)
-            if not overwrite and p.exists():
-                if warn_if_exists:
-                    print(f"Warn: {dst} exists, not overwiting with {src}")
-            else:
-                if warn_if_exists and p.exists():
-                    print(
-                        f"Warn: {dst} exists and is being overwritten with {src}")
-                p.parent.mkdir(parents=True, exist_ok=True)
-                action_callable(src, dst)
-                count += 1
+        if Path(src).exists():
+            dst = planned_actions[src]
+            if src != dst:
+                dst_path = Path(dst)
+                if not overwrite and dst_path.exists():
+                    if warn_if_exists:
+                        print(
+                            f"Warning: {dst} exists, not overwiting with {src}")
+                else:
+                    if dst_path.exists():
+                        if warn_if_exists:
+                            print(
+                                f"Warning: {dst} exists and is being overwritten with {src}")
+                        delete(dst_path)
+                    dst_path.parent.mkdir(parents=True, exist_ok=True)
+                    action_callable(src, dst)
+                    count += 1
     return count
 
 
