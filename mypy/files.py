@@ -33,7 +33,7 @@ def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[st
         yield (dirpath, dirnames, filenames)
 
 
-def __action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], *, overwrite: bool, warn_if_exists: bool, action_callable: typing.Callable[[os.PathLike, os.PathLike], None]) -> int:
+def __file_action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], action_callable: typing.Callable[[os.PathLike, os.PathLike], None], action_past_tense: str, *, overwrite: bool = False, warn_if_exists: bool = True, output: bool = False) -> int:
     count = 0
     for src in planned_actions:
         if Path(src).exists():
@@ -52,21 +52,20 @@ def __action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], *, overwri
                         delete(dst_path)
                     dst_path.parent.mkdir(parents=True, exist_ok=True)
                     action_callable(src, dst)
+                    if output:
+                        print(f"{action_past_tense} <{src}> -> <{dst}>")
                     count += 1
     return count
 
 
-def move_by_dict(planned_moves: dict[os.PathLike, os.PathLike], *,
-                 overwrite=False, warn_if_exists=True) -> int:
+def move_by_dict(planned_moves: dict[os.PathLike, os.PathLike], **kwargs) -> int:
     """Returns the number of items moved."""
-    return __action_by_dict(planned_moves, overwrite=overwrite,
-                            warn_if_exists=warn_if_exists, action_callable=shutil.move)
+    return __file_action_by_dict(planned_moves, shutil.move, "Moved", **kwargs)
 
 
-def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], *, overwrite=True, warn_if_exists=True) -> None:
+def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], **kwargs) -> None:
     """Returns the number of items copied."""
-    return __action_by_dict(planned_copies, overwrite=overwrite,
-                            warn_if_exists=warn_if_exists, action_callable=shutil.copy2)
+    return __file_action_by_dict(planned_copies, shutil.copy2, "Copied", **kwargs)
 
 
 def hard_link(existing: os.PathLike, new: os.PathLike):
@@ -86,9 +85,9 @@ def hard_link(existing: os.PathLike, new: os.PathLike):
             "Run programs that use this function as administrator")
 
 
-def hard_link_by_dict(planned_links: dict[os.PathLike, os.PathLike], *, overwrite=True, warn_if_exists=True):
+def hard_link_by_dict(planned_links: dict[os.PathLike, os.PathLike], **kwargs):
     """Returns the number of hard links created"""
-    return __action_by_dict(planned_links, overwrite=overwrite, warn_if_exists=warn_if_exists, action_callable=hard_link)
+    return __file_action_by_dict(planned_links, "Made hard link ", **kwargs)
 
 
 def delete(file: os.PathLike):
