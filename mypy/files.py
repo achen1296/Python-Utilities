@@ -90,9 +90,12 @@ def hard_link_by_dict(planned_links: dict[os.PathLike, os.PathLike], **kwargs):
     return __file_action_by_dict(planned_links, "Made hard link ", **kwargs)
 
 
-def delete(file: os.PathLike):
+def delete(file: os.PathLike, not_exist_ok=False):
     """Uses either os.remove or shutil.rmtree as appropriate."""
     path = Path(file)
+    if not path.exists() and not_exist_ok:
+        # else will raise an error on attempting one of the operations below
+        return
     if path.is_dir():
         shutil.rmtree(path)
     else:
