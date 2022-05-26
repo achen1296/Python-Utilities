@@ -229,9 +229,11 @@ def _recursive_zip(files: typing.Iterable[Path], zip: ZipFile, relative_root: os
             _recursive_zip(f.iterdir(), zip, relative_root)
 
 
-def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_root: os.PathLike, *, overwrite: bool = False):
+def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_root: os.PathLike = None, *, overwrite: bool = False):
     """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience. """
     zip_path = Path(zip_path).with_suffix(".zip")
+    if relative_root is None:
+        relative_root = zip_path.parent
     if overwrite:
         mode = "w"
     else:
