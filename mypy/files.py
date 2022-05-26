@@ -90,16 +90,22 @@ def hard_link_by_dict(planned_links: dict[os.PathLike, os.PathLike], **kwargs):
     return __file_action_by_dict(planned_links, "Made hard link ", **kwargs)
 
 
-def delete(file: os.PathLike, not_exist_ok=False):
+def delete(file: os.PathLike, not_exist_ok=False, *, output=False):
     """Uses either os.remove or shutil.rmtree as appropriate."""
     path = Path(file)
     if not path.exists() and not_exist_ok:
+        if output:
+            print(f"{path} already doesn't exist")
         # else will raise an error on attempting one of the operations below
         return
     if path.is_dir():
         shutil.rmtree(path)
+        if output:
+            print(f"Deleted directory {path}")
     else:
         os.remove(path)
+        if output:
+            print(f"Deleted file {path}")
 
 
 class FileMismatchException(Exception):
