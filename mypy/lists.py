@@ -1,4 +1,5 @@
 import os
+import random
 import re
 import typing
 
@@ -83,3 +84,14 @@ def combinations(items: list[list[int]]) -> typing.Iterable[list[int]]:
         if stop:
             break
         yield [items[i][j] for i, j in enumerate(indices)]
+
+
+def random_from(lst: typing.Iterable):
+    while True:
+        try:
+            return lst[random.randrange(0, len(lst))]
+        except TypeError:
+            lst = list(lst)
+        except ValueError:
+            # empty iterable
+            return None
