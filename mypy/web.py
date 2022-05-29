@@ -13,6 +13,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.remote.webdriver import WebDriver
 
+from . import environment
+
 
 def url_filename(url: str):
     """ Get ending filename in a URL pointing to a file"""
@@ -58,7 +60,8 @@ def firefox_driver(**kwargs) -> webdriver.Firefox:
 
 
 def tor_driver(**kwargs) -> webdriver.Firefox:
-    tor = r'C:\Users\RhQNS\Programs\Tor Browser\TorBrowser'
+    userprofile = environment.get("userprofile")
+    tor = userprofile + r'\Programs\Tor Browser\TorBrowser'
     torexe = os.popen(
         tor+r'\Tor\tor.exe')
     profile = FirefoxProfile(
