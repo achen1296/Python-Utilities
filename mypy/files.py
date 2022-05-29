@@ -70,12 +70,14 @@ def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], **kwargs) -> No
 
 def hard_link(existing: os.PathLike, new: os.PathLike):
     # catch file existence problems early to distinguish them from permission problems
-    if not Path(existing).exists():
+    existing = Path(existing).resolve()
+    new = Path(new).resolve()
+    if not existing.exists():
         raise OSError(f"File {existing} does not exist to hard link to")
-    if not Path(existing).is_file():
+    if not existing.is_file():
         raise OSError(f"{existing} is not a file")
 
-    if Path(new).exists():
+    if new.exists():
         raise OSError(f"File {new} already exists")
 
     result = os.system(f"mklink /h \"{new}\" \"{existing}\"")
