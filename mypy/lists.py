@@ -38,9 +38,12 @@ def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str
             f.write(i + separator)
 
 
-def sort_file(filename: os.PathLike, **kwargs):
+def sort_file(filename: os.PathLike, remove_duplicates: bool = False, **kwargs):
     l = read_file_list(filename, **kwargs)
-    write_file_list(filename, sorted(l), **kwargs)
+    if remove_duplicates:
+        l = set(l)
+    l = sorted(l)
+    write_file_list(filename, l, **kwargs)
 
 
 def remove_duplicates_file(filename: os.PathLike, **kwargs):
