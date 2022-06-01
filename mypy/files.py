@@ -132,7 +132,7 @@ class FileMismatchException(Exception):
 
 
 def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_file_action: typing.Callable[[os.PathLike], None] = delete, output_prefix="") -> int:
-    """Returns the number of files changed (empty directories do not increase the count)."""
+    """Returns the number of files changed (empty directories do not increase the count). Copies symbolic links instead of following them."""
     count = 0
     src = Path(src)
     dst = Path(dst)
@@ -145,13 +145,13 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
         if not dst.exists():
             if output:
                 print(f"{output_prefix}Creating file <{src}> -> <{dst}>")
-            shutil.copy2(src, dst)
+            shutil.copy2(src, dst, follow_symlinks=False)
             count += 1
         elif int(src.stat().st_mtime) > int(dst.stat().st_mtime):
             # src is newer than dst
             if output:
                 print(f"{output_prefix}Updating file <{src}> -> <{dst}>")
-            shutil.copy2(src, dst)
+            shutil.copy2(src, dst, follow_symlinks=False)
             count += 1
     else:
         #src is dir
@@ -203,24 +203,24 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
             if time1 > time2:
                 if output:
                     print(f"{output_prefix}Updating file <{path1}> -> <{path2}>")
-                shutil.copy2(path1, path2)
+                shutil.copy2(path1, path2, follow_symlinks=False)
                 count += 1
             elif time2 > time1:
                 if output:
                     print(f"{output_prefix}Updating file <{path2}> -> <{path1}>")
-                shutil.copy2(path2, path1)
+                shutil.copy2(path2, path1, follow_symlinks=False)
                 count += 1
             # time may be the same, in which case nothing happens
         else:
             if output:
                 print(f"{output_prefix}Creating file <{path1}> -> <{path2}>")
-            shutil.copy2(path1, path2)
+            shutil.copy2(path1, path2, follow_symlinks=False)
             count += 1
     elif path2.exists() and path2.is_file():
         #assert not path1.exists()
         if output:
             print(f"{output_prefix}Creating file <{path2}> -> <{path1}>")
-        shutil.copy2(path2, path1)
+        shutil.copy2(path2, path1, follow_symlinks=False)
         count += 1
     else:
         # directories
