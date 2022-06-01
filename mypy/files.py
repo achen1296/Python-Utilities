@@ -113,15 +113,15 @@ def link(src: os.PathLike, dst: os.PathLike, *, mode: str = None, symbolic: bool
 def delete(file: os.PathLike, not_exist_ok=False, *, output=False):
     """Uses either os.remove or shutil.rmtree as appropriate."""
     path = Path(file)
-    if not path.exists() and not_exist_ok:
-        if output:
-            print(f"{path} already doesn't exist")
-        # else will raise an error on attempting one of the operations below
-        return
     if path.is_symlink():
         os.remove(path)
         if output:
             print(f"Deleted symbolic link {path}")
+    elif not path.exists() and not_exist_ok:
+        if output:
+            print(f"{path} already doesn't exist")
+        # else will raise an error on attempting one of the operations below
+        return
     elif path.is_dir():
         shutil.rmtree(path)
         if output:
