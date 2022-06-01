@@ -84,6 +84,10 @@ def link(src: os.PathLike, dst: os.PathLike, *, mode: str = None, symbolic: bool
     if dst.exists():
         raise OSError(f"File {dst} already exists")
 
+    # if src is already a symlink, just copy it instead of linking to the existing link
+    if src.is_symlink():
+        shutil.copy2(src, dst, follow_symlinks=False)
+
     if mode is None:
         if symbolic:
             if src.is_file():
