@@ -68,28 +68,42 @@ def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], **kwargs) -> No
     return __file_action_by_dict(planned_copies, shutil.copy2, "Copied", **kwargs)
 
 
-def hard_link(existing: os.PathLike, new: os.PathLike):
+def link(src: os.PathLike, dst: os.PathLike, *, mode: str = None, symbolic: bool = False):
+    """ Leave mode as None to automatically determine whether to use a link for a file or for a directory. """
+    if mode is not None:
+        mode = mode.lower()
+        if mode != "" and mode not in {"h", "j", "d"}:
+            raise ValueError(
+                "If specified, mode can only be h, j, d, or empty string (hard link, junction, symbolic directory link, or symbolic file link)")
+
     # catch file existence problems early to distinguish them from permission problems
-    existing = Path(existing).resolve()
-    new = Path(new).resolve()
-    if not existing.exists():
-        raise OSError(f"File {existing} does not exist to hard link to")
-    if not existing.is_file():
-        raise OSError(f"{existing} is not a file")
+    src = Path(src)
+    dst = Path(dst)
+    if not src.exists():
+        raise OSError(f"File {src} does not exist to link to")
+    if dst.exists():
+        raise OSError(f"File {dst} already exists")
 
-    if new.exists():
-        raise OSError(f"File {new} already exists")
+    if mode is None:
+        if symbolic:
+            if src.is_file():
+                mode = ""
+            else:
+                mode = "d"
+        else:
+            if src.is_file():
+                mode = "h"
+            else:
+                mode = "j"
 
-    result = os.system(f"mklink /h \"{new}\" \"{existing}\"")
+    if mode == "":
+        result = os.system(f"mklink \"{dst}\" \"{src}\"")
+    else:
+        result = os.system(f"mklink /{mode} \"{dst}\" \"{src}\"")
 
     if result != 0:
         raise PermissionError(
-            "Run programs that use this function as administrator")
-
-
-def hard_link_by_dict(planned_links: dict[os.PathLike, os.PathLike], **kwargs):
-    """Returns the number of hard links created"""
-    return __file_action_by_dict(planned_links, "Made hard link ", **kwargs)
+            "Requires administrator permission")
 
 
 def delete(file: os.PathLike, not_exist_ok=False, *, output=False):
