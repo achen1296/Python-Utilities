@@ -97,13 +97,13 @@ def link(src: os.PathLike, dst: os.PathLike, *, mode: str = None, symbolic: bool
                 mode = "j"
 
     if mode == "":
-        result = os.system(f"mklink \"{dst}\" \"{src}\"")
+        command = f"mklink \"{dst}\" \"{src}\""
     else:
-        result = os.system(f"mklink /{mode} \"{dst}\" \"{src}\"")
+        command = f"mklink /{mode} \"{dst}\" \"{src}\""
+    result = os.system(command)
 
     if result != 0:
-        raise PermissionError(
-            "Requires administrator permission")
+        raise OSError(f"{command} resulted in an error")
 
 
 def delete(file: os.PathLike, not_exist_ok=False, *, output=False):
