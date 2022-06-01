@@ -119,9 +119,12 @@ def delete(file: os.PathLike, not_exist_ok=False, *, output=False):
         if output:
             print(f"Deleted directory {path}")
     else:
-        os.remove(path)
         if output:
-            print(f"Deleted file {path}")
+            if path.is_symlink():
+                print(f"Deleted symbolic link {path}")
+            else:
+                print(f"Deleted file {path}")
+        os.remove(path)
 
 
 class FileMismatchException(Exception):
