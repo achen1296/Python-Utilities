@@ -6,7 +6,7 @@ import typing
 from mypy import files
 
 
-def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#") -> typing.Generator:
+def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#") -> typing.Iterable[str]:
     """Read a file as a list of lists. Use comment="" for no comments."""
     for list_str in files.re_split(filename, list_separator, encoding="utf-8"):
         if comment != "" and re.match(comment, list_str):
@@ -28,8 +28,12 @@ def write_file_lists(filename: os.PathLike, lists: typing.Iterable[typing.Iterab
             f.write(list_separator)
 
 
-def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", **kwargs) -> typing.Generator:
-    return files.re_split(filename, separator, **kwargs)
+def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", comment: str = "\s*#", **kwargs) -> typing.Iterable[str]:
+    """Read a file as a list. Use comment="" for no comments."""
+    for item in files.re_split(filename, separator, **kwargs):
+        if comment != "" and re.match(comment, item):
+            continue
+        yield item
 
 
 def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str = "\n", text_mode="w", **open_kwargs):
