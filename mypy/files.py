@@ -341,14 +341,35 @@ def hash(file: os.PathLike, size: int = -1, hex: bool = True) -> int:
         return h.hexdigest() if hex else h.digest()
 
 
-def remove_empty_folders(root: os.PathLike):
+def is_empty(root: os.PathLike) -> bool:
+    """ Considers a directory empty if all of its subdirectories are empty. Always returns False for a file. """
+    def is_empty_recursive(root: Path):
+        if root.is_file():
+            return False
+        for f in root.iterdir():
+            if not is_empty_recursive(f):
+                return False
+        return True
+
     root = Path(root)
-    for f in root.iterdir():
-        try:
-            f.rmdir()
-        except OSError:
-            #not empty
-            pass
+    return is_empty_recursive(root)
+
+
+def delete_empty(root: os.PathLike):
+    def delete_empty_recursive(root: Path) -> bool:
+        """ Returns whether the root argument was or became empty and was deleted """
+        if root.is_file():
+            return False
+        empty = True
+        for f in root.iterdir():
+            if not delete_empty_recursive(f):
+                empty = False
+        if empty:
+            root.rmdir()
+        return empty
+
+    root = Path(root)
+    delete_empty_recursive(root)
 
 
 def list_files(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool] = None):
