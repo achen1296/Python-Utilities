@@ -1,3 +1,4 @@
+from fnmatch import fnmatch
 import hashlib
 import os
 import re
@@ -245,27 +246,48 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
     return count
 
 
-def _recursive_zip(files: typing.Iterable[Path], zip: ZipFile, relative_root: os.PathLike):
+def _recursive_zip(files: typing.Iterable[Path], zip: ZipFile, relative_root: Path, exclude: set[Path]):
     for f in files:
+        relative_path = f.relative_to(relative_root)
+        if relative_path in exclude:
+            continue
         if f.is_file():
-            zip.write(f, arcname=f.relative_to(relative_root))
+            zip.write(f, arcname=relative_path)
         else:
-            _recursive_zip(f.iterdir(), zip, relative_root)
+            _recursive_zip(f.iterdir(), zip, relative_root, exclude)
 
 
-def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_root: os.PathLike = None, *, overwrite: bool = False):
-    """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience. """
+class ZipException(Exception):
+    pass
+
+
+def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_root: os.PathLike = None, *, overwrite: bool = True, exclude: list[str] = []):
+    """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience. 
+
+    exclude is a list of Unix path expressions to skip zipping. """
     zip_path = Path(zip_path).with_suffix(".zip")
     if relative_root is None:
         relative_root = zip_path.parent
+    else:
+        relative_root = Path(relative_root)
+    files = [Path(f) for f in files]
+    for f in files:
+        if not relative_root in f.parents:
+            raise ZipException(
+                f"Relative root <{relative_root}> is not a parent of <{f}>")
+        if f in zip_path.parents or f == zip_path:
+            raise ZipException(
+                f"<{f}> is a parent of the zip target <{zip_path}>")
     if overwrite:
         mode = "w"
     else:
         mode = "a"
-    files = [Path(f) for f in files]
+    excluded_paths = set()
+    for ex in exclude:
+        excluded_paths |= set(relative_root.glob(ex))
     # use LZMA like 7-zip
     with ZipFile(zip_path, mode, zipfile.ZIP_DEFLATED) as zip:
-        _recursive_zip(files, zip, relative_root)
+        _recursive_zip(files, zip, relative_root, excluded_paths)
 
 
 def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = None,  output_dir: os.PathLike = None, *, overwrite: bool = False):
