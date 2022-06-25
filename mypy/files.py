@@ -248,11 +248,15 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
 
 def _recursive_zip(files: typing.Iterable[Path], zip: ZipFile, relative_root: Path, exclude: set[Path]):
     for f in files:
-        relative_path = f.relative_to(relative_root)
-        if relative_path in exclude:
+        skip = False
+        for e in exclude:
+            if re.fullmatch(e, str(f)):
+                skip = True
+                break
+        if skip:
             continue
         if f.is_file():
-            zip.write(f, arcname=relative_path)
+            zip.write(f, arcname=f.relative_to(relative_root))
         else:
             _recursive_zip(f.iterdir(), zip, relative_root, exclude)
 
@@ -264,12 +268,13 @@ class ZipException(Exception):
 def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_root: os.PathLike = None, *, overwrite: bool = True, exclude: list[str] = []):
     """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience. 
 
-    exclude is a list of Unix path expressions to skip zipping. """
+    exclude is a list of regular expressions applied to full file paths with backslahes replaced with forward slashes. Matching files are not zipped. If a directory matches, none of its contents are zipped. Respects whether the original arguments were relative or absolute for this purpose. """
     zip_path = Path(zip_path).with_suffix(".zip")
     if relative_root is None:
         relative_root = zip_path.parent
     else:
         relative_root = Path(relative_root)
+    relative_root = relative_root
     files = [Path(f) for f in files]
     for f in files:
         if not relative_root in f.parents:
@@ -282,12 +287,9 @@ def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_roo
         mode = "w"
     else:
         mode = "a"
-    excluded_paths = set()
-    for ex in exclude:
-        excluded_paths |= set(relative_root.glob(ex))
     # use LZMA like 7-zip
     with ZipFile(zip_path, mode, zipfile.ZIP_DEFLATED) as zip:
-        _recursive_zip(files, zip, relative_root, excluded_paths)
+        _recursive_zip(files, zip, relative_root, exclude)
 
 
 def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = None,  output_dir: os.PathLike = None, *, overwrite: bool = False):
