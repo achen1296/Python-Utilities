@@ -69,6 +69,17 @@ def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], **kwargs) -> No
     return __file_action_by_dict(planned_copies, shutil.copy2, "Copied", **kwargs)
 
 
+def remove_forbidden_chars(name: str, name_only=False):
+    """ If name_only is True, then slashes and colons will also be removed. """
+    if name_only:
+        chars = r'\/:*?"<>|'
+    else:
+        chars = '*?"<>|'
+    for c in chars:
+        name = name.replace(c, "")
+    return name
+
+
 def link(src: os.PathLike, dst: os.PathLike, *, mode: str = None, symbolic: bool = False):
     """ Leave mode as None to automatically determine whether to use a link for a file or for a directory. """
     if mode is not None:
