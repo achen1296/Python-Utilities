@@ -80,27 +80,32 @@ def remove_forbidden_chars(name: str, name_only=False):
     return name
 
 
+class LinkException(Exception):
+    pass
+
+
 def link(src: os.PathLike, dst: os.PathLike, *, mode: str = None, symbolic: bool = False):
-    """ Leave mode as None to automatically determine whether to use a link for a file or for a directory. """
-    if mode is not None:
-        mode = mode.lower()
-        if mode != "" and mode not in {"h", "j", "d"}:
-            raise ValueError(
-                "If specified, mode can only be h, j, d, or empty string (hard link, junction, symbolic directory link, or symbolic file link)")
+    """ Leave mode as None to automatically determine whether to use a link for a file or for a directory. If a symbolic link is requested and the source is a symbolic link, it is copied instead of linking to the existing link. """
 
     # catch file existence problems early to distinguish them from permission problems
     src = Path(src)
     dst = Path(dst)
     if not src.exists():
-        raise OSError(f"File {src} does not exist to link to")
+        raise LinkException(f"File {src} does not exist to link to")
     if dst.exists():
-        raise OSError(f"File {dst} already exists")
+        raise LinkException(f"File {dst} already exists")
 
     # if src is already a symlink, just copy it instead of linking to the existing link
     if src.is_symlink():
-        shutil.copy2(src, dst, follow_symlinks=False)
+        if symbolic:
+            shutil.copy2(src, dst, follow_symlinks=False)
+        else:
+            raise LinkException(
+                f"{src} is a symlink and a non-symbolic link was requested.")
 
-    if mode is None:
+    if mode is not None:
+        mode = mode.lower()
+    else:
         if symbolic:
             if src.is_file():
                 mode = ""
@@ -112,14 +117,20 @@ def link(src: os.PathLike, dst: os.PathLike, *, mode: str = None, symbolic: bool
             else:
                 mode = "j"
 
-    if mode == "":
-        command = f"mklink \"{dst}\" \"{src}\""
+    if mode == "h":
+        src.link_to(dst)
+    elif mode == "j":
+        command = f"mklink /j \"{dst}\" \"{src}\""
+        result = os.system(command)
+        if result != 0:
+            raise OSError(f"{command} resulted in an error")
+    elif mode == "d":
+        dst.symlink_to(src, target_is_directory=True)
+    elif mode == "":
+        dst.symlink_to(src, target_is_directory=False)
     else:
-        command = f"mklink /{mode} \"{dst}\" \"{src}\""
-    result = os.system(command)
-
-    if result != 0:
-        raise OSError(f"{command} resulted in an error")
+        raise ValueError(
+            "If specified, mode can only be \"h\", \"j\", \"d\", or empty string (hard link, junction, symbolic directory link, or symbolic file link).")
 
 
 def delete(file: os.PathLike, not_exist_ok=False, *, output=False):
