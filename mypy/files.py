@@ -198,7 +198,7 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
         # recursively update files remaining
         for f in src.iterdir():
             count += mirror(f, dst.joinpath(f.name), output=output,
-                            output_prefix=output_prefix+"    ")
+                            deleted_file_action=deleted_file_action, output_prefix=output_prefix+"    ")
     return count
 
 
