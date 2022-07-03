@@ -1,7 +1,7 @@
 import os
 import re
 import typing
-from typing import Callable, Iterable, Union
+from typing import Any, Callable, Iterable, Union
 
 from mypy import files
 
@@ -91,13 +91,25 @@ def write_file_dict(filename: os.PathLike, dictionary: dict[typing.Any, Union[ty
         f.write(write_string_dict(dictionary, **kwargs))
 
 
-def flip_dict(d: dict) -> dict:
-    """ Produces a new dictionary where each original key becomes the value of its value (if just one value) or each of its original values (an iterable non-string value). """
-    new_d = {}
-    for key, val in d.items():
-        if isinstance(val, Iterable) and not isinstance(val, str):
-            for v in val:
-                new_d[v] = key
+def _dict_list_add(d: dict, key, value):
+    """ If the key already has a value in the dictionary d, and that value is not a list, then the new combined value is a list containing the original value, then the new value. If the original value is already a list (but not any other kind of Iterable), the new value is appended. """
+    if key in d:
+        original_value = d[key]
+        if isinstance(original_value, list):
+            original_value.append(value)
         else:
-            new_d[val] = key
+            d[key] = [original_value, value]
+    else:
+        d[key] = value
+
+
+def flip_dict(d: dict) -> dict:
+    """ Produces a new dictionary where each original key becomes the value, with the original value (if just one value) or each of its original values (an iterable non-string value) as the key. If a duplicate value (that becomes a key) is found, then the keys (that become values) are combined into a list as the new value.  """
+    new_d = {}
+    for key, value in d.items():
+        if isinstance(value, Iterable) and not isinstance(value, str):
+            for v in value:
+                _dict_list_add(new_d, v, key)
+        else:
+            _dict_list_add(new_d, value, key)
     return new_d
