@@ -272,7 +272,7 @@ def _recursive_zip(files: typing.Iterable[Path], zip: ZipFile, relative_root: Pa
     for f in files:
         skip = False
         for e in exclude:
-            if re.fullmatch(e, str(f)):
+            if re.fullmatch(e, str(f).replace("\\", "/")):
                 skip = True
                 break
         if skip:
