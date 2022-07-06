@@ -6,7 +6,7 @@ from selenium import webdriver
 
 def steam_friends(driver: webdriver.Firefox, steam_profile: str):
     driver.get(steam_profile + "/friends")
-    friends = driver.find_elements_by_css_selector("a.selectable_overlay")
+    friends = driver.find_elements(By.CSS_SELECTOR, ("a.selectable_overlay")
     return [f.get_attribute("href") for f in friends]
 
 

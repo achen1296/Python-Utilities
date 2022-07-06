@@ -103,16 +103,15 @@ def scroll_all_elements(driver: WebDriver, css_selector: str, *, interactable_se
     """Scrolls until no more new elements found by css_selector load or until last_selector is found and returns those elements"""
     last_len = 0
     if interactable_selector != None:
-        interactable_element = driver.find_element_by_css_selector(
-            interactable_selector)
+        interactable_element = driver.find_element(
+            By.CSS_SELECTOR, interactable_selector)
     while True:
-        elements = driver.find_elements_by_css_selector(
-            css_selector)
+        elements = driver.find_elements(By.CSS_SELECTOR, css_selector)
 
         # try to find last_selector
         if last_selector != None:
             try:
-                driver.find_element_by_css_selector(last_selector)
+                driver.find_element(By.CSS_SELECTOR, last_selector)
             except NoSuchElementException:
                 pass
             else:
@@ -142,8 +141,7 @@ class PageReader:
 
     def to_download(self, driver: WebDriver) -> dict[str, os.PathLike]:
         """Returns a dictionary with URLs from the current page to download as keys and the destination filenames as values . The default implementation returns all img element src attributes."""
-        images: list[WebElement] = driver.find_elements_by_css_selector(
-            "img")
+        images: list[WebElement] = driver.find_elements(By.CSS_SELECTOR, "img")
         download_dict = {}
         for i in images:
             if i is not None:
@@ -154,8 +152,7 @@ class PageReader:
 
     def to_open(self, driver: WebDriver) -> list[str]:
         """Returns a list of URLs from the current page to open next. The default implemenation returns all a element href attributes."""
-        links: list[WebElement] = driver.find_elements_by_css_selector(
-            "a")
+        links: list[WebElement] = driver.find_elements(By.CSS_SELECTOR, "a")
         urls = [l.get_attribute("href") for l in links]
         return [u for u in urls if u is not None]
 
