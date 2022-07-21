@@ -296,7 +296,6 @@ def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_roo
         relative_root = zip_path.parent
     else:
         relative_root = Path(relative_root)
-    relative_root = relative_root
     files = [Path(f) for f in files]
     for f in files:
         if not relative_root in f.parents:
