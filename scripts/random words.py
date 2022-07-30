@@ -1,5 +1,5 @@
 import random
-from mypy import lists
+import lists
 
 words = list(lists.read_file_list("wordlist.txt"))
 lw = len(words)

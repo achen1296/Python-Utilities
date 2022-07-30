@@ -10,4 +10,13 @@ from pathlib import Path
 import selenium
 from PIL import Image
 
-from mypy import *
+import dictionaries
+import environment
+import files
+import ftp
+import images
+import lists
+import sets
+import strings
+import tags
+import web

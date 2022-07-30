@@ -3,7 +3,7 @@ import re
 import typing
 from typing import Any, Callable, Iterable, Union
 
-from mypy import files
+import files
 
 
 def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\s*>\s*", value_list_separator: str = "\s*\|\s*",  comment: str = "\s*#", all_lists: bool = False) -> dict[str, Union[str, list[str]]]:

@@ -1,7 +1,7 @@
 import typing
 import os
 from builtins import set as bset
-from mypy import files
+import files
 from pathlib import Path
 import re
 

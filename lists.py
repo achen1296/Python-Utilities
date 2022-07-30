@@ -3,7 +3,7 @@ import random
 import re
 import typing
 
-from mypy import files
+import files
 
 
 def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#") -> typing.Iterable[str]:

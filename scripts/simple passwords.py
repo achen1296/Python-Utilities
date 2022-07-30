@@ -1,5 +1,5 @@
 import random
-from mypy import lists
+import lists
 
 words = list(lists.read_file_list("common words.txt"))
 # printable ASCII except letters and digits
