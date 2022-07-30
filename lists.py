@@ -102,3 +102,41 @@ def random_from(lst: typing.Iterable):
         except ValueError:
             # empty iterable
             return None
+
+
+def count(lst: typing.Iterable):
+    counts = {}
+    for i in lst:
+        counts[i] = counts.get(i, 0) + 1
+    return counts
+
+
+def histogram(counts: dict, file: os.PathLike = None, *, sort_by=None, bar_char="-", **open_kwargs):
+    """ Pass in a dictionary as returned by count(). If file is specified, the result is written to that file. Whether or not it is specified, the result is also returned. sort_by can be "key" (all keys must comparable to each other), "count", or None. In the last case, the order of iteration over the dict is used. """
+    if sort_by is not None and sort_by not in {"key", "count"}:
+        raise Exception("sort_by must be \"key\", \"count\", or None")
+    if sort_by is None:
+        sorted_keys = counts.keys()
+    elif sort_by == "key":
+        sorted_keys = sorted(counts.keys())
+    else:
+        sorted_keys = sorted(counts.keys(), key=lambda k: counts[k])
+
+    longest_key = 0
+    for k in counts:
+        l = len(str(k))
+        if l > longest_key:
+            longest_key = l
+
+    hist_str = ""
+    for k in sorted_keys:
+        # keys padded to length of longest key and right-aligned
+        c = counts[k]
+        hist_str += format(k, ">" + str(longest_key)) + \
+            " " + (bar_char * c) + f" {c}\n"
+
+    if file is not None:
+        with open(file, "w", **open_kwargs) as f:
+            f.write(hist_str)
+
+    return hist_str
