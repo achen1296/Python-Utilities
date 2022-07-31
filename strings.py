@@ -339,6 +339,16 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: t
     return pair_list
 
 
+def unicode_escape(s: str):
+    escaped = ""
+    for c in s:
+        if c.isascii():
+            escaped += c
+        else:
+            escaped += "\\u" + hex(ord(c)).removeprefix("0x")
+    return escaped
+
+
 if __name__ == "__main__":
     result = unescape("\\a\\b\\\\c")
     assert result == "ab\\c", result
