@@ -50,7 +50,7 @@ def set_name(filename: str, new_name: str) -> str:
     return new_name + filename[len(name):]
 
 
-def tag_all_in(root: os.PathLike, tags: typing.Iterable[str], *, visit_subdirs: bool = True, remove_tags=False) -> None:
+def tag_in_folder(root: os.PathLike, tags: typing.Iterable[str], *, visit_subdirs: bool = True, remove_tags=False) -> None:
     tags = bset(tags)
     planned_moves = {}
 
@@ -62,6 +62,26 @@ def tag_all_in(root: os.PathLike, tags: typing.Iterable[str], *, visit_subdirs: 
                 new_name = add(f, tags)
             if f != new_name:
                 planned_moves[Path(dirpath, f)] = Path(dirpath, new_name)
+        if not visit_subdirs:
+            break
+
+    files.move_by_dict(planned_moves)
+
+
+def tag_matching(root: os.PathLike, tags: typing.Iterable[str], pattern: str, *, visit_subdirs: bool = True, remove_tags=False) -> None:
+    tags = bset(tags)
+    planned_moves = {}
+
+    for dirpath, _, filenames in os.walk(root):
+        for f in filenames:
+            name,ext=name_and_ext(f)
+            if re.search(pattern,name):
+                if remove_tags:
+                    new_name = remove(f, tags)
+                else:
+                    new_name = add(f, tags)
+                if f != new_name:
+                    planned_moves[Path(dirpath, f)] = Path(dirpath, new_name)
         if not visit_subdirs:
             break
 
