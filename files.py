@@ -125,14 +125,15 @@ def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True):
                 raise OSError(f"{command} resulted in an error")
 
 
-def relativize_link(link:os.PathLike):
+def relativize_link(link: os.PathLike):
     link = Path(link)
     if not link.is_symlink():
         return
     target = link.readlink()
     if target.is_absolute():
-        #pathlib doesn't work for relative paths that would need ".."
-        new_target = os.path.relpath(str(target).removeprefix("\\\\?\\"), link.parent)
+        # pathlib doesn't work for relative paths that would need ".."
+        new_target = os.path.relpath(
+            str(target).removeprefix("\\\\?\\"), link.parent)
         os.remove(link)
         link.symlink_to(new_target)
 
@@ -146,6 +147,7 @@ def absolutize_link(link: os.PathLike):
         new_target = target.absolute()
         os.remove(link)
         link.symlink_to(new_target)
+
 
 def delete(file: os.PathLike, not_exist_ok=False, *, output=False):
     """Uses either os.remove or shutil.rmtree as appropriate."""
