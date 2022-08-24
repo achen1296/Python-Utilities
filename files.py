@@ -315,7 +315,7 @@ def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_roo
         relative_root = Path(relative_root)
     files = [Path(f) for f in files]
     for f in files:
-        if not relative_root in f.parents:
+        if not (relative_root in f.parents or (relative_root == f and f.is_dir())):
             raise ZipException(
                 f"Relative root <{relative_root}> is not a parent of <{f}>")
         if f in zip_path.parents or f == zip_path:
