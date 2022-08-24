@@ -95,7 +95,8 @@ def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True):
         if not src.is_absolute():
             rel = dst.parent.joinpath(src)
             if not rel.exists():
-                raise LinkException(f"File <{rel}> does not exist to link to")
+                raise LinkException(
+                    f"File <{rel}> does not exist to link to (absolute path <{rel.resolve()}>)")
         else:
             if not src.exists():
                 raise LinkException(f"File <{src}> does not exist to link to")
