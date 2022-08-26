@@ -1,4 +1,3 @@
-from fnmatch import fnmatch
 import hashlib
 import os
 import re
