@@ -71,7 +71,7 @@ def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], **kwargs) -> No
 def remove_forbidden_chars(name: str, name_only=False):
     """ If name_only is True, then slashes and colons will also be removed. """
     if name_only:
-        chars = r'\/:*?"<>|'
+        chars = r'\/:*?"<>|'+"\r\n"
     else:
         chars = '*?"<>|'
     for c in chars:
