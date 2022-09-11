@@ -2,7 +2,7 @@ import typing
 
 
 class SetGroup:
-    """Represents a group of sets whose elements and provides the join operation. This is intended for constructing representations of elements that are related to each other if they are both related to another element. self[key] returns the set containing the key. Objects can also be deleted."""
+    """Represents a group of sets and provides the join operation. This is intended for constructing representations of partitions/equivalence relations. If you have a SetGroup s, s[key] returns the set containing the key. Objects can also be removed this way using the del keyword."""
 
     def __init__(self, initial_sets=None):
         self.internal_dict = {}
@@ -19,7 +19,7 @@ class SetGroup:
                     self.join(first, item)
 
     def join(self, obj1: typing.Hashable, obj2: typing.Hashable) -> None:
-        """Sets in the group can be joined together by calling join on one element from each. If an object is joined into a set but is not already part of another set in the group, it is simply added to that set. If both objects that are joined together are not in an existing set, they form a new set together. """
+        """Sets in the group can be joined together by calling join on one element from each. If an object is joined into a set but is not already part of another set in the group, it is simply added to that set. If both objects that are joined together are not in an existing set, they form a new set together."""
         if obj1 in self.internal_dict:
             if obj2 in self.internal_dict:
                 self.__join_sets(obj1, obj2)
