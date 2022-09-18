@@ -77,7 +77,7 @@ def remove_forbidden_chars(name: str, name_only=False):
     if name_only:
         chars = r'\/:*?"<>|'+"\r\n"
     else:
-        chars = '*?"<>|'
+        chars = '*?"<>|\r\n'
     for c in chars:
         name = name.replace(c, "")
     return name
