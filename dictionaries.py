@@ -1,7 +1,7 @@
 import os
 import re
 import typing
-from typing import Any, Callable, Iterable, Union
+from typing import Callable, Iterable, Union
 
 import files
 
