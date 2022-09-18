@@ -44,8 +44,6 @@ def read_string_dict(string_dict: str, *, entry_separator="\s*\n\s*", **kwargs) 
 
 def read_file_dict(filename: os.PathLike, *, encoding=None, entry_separator="\s*\n\s*", **kwargs) -> dict[str, Union[str, list[str]]]:
     """ Reads a dictionary from a file (using the specified encoding), converting it to a string and using read_iterable_dict (passing kwargs). All string parameters except filename and encoding are used as regular expressions. """
-    if filename == None:
-        return {}
     return read_iterable_dict(files.re_split(filename, entry_separator, encoding=encoding), **kwargs)
 
 
