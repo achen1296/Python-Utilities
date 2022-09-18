@@ -8,11 +8,15 @@ from pathlib import Path
 from zipfile import ZipFile
 
 
-def create_file(path: os.PathLike, **open_kwargs):
+def create_file(path: os.PathLike, binary=False, **open_kwargs):
     """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use os.makedirs). open_kwargs passed to open(), the result of which is returned. """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    return open(path, "w", **open_kwargs)
+    if binary:
+        mode = "wb"
+    else:
+        mode = "w"
+    return open(path, mode, **open_kwargs)
 
 
 def ignore_dot(dirpath: str, dirnames: list[str], filenames: list[str]) -> bool:
