@@ -1,3 +1,5 @@
+""" This module is for setting permanent environment variables. For temporary environment variables, os.environ can be used. """
+
 import os
 import subprocess
 
