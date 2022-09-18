@@ -30,7 +30,8 @@ class FTP(ftplib.FTP):
                 if re.search(e, local):
                     return
             try:
-                self.storbinary(f"STOR {remote}", open(local, "rb"))
+                with open(local, "rb") as f:
+                    self.storbinary(f"STOR {remote}", f)
                 return
             except PermissionError:
                 pass
