@@ -36,8 +36,8 @@ def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", commen
         yield item
 
 
-def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str = "\n", text_mode="w", **open_kwargs):
-    with open(filename, text_mode, encoding="UTF-8", **open_kwargs) as f:
+def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str = "\n", text_mode="w", encoding="utf8", **open_kwargs):
+    with open(filename, text_mode, encoding=encoding, **open_kwargs) as f:
         for i in l:
             f.write(str(i) + separator)
 
@@ -111,7 +111,7 @@ def count(lst: typing.Iterable):
     return counts
 
 
-def histogram(counts: dict, file: os.PathLike = None, *, sort_by=None, bar_char="-", **open_kwargs):
+def histogram(counts: dict, file: os.PathLike = None, *, sort_by=None, bar_char="-", encoding="utf8", **open_kwargs):
     """ Pass in a dictionary as returned by count(). If file is specified, the result is written to that file. Whether or not it is specified, the result is also returned. sort_by can be "key" (all keys must comparable to each other), "count", or None. In the last case, the order of iteration over the dict is used. """
     if sort_by is not None and sort_by not in {"key", "count"}:
         raise Exception("sort_by must be \"key\", \"count\", or None")
@@ -136,7 +136,7 @@ def histogram(counts: dict, file: os.PathLike = None, *, sort_by=None, bar_char=
             " " + (bar_char * c) + f" {c}\n"
 
     if file is not None:
-        with open(file, "w", **open_kwargs) as f:
+        with open(file, "w", encoding=encoding, **open_kwargs) as f:
             f.write(hist_str)
 
     return hist_str

@@ -8,11 +8,11 @@ from pathlib import Path
 from zipfile import ZipFile
 
 
-def create_file(path: os.PathLike, **kwargs):
-    """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use os.makedirs). kwargs passed to open(), the result of which is returned. """
+def create_file(path: os.PathLike, **open_kwargs):
+    """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use os.makedirs). open_kwargs passed to open(), the result of which is returned. """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    return open(path, "w", **kwargs)
+    return open(path, "w", **open_kwargs)
 
 
 def ignore_dot(dirpath: str, dirnames: list[str], filenames: list[str]) -> bool:
@@ -358,11 +358,11 @@ def long_names(root: os.PathLike) -> set[str]:
     return long_set
 
 
-def re_split(file: os.PathLike, separator: str = "\s*\n\s*", *, exclude_empty: bool = True, **kwargs):
+def re_split(file: os.PathLike, separator: str = "\s*\n\s*", *, exclude_empty: bool = True, encoding="utf8", **open_kwargs):
     """Like re.split() but does not load the whole file as a string all at once."""
     try:
         unprocessed = ""
-        with open(file, **kwargs) as f:
+        with open(file, encoding=encoding, **open_kwargs) as f:
             for line in f:
                 unprocessed += line
                 seps = list(re.finditer(separator, unprocessed))
