@@ -1,16 +1,17 @@
 import typing
 
 
-class SetGroup:
-    """Represents a group of sets and provides the join operation. This is intended for constructing representations of partitions/equivalence relations. If you have a SetGroup s, s[key] returns the set containing the key. Objects can also be removed this way using the del keyword."""
+class Partition:
+    """For constructing representations of partitions/equivalence relations. If you have a SetGroup s, s[key] returns the set containing the key. Objects can also be removed this way using the del keyword."""
 
     def __init__(self, initial_sets=None):
         self.internal_dict = {}
         if initial_sets is not None:
             self.merge(initial_sets)
 
-    def merge(self, other_sets: typing.Iterable[typing.Iterable[typing.Hashable]]):
-        for s in other_sets:
+    def merge(self, other_partition: typing.Iterable[typing.Iterable[typing.Hashable]]):
+        """ The resulting changes from this method may not match the argument if it is not really a partition. """
+        for s in other_partition:
             first = None
             for item in s:
                 if first is None:
@@ -82,4 +83,4 @@ class SetGroup:
             self.internal_dict[o] = large_set
 
     def __str__(self):
-        return "SetGroup([" + ",".join([str(s) for s in self]) + "])"
+        return "Partition([" + ",".join([str(s) for s in self]) + "])"
