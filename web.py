@@ -5,8 +5,7 @@ import typing
 import requests
 from selenium import webdriver
 from selenium.common.exceptions import (NoSuchElementException,
-                                        NoSuchWindowException,
-                                        TimeoutException)
+                                        NoSuchWindowException)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
@@ -39,16 +38,18 @@ def download_url(url: str, file: os.PathLike = None,  *, output=True, **get_kwar
         f.write(req.content)
 
 
-def download_urls(src_dst: dict[str, os.PathLike], *, output=True, **get_kwargs):
+def download_urls(src_dst: dict[str, os.PathLike], *, output=True, wait=0, **get_kwargs):
     """ src_dst should be a dictionary defining the order to download and the destination filenames. For None values, the filename is determined from the URL.
 
-    Waits for the specified number of seconds, 15 by default, in between downloads to avoid pressuring the server.
+    Waits for the specified number of seconds in between downloads as an option to avoid pressuring the server; by default does not wait.
 
     get_kwargs passed to requests.get. """
     if output:
         counter = 0
         total = len(src_dst)
     for url in src_dst:
+        if wait > 0:
+            time.sleep(wait)
         if output:
             counter += 1
             print(f"{counter}/{total}: ", end="")
@@ -125,7 +126,7 @@ def scroll_all_elements(driver: WebDriver, css_selector: str, *, interactable_se
                 elements[0].send_keys(Keys.END)
             else:
                 interactable_element.send_keys(Keys.END)
-            time.sleep(1)
+            time.sleep(wait)
         else:
             break
 
@@ -140,7 +141,7 @@ class PageReader:
         return True
 
     def to_download(self, driver: WebDriver) -> dict[str, os.PathLike]:
-        """Returns a dictionary with URLs from the current page to download as keys and the destination filenames as values . The default implementation returns all img element src attributes."""
+        """Returns a dictionary with URLs from the current page to download as keys and the destination filenames as values. The default implementation returns all img element src attributes."""
         images: list[WebElement] = driver.find_elements(By.CSS_SELECTOR, "img")
         download_dict = {}
         for i in images:
