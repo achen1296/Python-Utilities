@@ -101,5 +101,5 @@ class Partition:
         for o in small_set:
             self._internal_dict[o] = large_set
 
-    def __str__(self):
+    def __repr__(self):
         return "Partition([" + ",".join([str(s) for s in self]) + "])"
