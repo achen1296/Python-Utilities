@@ -13,6 +13,7 @@ from pprint import pprint
 import selenium
 from PIL import Image
 
+import console
 import dictionaries
 import environment
 import files
