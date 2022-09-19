@@ -28,23 +28,23 @@ def url_filename(url: str):
         return url[last_slash + 1:]
 
 
-def download_url(url: str, file: os.PathLike = None,  *, output=True, **kwargs):
-    """ If file = None, the name is inferred from the last piece of the URL. kwargs passed to requests.get. """
+def download_url(url: str, file: os.PathLike = None,  *, output=True, **get_kwargs):
+    """ If file = None, the name is inferred from the last piece of the URL. get_kwargs passed to requests.get. """
     if file is None:
         file = url_filename(url)
-    req = requests.get(url, **kwargs)
+    req = requests.get(url, **get_kwargs)
     if output:
         print(f"Downloading <{url}> -> <{file}>")
     with open(file, "wb") as f:
         f.write(req.content)
 
 
-def download_urls(src_dst: dict[str, os.PathLike], *, output=True, **kwargs):
+def download_urls(src_dst: dict[str, os.PathLike], *, output=True, **get_kwargs):
     """ src_dst should be a dictionary defining the order to download and the destination filenames. For None values, the filename is determined from the URL.
 
     Waits for the specified number of seconds, 15 by default, in between downloads to avoid pressuring the server.
 
-    kwargs passed to requests.get. """
+    get_kwargs passed to requests.get. """
     if output:
         counter = 0
         total = len(src_dst)
@@ -52,16 +52,16 @@ def download_urls(src_dst: dict[str, os.PathLike], *, output=True, **kwargs):
         if output:
             counter += 1
             print(f"{counter}/{total}: ", end="")
-        download_url(url, src_dst[url], output=output, **kwargs)
+        download_url(url, src_dst[url], output=output, **get_kwargs)
 
 
-def firefox_driver(**kwargs) -> webdriver.Firefox:
-    driver = webdriver.Firefox(**kwargs)
+def firefox_driver(**webdriver_kwargs) -> webdriver.Firefox:
+    driver = webdriver.Firefox(**webdriver_kwargs)
     driver.implicitly_wait(2)
     return driver
 
 
-def tor_driver(**kwargs) -> webdriver.Firefox:
+def tor_driver(**webdriver_kwargs) -> webdriver.Firefox:
     userprofile = environment.get("userprofile")
     tor = userprofile + r'\Programs\Tor Browser\TorBrowser'
     torexe = os.popen(
@@ -73,7 +73,7 @@ def tor_driver(**kwargs) -> webdriver.Firefox:
     profile.set_preference('network.proxy.socks_port', 9050)
     profile.set_preference("network.proxy.socks_remote_dns", False)
 
-    driver = webdriver.Firefox(firefox_profile=profile, **kwargs)
+    driver = webdriver.Firefox(firefox_profile=profile, **webdriver_kwargs)
     driver.get("http://check.torproject.org")
     return driver
 
@@ -180,18 +180,18 @@ class PageBrowser:
             self.driver.switch_to.window(current)
         return count
 
-    def download(self, output=True, **kwargs) -> int:
-        """Download everything on the current page found by any PageReader. Returns the number of downloads. kwargs passed to requests.get."""
+    def download(self, output=True, **get_kwargs) -> int:
+        """Download everything on the current page found by any PageReader. Returns the number of downloads. get_kwargs passed to requests.get."""
         count = 0
         for r in self.readers:
             if r.can_read(self.driver):
                 d = r.to_download(self.driver)
-                download_urls(d, output=output, **kwargs)
+                download_urls(d, output=output, **get_kwargs)
                 count += len(d)
         return count
 
-    def open_and_download(self, output=True, **kwargs) -> int:
-        """Open each link found on the current page, downloads, and closes the tab before moving on to the next one. Returns the number of downloads. kwargs passed to requests.get."""
+    def open_and_download(self, output=True, **get_kwargs) -> int:
+        """Open each link found on the current page, downloads, and closes the tab before moving on to the next one. Returns the number of downloads. get_kwargs passed to requests.get."""
         count = 0
         current = self.driver.current_window_handle
         for r in self.readers:
@@ -202,7 +202,7 @@ class PageBrowser:
                     self.driver.switch_to.window(
                         self.driver.window_handles[-1])
                     self.driver.get(url)
-                    count += self.download(output, **kwargs)
+                    count += self.download(output, **get_kwargs)
                     self.driver.close()
                     # switch to new last window for next script execution
                     self.driver.switch_to.window(
@@ -210,8 +210,8 @@ class PageBrowser:
             self.driver.switch_to.window(current)
         return count
 
-    def download_all(self, output=True, close_tabs: bool = True, **kwargs) -> int:
-        """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads. kwargs passed to requests.get"""
+    def download_all(self, output=True, close_tabs: bool = True, **get_kwargs) -> int:
+        """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads. get_kwargs passed to requests.get"""
         try:
             current = self.driver.current_window_handle
         except NoSuchWindowException:
@@ -220,7 +220,7 @@ class PageBrowser:
         count = 0
         for handle in self.driver.window_handles:
             self.driver.switch_to.window(handle)
-            current_count = self.download(output, **kwargs)
+            current_count = self.download(output, **get_kwargs)
             if current_count > 0 and close_tabs and len(self.driver.window_handles) > 1:
                 self.driver.close()
             count += current_count

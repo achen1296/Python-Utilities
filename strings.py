@@ -228,8 +228,8 @@ def span_include_exclusive(greater: tuple[int, int], lesser: tuple[int, int]):
     return greater[0] < lesser[0] and greater[1] > lesser[1]
 
 
-def find_pair(s: str, start: int, **kwargs):
-    pairs = find_pairs(s, **kwargs)
+def find_pair(s: str, start: int, **find_pairs_kwargs):
+    pairs = find_pairs(s, **find_pairs_kwargs)
     i = 0
     while i < len(pairs):
         p = pairs[i]

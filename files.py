@@ -37,7 +37,7 @@ def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[st
         yield (dirpath, dirnames, filenames)
 
 
-def __file_action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], action_callable: typing.Callable[[os.PathLike, os.PathLike], None], action_past_tense: str, *, overwrite: bool = False, warn_if_exists: bool = True, output: bool = False, **kwargs) -> int:
+def __file_action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], action_callable: typing.Callable[[os.PathLike, os.PathLike], None], action_past_tense: str, *, overwrite: bool = False, warn_if_exists: bool = True, output: bool = False, **action_kwargs) -> int:
     count = 0
     for src in planned_actions:
         if Path(src).exists():
@@ -55,21 +55,21 @@ def __file_action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], actio
                                 f"Warning: {dst} exists and is being overwritten with {src}")
                         delete(dst_path)
                     dst_path.parent.mkdir(parents=True, exist_ok=True)
-                    action_callable(src, dst, **kwargs)
+                    action_callable(src, dst, **action_kwargs)
                     if output:
                         print(f"{action_past_tense} <{src}> -> <{dst}>")
                     count += 1
     return count
 
 
-def move_by_dict(planned_moves: dict[os.PathLike, os.PathLike], **kwargs) -> int:
+def move_by_dict(planned_moves: dict[os.PathLike, os.PathLike], **move_kwargs) -> int:
     """Returns the number of items moved."""
-    return __file_action_by_dict(planned_moves, shutil.move, "Moved", **kwargs)
+    return __file_action_by_dict(planned_moves, shutil.move, "Moved", **move_kwargs)
 
 
-def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], **kwargs) -> None:
+def copy_by_dict(planned_copies: dict[os.PathLike, os.PathLike], **copy_kwargs) -> None:
     """Returns the number of items copied."""
-    return __file_action_by_dict(planned_copies, shutil.copy2, "Copied", **kwargs)
+    return __file_action_by_dict(planned_copies, shutil.copy2, "Copied", **copy_kwargs)
 
 
 def remove_forbidden_chars(name: str, name_only=False):
