@@ -6,17 +6,17 @@ import typing
 import files
 
 
-def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#") -> typing.Iterable[str]:
+def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#", encoding="utf8") -> typing.Iterable[str]:
     """Read a file as a list of lists. Use comment="" for no comments."""
-    for list_str in files.re_split(filename, list_separator, encoding="utf-8"):
+    for list_str in files.re_split(filename, list_separator, encoding=encoding):
         if comment != "" and re.match(comment, list_str):
             continue
         yield re.split(list_item_separator, list_str)
 
 
-def write_file_lists(filename: os.PathLike, lists: typing.Iterable[typing.Iterable], *, list_item_separator: str = ",", list_separator: str = "\n", text_mode="w", **open_kwargs) -> None:
+def write_file_lists(filename: os.PathLike, lists: typing.Iterable[typing.Iterable], *, list_item_separator: str = ",", list_separator: str = "\n", text_mode="w", encoding="utf8", **open_kwargs) -> None:
     """Write a list of lists to a file."""
-    with open(filename, text_mode, encoding="UTF-8", **open_kwargs) as f:
+    with open(filename, text_mode, encoding=encoding, **open_kwargs) as f:
         for l in lists:
             first = True
             for i in l:
