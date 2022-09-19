@@ -228,3 +228,14 @@ class PageBrowser:
         if current in self.driver.window_handles:
             self.driver.switch_to.window(current)
         return count
+
+
+def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.Callable]):
+    actions = {
+        "d": browser.download,
+        "a": browser.download_all,
+        "o": browser.open,
+        "od": browser.open_and_download,
+    }.update(additional_actions)
+
+    console.repl(actions)
