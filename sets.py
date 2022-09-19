@@ -2,14 +2,13 @@ from typing import Hashable, Iterable
 
 
 class Partition:
-    """For constructing representations of partitions/equivalence relations. If you have a SetGroup s, s[key] returns the set containing the key. Objects can also be removed this way using the del keyword."""
+    """For constructing representations of partitions/equivalence relations. If you have a Partition p, p[key] returns the cell containing the key. Objects can also be removed this way using the del keyword."""
 
     def __init__(self, initial_sets=None):
         self._internal_dict: dict[Hashable, set] = {}
         if initial_sets is not None:
             self.merge(initial_sets)
 
-        """ The resulting changes from this method may not match the argument if it is not really a partition. """
     def merge(self, other_partition: Iterable[Iterable[Hashable]]):
         """ The resulting changes from this method may not match the argument if it is not really a Partition. Of course, the state of this Partition also influences the result. """
         for s in other_partition:
