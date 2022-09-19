@@ -192,7 +192,7 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
     count = 0
     src = Path(src)
     dst = Path(dst)
-    if src.exists() and dst.exists() and src.is_dir() ^ dst.is_dir():
+    if src.exists() and dst.exists() and src.is_dir() != dst.is_dir():
         raise FileMismatchException(
             f"One of {src} and {dst} is a file, the other a directory")
     if src.is_file():
