@@ -60,7 +60,7 @@ def remove_duplicates_file(filename: os.PathLike, **open_kwargs):
 
 
 def remove_duplicates_in_place(l: list) -> list:
-    """Still uses sets, but preserves the order of the remaining elements, which turning into a set and then back would not."""
+    """Still uses sets, but preserves the order of the remaining elements, which turning into a set and then back may not. Returns the input list."""
     unique = set()
     i = 0
     while i < len(l):
