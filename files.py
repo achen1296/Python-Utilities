@@ -127,7 +127,7 @@ def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True):
         if dst.exists():
             raise LinkException(f"File <{dst}> already exists")
         if src.is_file():
-            src.link_to(dst)
+            dst.hardlink_to(src)
         else:
             command = f"mklink /j \"{dst}\" \"{src}\""
             result = os.system(command)
