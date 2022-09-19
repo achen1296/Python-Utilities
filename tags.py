@@ -23,12 +23,14 @@ def name_and_ext(filename: str) -> tuple[str, str]:
     return (name, ext if ext else "")
 
 
-def add(filename: str, new_tags: typing.Iterable[str]) -> str:
-    return set(filename, get(filename) | bset(new_tags))
-
-
-def remove(filename: str, remove_tags: typing.Iterable[str]) -> str:
-    return set(filename, get(filename) - bset(remove_tags))
+def set(filename: str, tags: typing.Iterable[str]) -> str:
+    tags = bset(tags)
+    if "" in tags:
+        tags.remove("")
+    name, ext = name_and_ext(filename)
+    if len(tags) == 0:
+        return name + ext
+    return name + "[" + " ".join([t.strip() for t in sorted(tags)]) + "]" + ext
 
 
 def get(filename: str) -> bset[str]:
@@ -43,6 +45,14 @@ def get(filename: str) -> bset[str]:
         tags = tags[1:-1]
         tags = re.split("\s+", tags)
         return bset(tags)
+
+
+def add(filename: str, new_tags: typing.Iterable[str]) -> str:
+    return set(filename, get(filename) | bset(new_tags))
+
+
+def remove(filename: str, remove_tags: typing.Iterable[str]) -> str:
+    return set(filename, get(filename) - bset(remove_tags))
 
 
 def set_name(filename: str, new_name: str) -> str:
@@ -111,15 +121,25 @@ def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, b
                     tags_to_folders[t].add(Path(dirpath, d))
     return tags_to_folders
 
+def tag_by_folder(root:os.PathLike):
+    """ For each subfolder of the root, tags all the files inside with the tags in the subfolder name (as a space-separated list). """
 
-def set(filename: str, tags: typing.Iterable[str]) -> str:
-    tags = bset(tags)
-    if "" in tags:
-        tags.remove("")
-    name, ext = name_and_ext(filename)
-    if len(tags) == 0:
-        return name + ext
-    return name + "[" + " ".join([t.strip() for t in sorted(tags)]) + "]" + ext
+    root = Path(root)
+    planned_moves = {}
+
+    for folder in root.iterdir():
+        if not folder.is_dir():
+            continue
+        tags = folder.stem.split()
+        for file in folder.iterdir():
+            if not file.is_file():
+                continue
+            new_name = add(file.name, tags)
+            if file.name != new_name:
+                planned_moves[file] = file.with_name(new_name)
+    
+    files.move_by_dict(planned_moves)
+
 
 
 if __name__ == "__main__":
