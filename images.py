@@ -60,7 +60,7 @@ def resize(img: typing.Union[os.PathLike, Image.Image], size: tuple[int, int], o
 
 
 def rgb_image_diff(img1: typing.Union[os.PathLike, Image.Image], img2: typing.Union[os.PathLike, Image.Image]) -> tuple[int, int]:
-    """Returns a pair of ints. The first is the total RGB difference (each pixel pair's difference is always given as the absolute value). The second is the maximum possible RGB difference given the size of the images."""
+    """Returns a pair of ints. The first is the total RGB difference (each pixel pair's difference is always given as the absolute value). The second is the maximum possible RGB difference given the size of the images (which must be the same)."""
     with _image_from_file_or_image(img1).convert(mode="RGB") as img1:
         with _image_from_file_or_image(img2).convert(mode="RGB") as img2:
             if img1.size != img2.size:
