@@ -3,7 +3,9 @@ import typing
 
 
 def unescape(s: str, *, escape_char: str = "\\") -> str:
-    # removes one level of escape \s
+    """Removes one level of escape characters. Only supports single characters."""
+    if len(escape_char) != 1:
+        raise Exception("Only single characters allowed")
     i = 0
     while i < len(s):
         if s[i] == escape_char:
@@ -27,7 +29,7 @@ def escape(s: str, special_chars: typing.Iterable[str], *, escape_char: str = "\
     return s
 
 
-def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, remove_outer: dict[str, str] = {"\"": "\"", "'": "'"}, remove_empty_tokens=True, unescape_char="\\", re_flags: int = 0) -> list[str]:
+def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_tokens=True, unescape_char="\\", re_flags: int = 0) -> list[str]:
     """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Arguments for `pairs` and `ignore_internal_pairs` are passed to `find_pairs`. """
 
     # spans that match the separator and that are not also inside of pairs
@@ -72,7 +74,7 @@ def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ig
                         last_match = m
                     if last_match.end() < len(t):
                         raise Exception(
-                            f"While removing outer pair, pair end{last_match} was not actually last found at the end of the token {t}")
+                            f"While removing outer pair, pair end <{last_match}> was not actually last found at the end of the token <{t}>")
                     t = t[:m.start()]
                     # only remove one outer pair
                     break
@@ -419,4 +421,4 @@ if __name__ == "__main__":
     assert result == [
         "/give", "@s", "minecraft:diamond_sword{display:{Name:'\"Super Slasher\"'}}"], result
     result = argument_split("get 1-31 \"minecraft worlds 2\"")
-    assert result == ["get", "1-31", "minecraft worlds 2    "], result
+    assert result == ["get", "1-31", "minecraft worlds 2"], result
