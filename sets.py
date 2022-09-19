@@ -12,28 +12,47 @@ class Partition:
     def merge(self, other_partition: typing.Iterable[typing.Iterable[typing.Hashable]]):
         """ The resulting changes from this method may not match the argument if it is not really a partition. """
         for s in other_partition:
-            first = None
-            for item in s:
-                if first is None:
-                    first = item
-                else:
-                    self.join(first, item)
+            self.join(*s)
 
-    def join(self, obj1: typing.Hashable, obj2: typing.Hashable) -> None:
-        """Sets in the group can be joined together by calling join on one element from each. If an object is joined into a set but is not already part of another set in the group, it is simply added to that set. If both objects that are joined together are not in an existing set, they form a new set together."""
-        if obj1 in self.internal_dict:
-            if obj2 in self.internal_dict:
+    def join(self, obj1: Hashable, /, *objs: Hashable):
+        """ Joins the cells containing each object. Objects not already in any cell are simply added. """
+        self.__join_two(obj1, obj1) 
+        for o in objs:
+            self.__join_two(obj1, o)
+
+    def __join_two(self, obj1: Hashable, obj2: Hashable):
+        if obj1 in self._internal_dict:
+            if obj2 in self._internal_dict:
                 self.__join_sets(obj1, obj2)
             else:
                 self.__add_to_set(obj1, obj2)
         else:
-            if obj2 in self.internal_dict:
+            if obj2 in self._internal_dict:
                 self.__add_to_set(obj2, obj1)
             else:
                 self.__new_set(obj1, obj2)
 
-    def joined(self, obj1: typing.Hashable, obj2: typing.Hashable) -> bool:
-        return obj1 in self.internal_dict and obj2 in self.internal_dict and obj2 in self.internal_dict[obj1]
+    def joined(self, obj1: Hashable, /, *objs: Hashable):
+        """ Checks if the objects are all in the same cell. Specifying only one argument just checks for membership. """
+        if not obj1 in self:
+            return False
+        for o in objs:
+            if not self.__joined_two(obj1, o):
+                return False
+        return True
+
+    def __joined_two(self, obj1: Hashable, obj2: Hashable) -> bool:
+        return obj1 in self._internal_dict and obj2 in self._internal_dict and obj2 in self._internal_dict[obj1]
+
+    def __eq__(self, other_partition: Iterable[Iterable[Hashable]]) -> bool:
+        for s in other_partition:
+            first = None
+            for item in s:
+                if first is None:
+                    first = item
+                elif not self.joined(first, item):
+                    return False
+        return True
 
     def __len__(self):
         return len(self.internal_dict)
