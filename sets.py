@@ -16,7 +16,7 @@ class Partition:
 
     def join(self, obj1: Hashable, /, *objs: Hashable):
         """ Joins the cells containing each object. Objects not already in any cell are simply added. """
-        self.__join_two(obj1, obj1) 
+        self.__join_two(obj1, obj1)
         for o in objs:
             self.__join_two(obj1, o)
 
@@ -37,12 +37,9 @@ class Partition:
         if not obj1 in self:
             return False
         for o in objs:
-            if not self.__joined_two(obj1, o):
+            if not o in self._internal_dict[obj1]:
                 return False
         return True
-
-    def __joined_two(self, obj1: Hashable, obj2: Hashable) -> bool:
-        return obj1 in self._internal_dict and obj2 in self._internal_dict and obj2 in self._internal_dict[obj1]
 
     def __eq__(self, other_partition: Iterable[Iterable[Hashable]]) -> bool:
         for s in other_partition:
