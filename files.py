@@ -407,8 +407,15 @@ def id(file: os.PathLike):
     return os.stat(file).st_ino
 
 
-def size(file: os.PathLike):
-    return os.stat(file).st_size
+def size(path: os.PathLike):
+    def size_recursive(path: Path):
+        if path.is_symlink() or path.is_file():
+            return os.stat(path).st_size
+        else:
+            return sum(
+                (size_recursive(f) for f in path.iterdir())
+            )
+    return size_recursive(Path(path))
 
 
 def hash(file: os.PathLike, size: int = -1, hex: bool = True) -> int:
