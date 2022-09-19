@@ -14,7 +14,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 
-import environment
+import console
 
 
 def url_filename(url: str):
@@ -63,7 +63,7 @@ def firefox_driver(**webdriver_kwargs) -> webdriver.Firefox:
 
 
 def tor_driver(**webdriver_kwargs) -> webdriver.Firefox:
-    userprofile = environment.get("userprofile")
+    userprofile = os.environ["userprofile"]
     tor = userprofile + r'\Programs\Tor Browser\TorBrowser'
     torexe = os.popen(
         tor+r'\Tor\tor.exe')
