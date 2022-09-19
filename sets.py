@@ -1,16 +1,17 @@
-import typing
+from typing import Hashable, Iterable
 
 
 class Partition:
     """For constructing representations of partitions/equivalence relations. If you have a SetGroup s, s[key] returns the set containing the key. Objects can also be removed this way using the del keyword."""
 
     def __init__(self, initial_sets=None):
-        self.internal_dict = {}
+        self._internal_dict: dict[Hashable, set] = {}
         if initial_sets is not None:
             self.merge(initial_sets)
 
-    def merge(self, other_partition: typing.Iterable[typing.Iterable[typing.Hashable]]):
         """ The resulting changes from this method may not match the argument if it is not really a partition. """
+    def merge(self, other_partition: Iterable[Iterable[Hashable]]):
+        """ The resulting changes from this method may not match the argument if it is not really a Partition. Of course, the state of this Partition also influences the result. """
         for s in other_partition:
             self.join(*s)
 
@@ -55,40 +56,40 @@ class Partition:
         return True
 
     def __len__(self):
-        return len(self.internal_dict)
+        return len(self._internal_dict)
 
-    def __getitem__(self, obj: typing.Hashable) -> set:
-        return self.internal_dict[obj]
+    def __getitem__(self, obj: Hashable) -> set:
+        return self._internal_dict[obj]
 
-    def __delitem__(self, obj: typing.Hashable):
-        self.internal_dict[obj].remove(obj)
-        del self.internal_dict[obj]
+    def __delitem__(self, obj: Hashable):
+        self._internal_dict[obj].remove(obj)
+        del self._internal_dict[obj]
 
-    def __contains__(self, obj: typing.Hashable) -> bool:
-        return obj in self.internal_dict
+    def __contains__(self, obj: Hashable) -> bool:
+        return obj in self._internal_dict
 
     def __iter__(self):
         found = set()
-        for key in self.internal_dict:
+        for key in self._internal_dict:
             if key in found:
                 continue
-            found |= self.internal_dict[key]
-            yield self.internal_dict[key]
+            found |= self._internal_dict[key]
+            yield self._internal_dict[key]
 
-    def __new_set(self, obj1: typing.Hashable, obj2: typing.Hashable) -> None:
-        self.internal_dict[obj1] = {obj1, obj2}
-        self.internal_dict[obj2] = self.internal_dict[obj1]
+    def __new_set(self, obj1: Hashable, obj2: Hashable) -> None:
+        self._internal_dict[obj1] = {obj1, obj2}
+        self._internal_dict[obj2] = self._internal_dict[obj1]
 
-    def __add_to_set(self, target: typing.Hashable, new: typing.Hashable) -> None:
-        self.internal_dict[target].add(new)
-        self.internal_dict[new] = self.internal_dict[target]
+    def __add_to_set(self, target: Hashable, new: Hashable) -> None:
+        self._internal_dict[target].add(new)
+        self._internal_dict[new] = self._internal_dict[target]
 
-    def __join_sets(self, obj1: typing.Hashable, obj2: typing.Hashable) -> None:
+    def __join_sets(self, obj1: Hashable, obj2: Hashable) -> None:
         if self.joined(obj1, obj2):
             return
 
-        set1 = self.internal_dict[obj1]
-        set2 = self.internal_dict[obj2]
+        set1 = self._internal_dict[obj1]
+        set2 = self._internal_dict[obj2]
 
         if len(set1) < len(set2):
             small_set = set1
@@ -99,7 +100,7 @@ class Partition:
 
         large_set |= small_set
         for o in small_set:
-            self.internal_dict[o] = large_set
+            self._internal_dict[o] = large_set
 
     def __str__(self):
         return "Partition([" + ",".join([str(s) for s in self]) + "])"
