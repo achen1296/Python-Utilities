@@ -51,6 +51,7 @@ def set_name(filename: str, new_name: str) -> str:
 
 
 def tag_in_folder(root: os.PathLike, tags: typing.Iterable[str], *, visit_subdirs: bool = True, remove_tags=False) -> None:
+    """ Adds the tags to all files in the root folder (recursively if visit_subdirs is True). """
     tags = bset(tags)
     planned_moves = {}
 
@@ -69,13 +70,14 @@ def tag_in_folder(root: os.PathLike, tags: typing.Iterable[str], *, visit_subdir
 
 
 def tag_matching(root: os.PathLike, tags: typing.Iterable[str], pattern: str, *, visit_subdirs: bool = True, remove_tags=False) -> None:
+    """ Adds the tags to each file in the root folder (recursively if visit_subdirs is True) if its name matches the regular regular expression pattern. """
     tags = bset(tags)
     planned_moves = {}
 
     for dirpath, _, filenames in os.walk(root):
         for f in filenames:
-            name,ext=name_and_ext(f)
-            if re.search(pattern,name):
+            name, _ = name_and_ext(f)
+            if re.search(pattern, name):
                 if remove_tags:
                     new_name = remove(f, tags)
                 else:
@@ -89,6 +91,7 @@ def tag_matching(root: os.PathLike, tags: typing.Iterable[str], pattern: str, *,
 
 
 def collect(root: os.PathLike) -> bset[str]:
+    """ Returns all of the tags on files in this folder. """
     collected_tags = bset()
     for _, _, filenames in os.walk(root):
         for f in filenames:
@@ -97,6 +100,7 @@ def collect(root: os.PathLike) -> bset[str]:
 
 
 def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, bset[os.PathLike]]:
+    """ Match each tag to a folders with the tag in its name (as a space-separated list). """
     tags_to_folders = {}
     for dirpath, dirnames, _ in os.walk(root):
         for d in dirnames:
