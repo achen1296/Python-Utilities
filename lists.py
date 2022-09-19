@@ -38,8 +38,13 @@ def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", commen
 
 def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str = "\n", text_mode="w", encoding="utf8", **open_kwargs):
     with open(filename, text_mode, encoding=encoding, **open_kwargs) as f:
+        first = True
         for i in l:
-            f.write(str(i) + separator)
+            if first:
+                first = False
+            else:
+                f.write(separator)
+            f.write(str(i))
 
 
 def sort_file(filename: os.PathLike, remove_duplicates: bool = False, **kwargs):
