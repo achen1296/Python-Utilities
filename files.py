@@ -88,7 +88,13 @@ class LinkException(Exception):
 
 
 def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True):
-    """ Leave mode as None to automatically determine whether to use a link for a file or for a directory. If a symbolic link is requested and the source is a symbolic link, it is copied instead of linking to the existing link. """
+    """ Creates a link at the path dst that targets the path at src.
+
+    Automatically determines what kind of link to create based on whether or not src is a file or folder (raises and exception if src does not exist). 
+
+    If making a symbolic link and the source is a symbolic link, it is copied instead of linking to the existing link. 
+
+    If src is a relative path, it is absolutized for a non-symbolic link. For a symbolic link it is interpreted relative to the parent of dst (mimicking the behavior of the link itself) to check for existence and is applied to the resulting link as-is. """
 
     # catch file existence problems early to distinguish them from permission problems
     src = Path(src)
