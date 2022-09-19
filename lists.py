@@ -55,9 +55,8 @@ def sort_file(filename: os.PathLike, remove_duplicates: bool = False, sort_key=N
     write_file_list(filename, l, **open_kwargs)
 
 
-def remove_duplicates_file(filename: os.PathLike, **kwargs):
-    l = read_file_list(filename, **kwargs)
-    write_file_list(filename, sorted(set(l)), **kwargs)
+def remove_duplicates_file(filename: os.PathLike, **open_kwargs):
+    sort_file(filename, remove_duplicates=True, **open_kwargs)
 
 
 def remove_duplicates_in_place(l: list) -> list:
