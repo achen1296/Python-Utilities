@@ -136,6 +136,7 @@ def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True):
 
 
 def relativize_link(link: os.PathLike):
+    """ Silently ignores calls on non-symlink files (including hard links and junctions) or links that are already relative. """
     link = Path(link)
     if not link.is_symlink():
         return
@@ -149,6 +150,7 @@ def relativize_link(link: os.PathLike):
 
 
 def absolutize_link(link: os.PathLike):
+    """ Silently ignores calls on non-symlink files (including hard links and junctions) or links that are already absolute. """
     link = Path(link)
     if not link.is_symlink():
         return
@@ -160,7 +162,7 @@ def absolutize_link(link: os.PathLike):
 
 
 def delete(file: os.PathLike, not_exist_ok=False, *, output=False):
-    """Uses either os.remove or shutil.rmtree as appropriate."""
+    """ Uses either os.remove or shutil.rmtree as appropriate. Works on symlinks. """
     path = Path(file)
     if path.is_symlink():
         os.remove(path)
@@ -410,6 +412,7 @@ def size(file: os.PathLike):
 
 
 def hash(file: os.PathLike, size: int = -1, hex: bool = True) -> int:
+    """ Hash with SHA3-256. """
     with open(file, "rb") as f:
         h = hashlib.sha3_256(f.read(size))
         return h.hexdigest() if hex else h.digest()
