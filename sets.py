@@ -73,12 +73,14 @@ class Partition:
             yield self._internal_dict[key]
 
     def __new_set(self, obj1: Hashable, obj2: Hashable) -> None:
-        self._internal_dict[obj1] = {obj1, obj2}
-        self._internal_dict[obj2] = self._internal_dict[obj1]
+        new_set = {obj1, obj2}
+        self._internal_dict[obj1] = new_set
+        self._internal_dict[obj2] = new_set
 
     def __add_to_set(self, target: Hashable, new: Hashable) -> None:
-        self._internal_dict[target].add(new)
-        self._internal_dict[new] = self._internal_dict[target]
+        target_set = self._internal_dict[target]
+        target_set.add(new)
+        self._internal_dict[new] = target_set
 
     def __join_sets(self, obj1: Hashable, obj2: Hashable) -> None:
         if self.joined(obj1, obj2):
