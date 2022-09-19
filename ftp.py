@@ -57,6 +57,7 @@ class FTP(ftplib.FTP):
                     self.retrbinary(f"RETR {remote}", f.write)
                 return
             except (ftplib.error_perm, ftplib.error_reply):
+                # assume failure is due to the remote path being a folder
                 pass
             os.remove(local)
             os.mkdir(local)
