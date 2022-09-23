@@ -2,6 +2,7 @@ import hashlib
 import os
 import re
 import shutil
+import traceback
 import typing
 import zipfile
 from pathlib import Path
@@ -161,28 +162,41 @@ def absolutize_link(link: os.PathLike):
         link.symlink_to(new_target)
 
 
-def delete(file: os.PathLike, not_exist_ok=False, *, output=False, output_prefix: str = ""):
+def delete(file: os.PathLike, not_exist_ok: bool = False, *, output: bool = False, ignore_errors: bool = False):
     """ Deletes files directly, recursively deletes directories. Works on symlinks, deleting the link without following it (leaves the link's destination intact). """
-    path = Path(file)
-    if path.is_symlink():
-        os.remove(path)
-        if output:
-            print(f"{output_prefix}Deleted symbolic link {path}")
-    elif not path.exists() and not_exist_ok:
-        if output:
-            print(f"{output_prefix}{path} already doesn't exist")
-        # else will raise an error on attempting one of the operations below
-        return
-    elif path.is_dir():
-        if output:
-            print(f"{output_prefix}Deleting directory {path}")
-        for p in path.iterdir():
-            delete(p, not_exist_ok=not_exist_ok, output=output,
-                   output_prefix=output_prefix + "    ")
-    else:
-        os.remove(path)
-        if output:
-            print(f"{output_prefix}Deleted file {path}")
+
+    def remove_respect_ignore_errors(file: os.PathLike):
+        try:
+            os.remove(file)
+        except:
+            if ignore_errors:
+                print(f"Failed to delete {file}")
+                traceback.print_exc()
+            else:
+                raise
+
+    def delete_recursive(file: os.PathLike, *, output_prefix: str = ""):
+        path = Path(file)
+        if path.is_symlink():
+            remove_respect_ignore_errors(path)
+            if output:
+                print(f"{output_prefix}Deleted symbolic link {path}")
+        elif not path.exists() and not_exist_ok:
+            if output:
+                print(f"{output_prefix}{path} already doesn't exist")
+            # else will raise an error on attempting one of the operations below
+            return
+        elif path.is_dir():
+            if output:
+                print(f"{output_prefix}Deleting directory {path}")
+            for p in path.iterdir():
+                delete_recursive(p, output_prefix=output_prefix + "    ")
+        else:
+            remove_respect_ignore_errors(path)
+            if output:
+                print(f"{output_prefix}Deleted file {path}")
+
+    delete_recursive(file)
 
 
 class FileMismatchException(Exception):
