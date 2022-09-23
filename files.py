@@ -161,26 +161,28 @@ def absolutize_link(link: os.PathLike):
         link.symlink_to(new_target)
 
 
-def delete(file: os.PathLike, not_exist_ok=False, *, output=False):
-    """ Uses either os.remove or shutil.rmtree as appropriate. Works on symlinks. """
+def delete(file: os.PathLike, not_exist_ok=False, *, output=False, output_prefix: str = ""):
+    """ Deletes files directly, recursively deletes directories. Works on symlinks, deleting the link without following it (leaves the link's destination intact). """
     path = Path(file)
     if path.is_symlink():
         os.remove(path)
         if output:
-            print(f"Deleted symbolic link {path}")
+            print(f"{output_prefix}Deleted symbolic link {path}")
     elif not path.exists() and not_exist_ok:
         if output:
-            print(f"{path} already doesn't exist")
+            print(f"{output_prefix}{path} already doesn't exist")
         # else will raise an error on attempting one of the operations below
         return
     elif path.is_dir():
-        shutil.rmtree(path)
         if output:
-            print(f"Deleted directory {path}")
+            print(f"{output_prefix}Deleting directory {path}")
+        for p in path.iterdir():
+            delete(p, not_exist_ok=not_exist_ok, output=output,
+                   output_prefix=output_prefix + "    ")
     else:
         os.remove(path)
         if output:
-            print(f"Deleted file {path}")
+            print(f"{output_prefix}Deleted file {path}")
 
 
 class FileMismatchException(Exception):
