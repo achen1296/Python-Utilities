@@ -29,3 +29,16 @@ def sieve(numbers: typing.Union[int, typing.Iterable[int]]):
         i += 1
 
     return primes
+
+
+def factor(x: int):
+    pr = sieve(math.ceil(math.sqrt(x)))
+
+    factors = []
+
+    for p in pr:
+        while x % p == 0:
+            factors.append(p)
+            x /= p
+
+    return factors
