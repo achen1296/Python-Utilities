@@ -1,5 +1,17 @@
-def primes(max: int):
-    primes = list(range(2, max+1))
+import math
+import typing
+
+
+def sieve(numbers: typing.Union[int, typing.Iterable[int]]):
+    if isinstance(numbers, int):
+        max = numbers
+        primes = list(range(2, numbers+1))
+    else:
+        primes = sorted(numbers)
+        if len(primes) == 0:
+            return []
+        max = primes[-1]
+
     i = 0
     while i < len(primes):
         curr_prime = primes[i]
