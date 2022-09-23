@@ -32,7 +32,7 @@ def sieve(numbers: typing.Union[int, typing.Iterable[int]]) -> list[int]:
 
 
 def factor(x: int) -> list[int]:
-    pr = sieve(math.ceil(math.sqrt(x)))
+    pr = sieve(x)
 
     factors = []
 
