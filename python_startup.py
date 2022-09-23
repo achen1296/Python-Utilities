@@ -19,6 +19,7 @@ import environment
 import files
 import ftp
 import images
+import integers
 import lists
 import sets
 import strings
