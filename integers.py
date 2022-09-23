@@ -2,7 +2,7 @@ import math
 import typing
 
 
-def sieve(numbers: typing.Union[int, typing.Iterable[int]]):
+def sieve(numbers: typing.Union[int, typing.Iterable[int]]) -> list[int]:
     if isinstance(numbers, int):
         max = numbers
         primes = list(range(2, numbers+1))
@@ -31,7 +31,7 @@ def sieve(numbers: typing.Union[int, typing.Iterable[int]]):
     return primes
 
 
-def factor(x: int):
+def factor(x: int) -> list[int]:
     pr = sieve(math.ceil(math.sqrt(x)))
 
     factors = []
