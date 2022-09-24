@@ -72,30 +72,14 @@ def remove_duplicates_in_place(l: list) -> list:
     return l
 
 
-def combinations(items: list[list[int]]) -> typing.Iterable[list[int]]:
-    # start with all indices at 0 -- in loop below, increment happens first, so start first index at -1
-    indices = [0 for _ in range(0, len(items))]
-    indices[-1] = -1
-
-    stop = False
-    while True:
-        # increment indices to try next key
-        i = len(indices) - 1
-        while True:
-            indices[i] += 1
-            if indices[i] >= len(items[i]):
-                indices[i] = 0
-                i -= 1
-                if i == -1:
-                    # tried all keys
-                    stop = True
-                    break
-            else:
-                break
-        if stop:
-            break
-        yield [items[i][j] for i, j in enumerate(indices)]
-
+def cartesian_product(l1: typing.Iterable, *lists: typing.Iterable) -> typing.Iterable[list]:
+    if len(lists) == 0:
+        for i in l1:
+            yield [i]
+    else:
+        for i in l1:
+            for combo in cartesian_product(*lists):
+                yield [i] + combo
 
 def random_from(lst: typing.Iterable):
     while True:
