@@ -81,6 +81,7 @@ def cartesian_product(l1: typing.Iterable, *lists: typing.Iterable) -> typing.It
             for combo in cartesian_product(*lists):
                 yield [i] + combo
 
+
 def random_from(lst: typing.Iterable):
     while True:
         try:
