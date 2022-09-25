@@ -20,18 +20,20 @@ class Dots:
 
     def dot(self):
         self._count += 1
-        now = time.monotonic()
-        if self._count >= self._min_count and now - self._last_time >= self._min_time:
-            self._count = 0
-            self._last_time = now
+        if self._count >= self._min_count and time.monotonic() - self._last_time >= self._min_time:
+            self.reset()
             self._output_callback(self._output_str)
+
+    def reset(self):
+        self._count = 0
+        self._last_time = time.monotonic()
 
 
 DOTS = Dots(100, 1.0)
 
 
 def dot():
-    """ Calls dot on a shared Dots(100, 1.0) object """
+    """ Calls dot on shared Dots(100, 1.0) object DOTS """
     DOTS.dot()
 
 
