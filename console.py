@@ -1,6 +1,38 @@
 import traceback
 import typing
 import strings
+import time
+
+
+class Dots:
+    """ For printing dots to show that the console is working. Every time dot() is called, a counter increments and the time since the last dot was printed is evaluated. If there were both enough calls and enough time to exceed both the minimum count and the minimum time (in seconds), a dot is printed. """
+
+    def __init__(self, min_count: int, min_time: float, output_callback=None, output_str="."):
+        self._count = 0
+        self._last_time = time.monotonic()
+        self._min_count = min_count
+        self._min_time = min_time
+        if output_callback is None:
+            self._output_callback = lambda s: print(s, end="", flush=True)
+        else:
+            self._output_callback = output_callback
+        self._output_str = output_str
+
+    def dot(self):
+        self._count += 1
+        now = time.monotonic()
+        if self._count >= self._min_count and now - self._last_time >= self._min_time:
+            self._count = 0
+            self._last_time = now
+            self._output_callback(self._output_str)
+
+
+DOTS = Dots(100, 1.0)
+
+
+def dot():
+    """ Calls dot on a shared Dots(100, 1.0) object """
+    DOTS.dot()
 
 
 def input_generator(prompt: str = ">> "):
@@ -14,7 +46,7 @@ def input_generator(prompt: str = ">> "):
 def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[str] = None):
     if input_source is None:
         input_source = input_generator()
-        
+
     for i in input_source:
         args = strings.argument_split(i)
         try:
