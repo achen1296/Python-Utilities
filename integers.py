@@ -32,13 +32,18 @@ def sieve(numbers: typing.Union[int, typing.Iterable[int]]) -> list[int]:
 
 
 def factor(x: int) -> list[int]:
-    pr = sieve(x)
+    primes = sieve(math.floor(math.sqrt(x)))
 
     factors = []
 
-    for p in pr:
+    for p in primes:
         while x % p == 0:
             factors.append(p)
             x /= p
+        if x == 1:
+            break
+
+    if len(factors) == 0:
+        return [x]
 
     return factors
