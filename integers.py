@@ -2,7 +2,7 @@ import math
 import typing
 
 
-def sieve(numbers: typing.Union[int, typing.Iterable[int]]) -> list[int]:
+def sieve(numbers: typing.Union[int, typing.Iterable[int]]) -> typing.Iterable[int]:
     if isinstance(numbers, int):
         max = numbers
         primes = list(range(2, numbers+1))
@@ -16,7 +16,11 @@ def sieve(numbers: typing.Union[int, typing.Iterable[int]]) -> list[int]:
     while i < len(primes):
         curr_prime = primes[i]
 
+        yield curr_prime
+
         if curr_prime > max//2:
+            # above max//2, sieving will not remove any more composite numbers; yield the rest
+            i += 1
             break
 
         j = i + 1
@@ -28,7 +32,10 @@ def sieve(numbers: typing.Union[int, typing.Iterable[int]]) -> list[int]:
 
         i += 1
 
-    return primes
+    lp = len(primes)
+    while i < lp:
+        yield primes[i]
+        i += 1
 
 
 def factor(x: int) -> list[int]:
