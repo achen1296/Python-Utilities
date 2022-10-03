@@ -62,7 +62,15 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
         action_name = args[0]
         args = args[1:]
         if action_name == "help":
-            for name, a in actions.items():
+            if len(args) == 0:
+                items = actions.items()
+            else:
+                items = [(name, actions.get(name))
+                         for name in args]
+            for name, a in items:
+                if a is None:
+                    print(f"Unknown action {name}")
+                    continue
                 if name in arg_transform:
                     sig = f"{inspect.signature(arg_transform[name])} -> "
                 else:
