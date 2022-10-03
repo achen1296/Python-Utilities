@@ -236,6 +236,7 @@ def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.
         "a": browser.download_all,
         "o": browser.open,
         "od": browser.open_and_download,
-    }.update(additional_actions)
+    }
+    actions.update(additional_actions)
 
     console.repl(actions)
