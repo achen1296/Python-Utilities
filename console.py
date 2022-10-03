@@ -50,6 +50,11 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
     if input_source is None:
         input_source = input_generator()
 
+    extra_transforms = set(arg_transform) - set(actions)
+    if len(extra_transforms) > 0:
+        raise Exception(
+            f"Extra transformations specified for unknown actions {', '.join(extra_transforms)}")
+
     for i in input_source:
         args = strings.argument_split(i)
         if len(args) == 0:
