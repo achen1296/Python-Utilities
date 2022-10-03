@@ -2,6 +2,7 @@ import traceback
 import typing
 import strings
 import time
+import inspect
 
 
 class Dots:
@@ -51,13 +52,14 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
 
     for i in input_source:
         args = strings.argument_split(i)
+        if args[0] == "help":
+            for name, a in actions.items():
+                print(f"{name}: {inspect.signature(a)} {a.__doc__}")
+            continue
         try:
-            actions[args[0]](*args[1:])
-        except KeyError:
-            print(f"Unknown action {args[0]}")
-            traceback.print_exc()
-        except TypeError:
-            print(f"Invalid arguments {args[1:]}")
-            traceback.print_exc()
+            if args[0] in actions:
+                print(actions[args[0]](*args[1:]))
+            else:
+                print(f"Unknown action {args[0]}")
         except Exception:
             traceback.print_exc()
