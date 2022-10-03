@@ -72,3 +72,17 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
                 print(f"Unknown action {action_name}")
         except Exception:
             traceback.print_exc()
+
+
+if __name__ == "__main__":
+    def test_action(x: int):
+        "Add 1 to x"
+        return x+1
+
+    def test_transform(x: str):
+        return int(x)
+    repl({
+        "test": test_action
+    }, arg_transform={
+        "test": test_transform
+    })
