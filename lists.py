@@ -93,10 +93,11 @@ def random_from(lst: typing.Iterable):
             return None
 
 
-def count(lst: typing.Iterable):
+def count(lst: typing.Iterable, bucket: typing.Callable = lambda x: x):
     counts = {}
     for i in lst:
-        counts[i] = counts.get(i, 0) + 1
+        b = bucket(i)
+        counts[b] = counts.get(b, 0) + 1
     return counts
 
 
