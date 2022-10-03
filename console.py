@@ -46,20 +46,29 @@ def input_generator(prompt: str = ">> "):
             break
 
 
-def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[str] = None):
+def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[str] = None, arg_transform: dict[str, typing.Callable] = {}):
     if input_source is None:
         input_source = input_generator()
 
     for i in input_source:
         args = strings.argument_split(i)
-        if args[0] == "help":
+        action_name = args[0]
+        args = args[1:]
+        if action_name == "help":
             for name, a in actions.items():
-                print(f"{name}: {inspect.signature(a)} {a.__doc__}")
+                if name in arg_transform:
+                    sig = f"{inspect.signature(arg_transform[name])} -> "
+                else:
+                    sig = ""
+                sig += str(inspect.signature(a))
+                print(f"{name}: {sig} {a.__doc__ or ''}")
             continue
         try:
-            if args[0] in actions:
-                print(actions[args[0]](*args[1:]))
+            if action_name in actions:
+                if action_name in arg_transform:
+                    args = arg_transform[action_name](*args)
+                print(actions[action_name](args))
             else:
-                print(f"Unknown action {args[0]}")
+                print(f"Unknown action {action_name}")
         except Exception:
             traceback.print_exc()
