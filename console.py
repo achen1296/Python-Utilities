@@ -82,7 +82,9 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
             if action_name in actions:
                 if action_name in arg_transform:
                     args = arg_transform[action_name](*args)
-                print(actions[action_name](*args))
+                result = actions[action_name](*args)
+                if result is not None:
+                    print(result)
             else:
                 print(f"Unknown action {action_name}")
         except Exception:
