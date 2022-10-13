@@ -388,35 +388,32 @@ def long_names(root: os.PathLike) -> set[str]:
 
 def re_split(file: os.PathLike, separator: str = "\s*\n\s*", *, exclude_empty: bool = True, encoding="utf8", **open_kwargs):
     """Like re.split() but does not load the whole file as a string all at once."""
-    try:
-        unprocessed = ""
-        with open(file, encoding=encoding, **open_kwargs) as f:
-            for line in f:
-                unprocessed += line
-                seps = list(re.finditer(separator, unprocessed))
-                # no separators found yet
-                if len(seps) == 0:
+    unprocessed = ""
+    with open(file, encoding=encoding, **open_kwargs) as f:
+        for line in f:
+            unprocessed += line
+            seps = list(re.finditer(separator, unprocessed))
+            # no separators found yet
+            if len(seps) == 0:
+                continue
+            # read lines until either the last separator does not reach the end of the string or, if there is a separator reaching the end of the string, there are at least two separators, in which case the second-last one is used as the split instead of the last one, so that the regular expression is allowed to be as greedy as possible
+            last = seps[-1]
+            if last.end() == len(unprocessed):
+                if len(seps) < 2:
                     continue
-                # read lines until either the last separator does not reach the end of the string or, if there is a separator reaching the end of the string, there are at least two separators, in which case the second-last one is used as the split instead of the last one, so that the regular expression is allowed to be as greedy as possible
-                last = seps[-1]
-                if last.end() == len(unprocessed):
-                    if len(seps) < 2:
-                        continue
-                    else:
-                        last = seps[-2]
-                # use the normal re.split function in case the line introduced more than one additional separator
-                for s in re.split(separator, unprocessed[:last.start()]):
-                    if exclude_empty and s == "":
-                        continue
-                    yield s
-                unprocessed = unprocessed[last.end():]
-            # yield what is left after the whole file is read
-            for s in re.split(separator, unprocessed):
+                else:
+                    last = seps[-2]
+            # use the normal re.split function in case the line introduced more than one additional separator
+            for s in re.split(separator, unprocessed[:last.start()]):
                 if exclude_empty and s == "":
                     continue
                 yield s
-    except FileNotFoundError:
-        return
+            unprocessed = unprocessed[last.end():]
+        # yield what is left after the whole file is read
+        for s in re.split(separator, unprocessed):
+            if exclude_empty and s == "":
+                continue
+            yield s
 
 
 def id(file: os.PathLike):
