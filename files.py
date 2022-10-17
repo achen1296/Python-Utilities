@@ -421,6 +421,7 @@ def id(file: os.PathLike):
 
 
 def size(path: os.PathLike):
+    """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively."""
     def size_recursive(path: Path):
         if path.is_symlink() or path.is_file():
             return os.stat(path).st_size
