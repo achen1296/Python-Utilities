@@ -420,8 +420,15 @@ def id(file: os.PathLike):
     return os.stat(file).st_ino
 
 
-def size(path: os.PathLike):
-    """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively."""
+BYTE = 1
+KB = KILOBYTE = 1E3
+MB = MEGABYTE = 1E6
+GB = GIGABYTE = 1E9
+TB = TERABYTE = 1E12
+
+
+def size(path: os.PathLike, unit=BYTE):
+    """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively. The result is divided by the argument to unit. For convenience, constants for bytes, KB, MB, GB, and TB have been specified."""
     def size_recursive(path: Path):
         if path.is_symlink() or path.is_file():
             return os.stat(path).st_size
@@ -429,7 +436,7 @@ def size(path: os.PathLike):
             return sum(
                 (size_recursive(f) for f in path.iterdir())
             )
-    return size_recursive(Path(path))
+    return size_recursive(Path(path))/unit
 
 
 def hash(file: os.PathLike, size: int = -1, hex: bool = True) -> int:
