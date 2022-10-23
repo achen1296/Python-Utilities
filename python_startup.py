@@ -9,6 +9,7 @@ import time
 from importlib import reload
 from pathlib import Path
 from pprint import pprint
+from urllib.parse import urlparse, quote, unquote
 
 import selenium
 from PIL import Image
