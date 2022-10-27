@@ -60,7 +60,7 @@ def sieve(numbers: typing.Iterable[int]) -> typing.Iterable[int]:
 
 
 def factor(x: int) -> list[int]:
-    ps = primes(math.floor(math.sqrt(x)))
+    ps = primes(x//2)
 
     factors = []
 
