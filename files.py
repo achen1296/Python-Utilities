@@ -2,13 +2,13 @@ import hashlib
 import os
 import re
 import shutil
+import time
 import traceback
 import typing
 import zipfile
 from pathlib import Path
-from zipfile import ZipFile
-
 from shutil import copy2 as copy
+from zipfile import ZipFile
 
 
 def create_file(path: os.PathLike, binary=False, **open_kwargs):
@@ -484,3 +484,22 @@ def list_files(root: os.PathLike, condition: typing.Callable[[str, list[str], li
     for dirpath, dirnames, filenames in conditional_walk(root, condition):
         result += [dirpath + os.sep + f for f in filenames]
     return result
+
+
+def watch(file: os.PathLike, callback: typing.Callable[[os.PathLike, time.struct_time], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
+    """Monitor a file for changes by checking periodicially seeing if its modification time has changed (every 5 seconds by default) (not necessarily increasing, such as if an old copy of the file was moved into the original location). Provides the callback function with the file and its new modification time. Optionally, can also print out that the file was updated and when."""
+    file = Path(file)
+
+    last_mod_time = os.stat(file).st_mtime
+
+    while True:
+        current_mod_time = os.stat(file).st_mtime
+
+        if current_mod_time != last_mod_time:
+            if output:
+                print(
+                    f"File <{file}> was updated at <{time.strftime(time_format,time.gmtime(current_mod_time))}>")
+            callback(file, current_mod_time)
+            last_mod_time = current_mod_time
+
+        time.sleep(poll_time)
