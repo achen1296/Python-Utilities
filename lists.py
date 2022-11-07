@@ -77,8 +77,8 @@ def cartesian_product(l1: typing.Iterable, *lists: typing.Iterable) -> typing.It
         for i in l1:
             yield [i]
     else:
-        for i in l1:
-            for combo in cartesian_product(*lists):
+        for combo in cartesian_product(*lists):
+            for i in l1:
                 yield [i] + combo
 
 
