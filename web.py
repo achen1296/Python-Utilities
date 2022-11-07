@@ -230,13 +230,14 @@ class PageBrowser:
         return count
 
 
-def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.Callable]):
+def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.Callable] = None):
     actions = {
         "d": browser.download,
         "a": browser.download_all,
         "o": browser.open,
         "od": browser.open_and_download,
     }
-    actions.update(additional_actions)
+    if additional_actions is not None:
+        actions.update(additional_actions)
 
     console.repl(actions)
