@@ -1,4 +1,5 @@
 import os
+import random
 import typing
 from pathlib import Path
 
@@ -73,3 +74,33 @@ def rgb_image_diff(img1: typing.Union[os.PathLike, Image.Image], img2: typing.Un
                                     img2.getpixel((x, y)))
     # maximum difference is 255 per color per pixel (e.g. an all-white image and an all-black image)
     return sum, 765*width*height
+
+
+def collage(imgs: list[typing.Union[os.PathLike, Image.Image]], width: int, height: int, img_width: int, img_height: int, shuffle: bool = False, output: os.PathLike = None):
+    """Make a collage of a list of images which must all be scaled to the same dimensions."""
+
+    len_imgs = len(imgs)
+    if len_imgs > width*height:
+        raise Exception(
+            f"Number of images ({len_imgs}) exceeds width*height ({width*height})")
+
+    imgs = [_image_from_file_or_image(i) for i in imgs]
+
+    if shuffle:
+        random.shuffle(imgs)
+
+    new = Image.new("RGB", (img_width * width, img_height * height))
+
+    for index in range(0, len_imgs):
+        img = resize(imgs[index], (img_width, img_height))
+        if img.size != (img_width, img_height):
+            raise Exception(
+                f"Current image size {(img.size)} differs from first image size {(img_width,img_height)})")
+
+        row = index // width
+        col = index % width
+
+        new.paste(img, (col * img_width, row * img_height))
+
+    _optional_save(new, output)
+    return new
