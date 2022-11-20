@@ -165,6 +165,12 @@ class PageBrowser:
         self.driver = driver
         self.readers = set(readers)
 
+    def new_tab(self):
+        self.driver.execute_script("window.open('')")
+        # switch to last, i.e. newest, window
+        self.driver.switch_to.window(
+            self.driver.window_handles[-1])
+
     def open(self) -> int:
         """Open all links found on the current page by any PageReader. Returns the number of links opened."""
         count = 0
@@ -198,10 +204,7 @@ class PageBrowser:
         for r in self.readers:
             if r.can_read(self.driver):
                 for url in r.to_open(self.driver):
-                    self.driver.execute_script("window.open('')")
-                    # switch to last, i.e. newest, window
-                    self.driver.switch_to.window(
-                        self.driver.window_handles[-1])
+                    self.new_tab()
                     self.driver.get(url)
                     count += self.download(output, **get_kwargs)
                     self.driver.close()
@@ -211,6 +214,11 @@ class PageBrowser:
             self.driver.switch_to.window(current)
         return count
 
+    def iter_tabs(self):
+        for handle in self.driver.window_handles:
+            self.driver.switch_to.window(handle)
+            yield handle
+
     def download_all(self, output=True, close_tabs: bool = True, **get_kwargs) -> int:
         """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads. get_kwargs passed to requests.get"""
         try:
@@ -219,8 +227,7 @@ class PageBrowser:
             # window being controlled was closed
             current = None
         count = 0
-        for handle in self.driver.window_handles:
-            self.driver.switch_to.window(handle)
+        for handle in self.iter_tabs():
             current_count = self.download(output, **get_kwargs)
             if current_count > 0 and close_tabs and len(self.driver.window_handles) > 1:
                 self.driver.close()
