@@ -430,7 +430,7 @@ TB = TERABYTE = 1E12
 
 
 def size(path: os.PathLike, unit=BYTE):
-    """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively. The result is divided by the argument to unit. For convenience, constants for bytes, KB, MB, GB, and TB have been specified."""
+    """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively. The result is divided by the argument to unit. For convenience, constants for bytes, KB, MB, GB, and TB have been specified. Does not follow symlinks, their size is added instead."""
     def size_recursive(path: Path):
         if path.is_symlink() or path.is_file():
             return os.stat(path).st_size
@@ -439,6 +439,18 @@ def size(path: os.PathLike, unit=BYTE):
                 (size_recursive(f) for f in path.iterdir())
             )
     return size_recursive(Path(path))/unit
+
+
+def count(path: os.PathLike):
+    """Counts files recursively. Does not follow symlinks, they are counted as one file instead."""
+    def count_recursive(path: Path):
+        if path.is_symlink() or path.is_file():
+            return 1
+        else:
+            return sum(
+                (count_recursive(f) for f in path.iterdir())
+            )
+    return count_recursive(Path(path))
 
 
 def hash(file: os.PathLike, size: int = -1, hex: bool = True) -> int:
