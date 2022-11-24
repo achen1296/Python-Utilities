@@ -44,6 +44,59 @@ def input_generator(prompt: str = ">> "):
             yield input(prompt)
         except KeyboardInterrupt:
             break
+def cmd_split(s: str) -> typing.Iterable[list[str]]:
+    """Splits commands by semicolons, splits arguments by whitespace, but neither when inside a string delimited with ' or ". String arguments can include ' or " using backslash escape."""
+
+    def unescape(s: str) -> str:
+        return s.replace('\\"', '"').replace("\\'", "'")
+
+    start = -1
+    end = -1
+    quote = None
+    args = []
+
+    s_len = len(s)
+    for i in range(0, s_len):
+        if i == 0:
+            last = None
+        else:
+            last = s[i-1]
+        c = s[i]
+        if (c in ['"', "'"] and last != "\\"):
+            if quote is None:
+                # found the beginning of a string
+                quote = c
+                start = i
+
+                semicolon_split = s[end+1:start].split(";")
+                semi_len = len(semicolon_split)
+                if semi_len > 1:
+                    yield args + semicolon_split[0].split()
+                    for cmd in semicolon_split[1:-1]:
+                        yield cmd.split()
+                    args = []
+                if semi_len >= 1:
+                    args += semicolon_split[-1].split()
+
+            elif quote == c:
+                # found the end of a string
+                quote = None
+                end = i
+                args.append(s[start+1:end])
+
+    if quote is not None:
+        raise Exception("Unbalanced quotes")
+
+    semicolon_split = s[end+1:].split(";")
+    semi_len = len(semicolon_split)
+    if semi_len > 1:
+        yield args + semicolon_split[0].split()
+        for cmd in semicolon_split[1:-1]:
+            yield cmd.split()
+        args = []
+    if semi_len >= 1:
+        args += semicolon_split[-1].split()
+    yield args
 
 
 def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[str] = None, arg_transform: dict[str, typing.Callable] = {}):
@@ -92,6 +145,13 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
 
 
 if __name__ == "__main__":
+
+    result = list(cmd_split("a;b;c d"))
+    assert result == [["a"], ["b"], ["c", "d"]], result
+
+    result = list(cmd_split("'a';\"b;\\\"c\" d"))
+    assert result == [["a"], ["b;\\\"c", "d"]], result
+
     def test_action(x: int):
         "Add 1 to x"
         return x+1
