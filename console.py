@@ -1,3 +1,4 @@
+import re
 import traceback
 import typing
 import strings
@@ -43,7 +44,9 @@ def input_generator(prompt: str = ">> "):
         try:
             yield input(prompt)
         except KeyboardInterrupt:
-            break
+            print("KeyboardInterrupt")
+
+
 def cmd_split(s: str) -> typing.Iterable[list[str]]:
     """Splits commands by semicolons, splits arguments by whitespace, but neither when inside a string delimited with ' or ". String arguments can include ' or " using backslash escape."""
 
@@ -99,6 +102,32 @@ def cmd_split(s: str) -> typing.Iterable[list[str]]:
     yield args
 
 
+def sleep(time_str: str):
+    match: re.Match = re.match("^(\d+):(\d{2}):(\d{2})$", time_str)
+    if match:
+        hours = int(match.group(1))
+        minutes = int(match.group(2))
+        seconds = int(match.group(3))
+    else:
+        match: re.Match = re.match("^(\d):(\d{2})$", time_str)
+        if match:
+            hours = 0
+            minutes = int(match.group(1))
+            seconds = int(match.group(2))
+        else:
+            match: re.Match = re.match("^(\d+)$", time_str)
+            if match:
+                hours = minutes = 0
+                seconds = int(match.group(1))
+            else:
+                raise Exception("Invalid time string")
+    if not (0 <= seconds <= 59 and 0 <= minutes <= 59):
+        raise Exception("Invalid time string")
+    sleep_time = seconds + 60*(minutes + 60*hours)
+    print(f"Sleeping for {sleep_time} seconds")
+    time.sleep(sleep_time)
+
+
 def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[str] = None, arg_transform: dict[str, typing.Callable] = {}):
     if input_source is None:
         input_source = input_generator()
@@ -107,41 +136,52 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
     if len(extra_transforms) > 0:
         raise Exception(
             f"Extra transformations specified for unknown actions {', '.join(extra_transforms)}")
-
-    for i in input_source:
-        args = strings.argument_split(i)
-        if len(args) == 0:
-            continue
-        action_name = args[0]
-        args = args[1:]
-        if action_name == "help":
-            if len(args) == 0:
-                items = actions.items()
-            else:
-                items = [(name, actions.get(name))
-                         for name in args]
-            for name, a in items:
-                if a is None:
-                    print(f"Unknown action {name}")
-                    continue
-                if name in arg_transform:
-                    sig = f"{inspect.signature(arg_transform[name])} -> "
-                else:
-                    sig = ""
-                sig += str(inspect.signature(a))
-                print(f"{name}: {sig} {a.__doc__ or ''}")
-            continue
-        try:
-            if action_name in actions:
-                if action_name in arg_transform:
-                    args = arg_transform[action_name](*args)
-                result = actions[action_name](*args)
-                if result is not None:
-                    print(result)
-            else:
-                print(f"Unknown action {action_name}")
-        except Exception:
-            traceback.print_exc()
+    try:
+        for i in input_source:
+            exited = False
+            try:
+                for args in cmd_split(i):
+                    if len(args) == 0:
+                        continue
+                    action_name = args[0]
+                    args = args[1:]
+                    if action_name == "help":
+                        if len(args) == 0:
+                            items = actions.items()
+                        else:
+                            items = [(name, actions.get(name))
+                                     for name in args]
+                        for name, a in items:
+                            if a is None:
+                                print(f"Unknown action {name}")
+                                continue
+                            if name in arg_transform:
+                                sig = f"{inspect.signature(arg_transform[name])} -> "
+                            else:
+                                sig = ""
+                            sig += str(inspect.signature(a))
+                            print(f"{name}: {sig} {a.__doc__ or ''}")
+                    elif action_name in {"sleep", "wait"}:
+                        sleep(args[0])
+                    elif action_name == "exit":
+                        exited = True
+                        break
+                    elif action_name in actions:
+                        if action_name in arg_transform:
+                            args = arg_transform[action_name](*args)
+                        result = actions[action_name](*args)
+                        if result is not None:
+                            print(result)
+                    else:
+                        print(f"Unknown action {action_name}")
+            except Exception:
+                traceback.print_exc()
+            except KeyboardInterrupt:
+                print("KeyboardInterrupt")
+            if exited:
+                break
+    except EOFError:
+        return
 
 
 if __name__ == "__main__":
