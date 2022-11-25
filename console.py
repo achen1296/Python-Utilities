@@ -145,7 +145,7 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
                         continue
                     action_name = args[0]
                     args = args[1:]
-                    if action_name == "help":
+                    if action_name in ["help", "?"]:
                         if len(args) == 0:
                             items = actions.items()
                         else:
