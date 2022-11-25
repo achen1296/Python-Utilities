@@ -165,9 +165,16 @@ class PageBrowser:
         self.driver = driver
         self.readers = set(readers)
 
-    def new_tab(self):
+    def new_tab(self, url):
         self.driver.execute_script("window.open('')")
         # switch to last, i.e. newest, window
+        self.driver.switch_to.window(
+            self.driver.window_handles[-1])
+        self.driver.get(url)
+
+    def close_tab(self):
+        self.driver.close()
+        # switch to new last window, somewhat mimicking normal tab close behavior
         self.driver.switch_to.window(
             self.driver.window_handles[-1])
 
@@ -179,11 +186,7 @@ class PageBrowser:
             if r.can_read(self.driver):
                 for url in r.to_open(self.driver):
                     count += 1
-                    self.driver.execute_script("window.open('')")
-                    # switch to last, i.e. newest, window
-                    self.driver.switch_to.window(
-                        self.driver.window_handles[-1])
-                    self.driver.get(url)
+                    self.new_tab(url)
             self.driver.switch_to.window(current)
         return count
 
@@ -199,20 +202,22 @@ class PageBrowser:
 
     def open_and_download(self, output=True, **get_kwargs) -> int:
         """Open each link found on the current page, downloads, and closes the tab before moving on to the next one. Returns the number of downloads. get_kwargs passed to requests.get."""
-        count = 0
+        open_count = 0
+        download_count = 0
         current = self.driver.current_window_handle
         for r in self.readers:
             if r.can_read(self.driver):
-                for url in r.to_open(self.driver):
-                    self.new_tab()
-                    self.driver.get(url)
-                    count += self.download(output, **get_kwargs)
-                    self.driver.close()
-                    # switch to new last window for next script execution
-                    self.driver.switch_to.window(
-                        self.driver.window_handles[-1])
+                to_open = r.to_open(self.driver)
+                open_total = len(to_open)
+                for url in to_open:
+                    if output:
+                        open_count += 1
+                        print(f"{open_count}/{open_total}")
+                    self.new_tab(url)
+                    download_count += self.download(output, **get_kwargs)
+                    self.close_tab()
             self.driver.switch_to.window(current)
-        return count
+        return download_count
 
     def iter_tabs(self):
         for handle in self.driver.window_handles:
