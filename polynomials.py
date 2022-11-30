@@ -1,3 +1,4 @@
+import re
 import typing
 
 
@@ -24,6 +25,57 @@ class Polynomial:
         coeffs = [0 for _ in range(0, e+1)]
         coeffs[0] = c
         return cls(*coeffs)
+
+    @classmethod
+    def from_str(cls, s: str):
+        # remove whitespace
+        s = re.sub("\s+", "", s)
+        # split around +/- operations but keep them on the split terms
+        terms = re.split("(?=[-+])", s)
+        # remove empty strings
+        terms = [t for t in terms if len(t) > 0]
+        coefficients = []
+        exponents = []
+        for t in terms:
+            match: re.Match = re.match(
+                "^([-+])?((\d+)|(\d*\.\d+)|(\d+\.))?(x(\^(\d+))?)?$", t)
+            # group 1: sign, defaults to +
+            # group 2: optional coefficient, contains 3-5, defaults to 1
+            # group 3: integer coefficient
+            # group 4, 5: float coefficient
+            # group 6: optional "x" + contains group 7, defaults to x^0 = 1
+            # group 7: optional "^" + contains group 8, defaults to x = x^1
+            # group 8: integer exponent
+            # must have either group 2 or group 6
+
+            if not match or not (match.group(2) or match.group(6)):
+                raise Exception("Invalid Polynomial string")
+
+            if match.group(1) == "-":
+                sign = -1
+            else:
+                sign = 1
+            if match.group(2):
+                int_coeff = match.group(3)
+                if int_coeff:
+                    coefficients.append(sign*int(int_coeff))
+                else:
+                    float_coeff = match.group(4) or match.group(5)
+                    coefficients.append(sign*float(float_coeff))
+            else:
+                coefficients.append(1)
+            if match.group(6):
+                if match.group(7):
+                    exponents.append(int(match.group(8)))
+                else:
+                    exponents.append(1)
+            else:
+                exponents.append(0)
+        degree = max(exponents)
+        combined_coeff = [0 for _ in range(0, degree+1)]
+        for c, e in zip(coefficients, exponents):
+            combined_coeff[e] += c
+        return Polynomial(*combined_coeff, high_powers_first=False)
 
     def is_zero(self):
         for c in self.coefficients:
