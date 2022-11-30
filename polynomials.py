@@ -56,10 +56,10 @@ class Polynomial:
             return True
         elif sd > od:
             return False
-        for i in range(sd, 0-1, -1):
-            if self[i] < other[i]:
+        for e in range(sd, 0-1, -1):
+            if self[e] < other[e]:
                 return True
-            if self[i] > other[i]:
+            if self[e] > other[e]:
                 return False
         return False
 
@@ -70,10 +70,10 @@ class Polynomial:
             return True
         elif sd > od:
             return False
-        for i in range(sd, 0-1, -1):
-            if self[i] < other[i]:
+        for e in range(sd, 0-1, -1):
+            if self[e] < other[e]:
                 return True
-            if self[i] > other[i]:
+            if self[e] > other[e]:
                 return False
         return True
 
@@ -84,10 +84,10 @@ class Polynomial:
             return True
         elif sd < od:
             return False
-        for i in range(sd, 0-1, -1):
-            if self[i] > other[i]:
+        for e in range(sd, 0-1, -1):
+            if self[e] > other[e]:
                 return True
-            if self[i] < other[i]:
+            if self[e] < other[e]:
                 return False
         return False
 
@@ -98,10 +98,10 @@ class Polynomial:
             return True
         elif sd < od:
             return False
-        for i in range(sd, 0-1, -1):
-            if self[i] > other[i]:
+        for e in range(sd, 0-1, -1):
+            if self[e] > other[e]:
                 return True
-            if self[i] < other[i]:
+            if self[e] < other[e]:
                 return False
         return True
 
@@ -110,8 +110,8 @@ class Polynomial:
         od = other.degree()
         if sd != od:
             return False
-        for i in range(0, len(self)):
-            if self[i] != other[i]:
+        for e in range(0, len(self)):
+            if self[e] != other[e]:
                 return False
         return True
 
@@ -120,23 +120,23 @@ class Polynomial:
         od = other.degree()
         if sd != od:
             return True
-        for i in range(0, len(self)):
-            if self[i] != other[i]:
+        for e in range(0, len(self)):
+            if self[e] != other[e]:
                 return True
         return False
 
     def __neg__(self) -> "Polynomial":
-        return Polynomial(*(-self[i] for i in range(0, len(self))), high_powers_first=False)
+        return Polynomial(*(-self[e] for e in range(0, len(self))), high_powers_first=False)
 
     def __add__(self, other: "Polynomial") -> "Polynomial":
         l = max(len(self), len(other))
 
-        return Polynomial(*(self[i] + other[i] for i in range(0, l)), high_powers_first=False)
+        return Polynomial(*(self[e] + other[e] for e in range(0, l)), high_powers_first=False)
 
     def __sub__(self, other: "Polynomial") -> "Polynomial":
         l = max(len(self), len(other))
 
-        return Polynomial(*(self[i] - other[i] for i in range(0, l)), high_powers_first=False)
+        return Polynomial(*(self[e] - other[e] for e in range(0, l)), high_powers_first=False)
 
     def __mul__(self, other: "Polynomial") -> "Polynomial":
         l1 = len(self)
@@ -183,13 +183,21 @@ class Polynomial:
         dividend, divisor = max(p1, p2), min(p1, p2)
         r = p2
         while True:
-            _, r = divmod(dividend, divisor)
+            r = dividend % divisor
             if modulus is not None:
                 r.reduce(modulus)
             if r.is_zero():
                 return divisor
             dividend = divisor
             divisor = r
+
+    def evaluate(self, x: float, modulus: int = None):
+        result = 0
+        for e in range(0, len(self)):
+            result += self[e] * (x ** e)
+            if modulus is not None:
+                result %= modulus
+        return result
 
     def __str__(self):
         if self.is_zero():
