@@ -9,7 +9,7 @@ import time
 from importlib import reload
 from pathlib import Path
 from pprint import pprint
-from urllib.parse import urlparse, quote, unquote
+from urllib.parse import quote, unquote, urlparse
 
 import selenium
 from PIL import Image
@@ -22,7 +22,11 @@ import ftp
 import images
 import integers
 import lists
+import polynomials
 import sets
 import strings
 import tags
 import web
+from polynomials import Polynomial
+
+Poly = Polynomial
