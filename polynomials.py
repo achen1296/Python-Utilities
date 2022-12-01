@@ -97,6 +97,12 @@ class Polynomial:
             return 0
         return self.coefficients[e]
 
+    def __iter__(self):
+        return iter(self.coefficients)
+
+    def __reversed__(self):
+        return reversed(self.coefficients)
+
     def __lt__(self, other: "Polynomial") -> bool:
         sd = self.degree()
         od = other.degree()
