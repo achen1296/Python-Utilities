@@ -106,78 +106,36 @@ class Polynomial:
     def __lt__(self, other: "Polynomial") -> bool:
         sd = self.degree()
         od = other.degree()
-        if sd < od:
-            return True
-        elif sd > od:
-            return False
-        for e in range(sd, 0-1, -1):
-            if self[e] < other[e]:
-                return True
-            if self[e] > other[e]:
-                return False
-        return False
+        if sd != od:
+            return sd < od
+        return tuple(reversed(self.coefficients)) < tuple(reversed(other.coefficients))
 
     def __le__(self, other: "Polynomial") -> bool:
         sd = self.degree()
         od = other.degree()
-        if sd < od:
-            return True
-        elif sd > od:
-            return False
-        for e in range(sd, 0-1, -1):
-            if self[e] < other[e]:
-                return True
-            if self[e] > other[e]:
-                return False
-        return True
+        if sd != od:
+            return sd < od
+        return tuple(reversed(self.coefficients)) <= tuple(reversed(other.coefficients))
 
     def __gt__(self, other: "Polynomial") -> bool:
         sd = self.degree()
         od = other.degree()
-        if sd > od:
-            return True
-        elif sd < od:
-            return False
-        for e in range(sd, 0-1, -1):
-            if self[e] > other[e]:
-                return True
-            if self[e] < other[e]:
-                return False
-        return False
+        if sd != od:
+            return sd > od
+        return tuple(reversed(self.coefficients)) > tuple(reversed(other.coefficients))
 
     def __ge__(self, other: "Polynomial") -> bool:
         sd = self.degree()
         od = other.degree()
-        if sd > od:
-            return True
-        elif sd < od:
-            return False
-        for e in range(sd, 0-1, -1):
-            if self[e] > other[e]:
-                return True
-            if self[e] < other[e]:
-                return False
-        return True
+        if sd != od:
+            return sd > od
+        return tuple(reversed(self.coefficients)) >= tuple(reversed(other.coefficients))
 
     def __eq__(self, other: "Polynomial") -> bool:
-        sd = self.degree()
-        od = other.degree()
-        if sd != od:
-            return False
-        for e in range(0, len(self)):
-            if self[e] != other[e]:
-                return False
-        return True
+        return tuple(self.coefficients) == tuple(other.coefficients)
 
     def __ne__(self, other: "Polynomial") -> bool:
-        sd = self.degree()
-        od = other.degree()
-        if sd != od:
-            return True
-        for e in range(0, len(self)):
-            if self[e] != other[e]:
-                return True
-        return False
+        return tuple(self.coefficients) != tuple(other.coefficients)
 
     def __hash__(self):
         return hash(tuple(self.coefficients))
