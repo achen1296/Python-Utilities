@@ -1,3 +1,4 @@
+import lists
 import math
 import typing
 
@@ -75,3 +76,12 @@ def factor(x: int) -> list[int]:
         return [x]
 
     return factors
+
+
+def totient(x: int) -> int:
+    result = 1
+    fact = lists.count(factor(x))
+    for p in fact:
+        e = fact[p]
+        result *= (p-1) * (p**(e-1))
+    return result
