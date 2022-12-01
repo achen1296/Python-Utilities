@@ -173,6 +173,9 @@ class Polynomial:
                 return True
         return False
 
+    def __hash__(self):
+        return hash(tuple(self.coefficients))
+
     def __neg__(self) -> "Polynomial":
         return Polynomial(*(-self[e] for e in range(0, len(self))), high_powers_first=False)
 
