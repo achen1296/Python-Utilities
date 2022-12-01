@@ -38,14 +38,14 @@ class Polynomial:
         exponents = []
         for t in terms:
             match: re.Match = re.match(
-                "^([-+])?((\d+)|(\d*\.\d+)|(\d+\.))?(x(\^(\d+))?)?$", t)
+                "^([-+])?((\d+)|(\d*\.\d+)|(\d+\.))?\*?(x((\^|\*\*)(\d+))?)?$", t)
             # group 1: sign, defaults to +
             # group 2: optional coefficient, contains 3-5, defaults to 1
             # group 3: integer coefficient
             # group 4, 5: float coefficient
             # group 6: optional "x" + contains group 7, defaults to x^0 = 1
-            # group 7: optional "^" + contains group 8, defaults to x = x^1
-            # group 8: integer exponent
+            # group 7: optional "^" or "**" + contains group 9, defaults to x = x^1
+            # group 9: integer exponent
             # must have either group 2 or group 6
 
             if not match or not (match.group(2) or match.group(6)):
@@ -66,7 +66,7 @@ class Polynomial:
                 coefficients.append(1)
             if match.group(6):
                 if match.group(7):
-                    exponents.append(int(match.group(8)))
+                    exponents.append(int(match.group(9)))
                 else:
                     exponents.append(1)
             else:
