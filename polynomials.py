@@ -196,14 +196,14 @@ class Polynomial:
     def gcd(p1: "Polynomial", p2: "Polynomial", modulus: int = None) -> "Polynomial":
         # p1 = q * p2 + r
         if modulus is not None:
-            p1.reduce(modulus)
-            p2.reduce(modulus)
+            p1 %= modulus
+            p2 %= modulus
         dividend, divisor = max(p1, p2), min(p1, p2)
         r = p2
         while True:
             r = dividend % divisor
             if modulus is not None:
-                r.reduce(modulus)
+                r %= modulus
             if r.is_zero():
                 return divisor
             dividend = divisor
