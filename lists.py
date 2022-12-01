@@ -36,7 +36,7 @@ def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", commen
         yield item
 
 
-def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str = "\n", text_mode="w", encoding="utf8", **open_kwargs):
+def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str = "\n", text_mode="w", encoding="utf8", **open_kwargs) -> None:
     with open(filename, text_mode, encoding=encoding, **open_kwargs) as f:
         first = True
         for i in l:
@@ -47,7 +47,7 @@ def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str
             f.write(str(i))
 
 
-def sort_file(filename: os.PathLike, remove_duplicates: bool = False, sort_key=None, **open_kwargs):
+def sort_file(filename: os.PathLike, remove_duplicates: bool = False, sort_key=None, **open_kwargs) -> None:
     l = read_file_list(filename, **open_kwargs)
     if remove_duplicates:
         l = set(l)
@@ -55,7 +55,7 @@ def sort_file(filename: os.PathLike, remove_duplicates: bool = False, sort_key=N
     write_file_list(filename, l, **open_kwargs)
 
 
-def remove_duplicates_file(filename: os.PathLike, **open_kwargs):
+def remove_duplicates_file(filename: os.PathLike, **open_kwargs) -> None:
     sort_file(filename, remove_duplicates=True, **open_kwargs)
 
 
@@ -82,7 +82,7 @@ def cartesian_product(l1: typing.Iterable, *lists: typing.Iterable) -> typing.It
                 yield [i] + combo
 
 
-def random_from(lst: typing.Iterable):
+def random_from(lst: typing.Iterable) -> typing.Any:
     while True:
         try:
             return lst[random.randrange(0, len(lst))]
@@ -93,7 +93,7 @@ def random_from(lst: typing.Iterable):
             return None
 
 
-def count(lst: typing.Iterable, bucket: typing.Callable = lambda x: x):
+def count(lst: typing.Iterable[typing.Hashable], bucket: typing.Callable = lambda x: x) -> dict[typing.Hashable, 5]:
     counts = {}
     for i in lst:
         b = bucket(i)
@@ -101,7 +101,7 @@ def count(lst: typing.Iterable, bucket: typing.Callable = lambda x: x):
     return counts
 
 
-def histogram(counts: dict, file: os.PathLike = None, *, sort_by=None, bar_char="-", encoding="utf8", **open_kwargs):
+def histogram(counts: dict, file: os.PathLike = None, *, sort_by=None, bar_char="-", encoding="utf8", **open_kwargs) -> str:
     """ Pass in a dictionary as returned by count(). If file is specified, the result is written to that file. Whether or not it is specified, the result is also returned. sort_by can be a Callable argument for sorted(), "count", or False, which causes the order of iteration over the dict to be used. """
     if sort_by is False:
         sorted_keys = counts.keys()
