@@ -9,17 +9,17 @@ def egcd(a: int, b: int) -> tuple[int, int, int]:
     return (prev_x, prev_y, a)
 
 
-def mod_inverse(i: int, N: int) -> int:
+def inverse(i: int, N: int) -> int:
     x, y, g = egcd(i, N)
     return x % N
 
 
-def mod_exp(i: int, pow: int, N: int) -> int:
+def exp(i: int, pow: int, N: int) -> int:
     if pow == 0:
         return 1
     if pow < 0:
         pow *= -1
-        i = mod_inverse(i, N)
+        i = inverse(i, N)
     r = 1
     while pow > 1:
         if pow % 2 == 0:
