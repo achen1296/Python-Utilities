@@ -72,14 +72,19 @@ def remove_duplicates_in_place(l: list) -> list:
     return l
 
 
-def cartesian_product(l1: typing.Iterable, *lists: typing.Iterable) -> typing.Iterable[list]:
+def cartesian_product(l1: typing.Iterable, *lists: typing.Iterable, first_fastest: bool = False) -> typing.Iterable[list]:
     if len(lists) == 0:
         for i in l1:
             yield [i]
     else:
-        for combo in cartesian_product(*lists):
+        if first_fastest:
+            for combo in cartesian_product(*lists, first_fastest=first_fastest):
+                for i in l1:
+                    yield [i] + combo
+        else:
             for i in l1:
-                yield [i] + combo
+                for combo in cartesian_product(*lists, first_fastest=first_fastest):
+                    yield [i] + combo
 
 
 def random_from(lst: typing.Iterable) -> typing.Any:
