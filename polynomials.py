@@ -97,10 +97,6 @@ class Polynomial:
             return 0
         return self.coefficients[e]
 
-    def reduce(self, modulus: int):
-        self.coefficients = Polynomial.__remove_high_exp_zeros(
-            [c % modulus for c in self.coefficients])
-
     def __lt__(self, other: "Polynomial") -> bool:
         sd = self.degree()
         od = other.degree()
@@ -206,9 +202,12 @@ class Polynomial:
         q, _ = divmod(self, other)
         return q
 
-    def __mod__(self, other: "Polynomial") -> "Polynomial":
-        _, r = divmod(self, other)
-        return r
+    def __mod__(self, other: typing.Union["Polynomial", int]) -> "Polynomial":
+        if isinstance(other, Polynomial):
+            _, r = divmod(self, other)
+            return r
+        elif isinstance(other, int):
+            return Polynomial(*[c % other for c in self.coefficients], high_powers_first=False)
 
     def __divmod__(self, other: "Polynomial") -> tuple["Polynomial", "Polynomial"]:
         od = other.degree()
