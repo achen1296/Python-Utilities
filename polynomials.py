@@ -51,7 +51,7 @@ class Polynomial:
                     float_coeff = match.group(4) or match.group(5)
                     coefficients.append(sign*float(float_coeff))
             else:
-                coefficients.append(1)
+                coefficients.append(sign)
             if match.group(6):
                 if match.group(7):
                     exponents.append(int(match.group(9)))
