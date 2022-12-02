@@ -14,20 +14,8 @@ class Polynomial:
             zeros += 1
         return coefficients[:l-zeros]
 
-    def __init__(self, *coefficients: float, high_powers_first=True):
-        if high_powers_first:
-            coefficients = reversed(coefficients)
-        self.coefficients: list[float] = Polynomial.__remove_high_exp_zeros(
-            coefficients)
-
-    @classmethod
-    def term(cls, c: float, e: int):
-        coeffs = [0 for _ in range(0, e+1)]
-        coeffs[0] = c
-        return cls(*coeffs)
-
-    @classmethod
-    def from_str(cls, s: str):
+    @staticmethod
+    def coefficients_from_str(s: str):
         # remove whitespace
         s = re.sub("\s+", "", s)
         # split around +/- operations but keep them on the split terms
@@ -75,7 +63,26 @@ class Polynomial:
         combined_coeff = [0 for _ in range(0, degree+1)]
         for c, e in zip(coefficients, exponents):
             combined_coeff[e] += c
-        return Polynomial(*combined_coeff, high_powers_first=False)
+        return combined_coeff
+
+    def __init__(self, *coefficients: typing.Union[float, str], high_powers_first=True):
+        """Specify coefficients in order from high to low exponent.
+
+        Alternatively, specify a single str argument with the variable x. Supports optional * between coefficients and the variable x. Both ^ and ** may be used for exponentiation.
+
+        For example, Polynomial(1,2,3) == Polynomial("x^2+2x+3")."""
+        if len(coefficients) == 1 and isinstance(coefficients[0], str):
+            coefficients = Polynomial.coefficients_from_str(coefficients[0])
+        elif high_powers_first:
+            coefficients = reversed(coefficients)
+        self.coefficients: list[float] = Polynomial.__remove_high_exp_zeros(
+            coefficients)
+
+    @classmethod
+    def term(cls, c: float, e: int):
+        coeffs = [0 for _ in range(0, e+1)]
+        coeffs[0] = c
+        return cls(*coeffs)
 
     def is_zero(self):
         for c in self.coefficients:
