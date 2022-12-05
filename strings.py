@@ -351,6 +351,15 @@ def unicode_escape(s: str):
     return escaped
 
 
+def strikethrough(s: str):
+    # U+0336 "Combining Long Stroke Overlay"
+    strikethrough_char = '\u0336'
+    new = strikethrough_char
+    for c in s:
+        new += c + strikethrough_char
+    return new
+
+
 if __name__ == "__main__":
     result = unescape("\\a\\b\\\\c")
     assert result == "ab\\c", result
