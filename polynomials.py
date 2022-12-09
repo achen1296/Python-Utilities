@@ -199,6 +199,30 @@ class Polynomial:
 
         return (q, r)
 
+    def __pow__(self, exponent: int, modulus: int = None):
+        if exponent < 0:
+            raise Exception("negative exponents not supported")
+        if exponent == 0:
+            return Polynomial(1)
+        if exponent == 1:
+            return self
+        odd_exp_acc = Polynomial(1)
+        while exponent > 1:
+            if exponent % 2 == 1:
+                odd_exp_acc *= self
+                if modulus is not None:
+                    odd_exp_acc %= modulus
+                exponent -= 1
+            else:
+                self *= self
+                if modulus is not None:
+                    self %= modulus
+                exponent //= 2
+        result = self * odd_exp_acc
+        if modulus is not None:
+            result %= modulus
+        return result
+
     @staticmethod
     def gcd(p1: "Polynomial", p2: "Polynomial", modulus: int = None) -> "Polynomial":
         # p1 = q * p2 + r
