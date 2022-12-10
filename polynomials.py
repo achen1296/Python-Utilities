@@ -96,13 +96,32 @@ class Polynomial:
     def degree(self):
         return len(self) - 1
 
-    def __getitem__(self, e: int):
-        if e < 0:
-            raise Exception("No negative exponents")
-        l = len(self)
-        if e >= l:
-            return 0
-        return self.coefficients[e]
+    def __getitem__(self, e: typing.Union[int, slice]):
+        if isinstance(e, int):
+            if e < 0:
+                raise IndexError("No negative exponents")
+            l = len(self)
+            if e >= l:
+                return 0
+            return self.coefficients[e]
+        elif isinstance(e, slice):
+            return self.coefficients[e]
+
+    def __setitem__(self, e: typing.Union[int, slice], value):
+        if isinstance(e, int):
+            if e < 0:
+                raise IndexError("No negative exponents")
+            l = len(self)
+            if e >= l:
+                self.coefficients += [0 for _ in range(0, e-l+1)]
+            self.coefficients[e] = value
+        elif isinstance(e, slice):
+            l = len(self)
+            if e.stop >= l:
+                self.coefficients += [0 for _ in range(0, e.stop-l+1)]
+            self.coefficients[e] = value
+        self.coefficients = Polynomial.__remove_high_exp_zeros(
+            self.coefficients)
 
     def __iter__(self):
         return iter(self.coefficients)
