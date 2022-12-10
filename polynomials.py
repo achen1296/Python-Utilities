@@ -179,7 +179,9 @@ class Polynomial:
 
         return Polynomial(*(self[e] - other[e] for e in range(0, l)), high_powers_first=False)
 
-    def __mul__(self, other: "Polynomial") -> "Polynomial":
+    def __mul__(self, other: typing.Union["Polynomial", int, float]) -> "Polynomial":
+        if isinstance(other, int) or isinstance(other, float):
+            other = Polynomial(other)
         l1 = len(self)
         l2 = len(other)
         # deg(p1) = l1 - 1
