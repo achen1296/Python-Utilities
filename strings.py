@@ -360,6 +360,27 @@ def strikethrough(s: str):
     return new
 
 
+def ascii_table(hex: bool = True):
+    if hex:
+        print("  0123456789ABCDEF")
+        for hex1 in range(2, 8):
+            print(f"{hex1} ", end="")
+            for hex2 in range(0, 16):
+                print(chr(16*hex1+hex2), end="")
+            print()
+    else:
+        print("   0123456789")
+        for dec1 in range(3, 13):
+            print(f"{dec1:2} ", end="")
+            for dec2 in range(0, 10):
+                chr_num = 10*dec1+dec2
+                if 32 <= chr_num <= 127:
+                    print(chr(chr_num), end="")
+                else:
+                    print(" ", end="")
+            print()
+
+
 if __name__ == "__main__":
     result = unescape("\\a\\b\\\\c")
     assert result == "ab\\c", result
