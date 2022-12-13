@@ -184,6 +184,10 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
         return
 
 
+def bell():
+    print('\u0007', end="")  # "bell" ASCII character
+
+
 if __name__ == "__main__":
 
     result = list(cmd_split("a;b;c d"))
