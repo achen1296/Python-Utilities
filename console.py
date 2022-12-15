@@ -188,6 +188,11 @@ def bell():
     print('\u0007', end="")  # "bell" ASCII character
 
 
+def pause(message: str = "Press Enter to continue...: "):
+    """ Mimics the Windows pause console command, including the same message by default. """
+    input(message)
+
+
 if __name__ == "__main__":
 
     result = list(cmd_split("a;b;c d"))
