@@ -22,24 +22,6 @@ def create_file(path: os.PathLike, binary=False, **open_kwargs):
     return open(path, mode, **open_kwargs)
 
 
-def ignore_dot(dirpath: str, dirnames: list[str], filenames: list[str]) -> bool:
-    """ For use with conditional_walk as a condition. Ignores directories/files that start with a ., the Unix hidden file convention. """
-    return Path(dirpath).name[0] != "."
-
-
-def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool] = None) -> tuple[str, list[str], list[str]]:
-    """ Wraps os.walk, only returning the directory information that passes the condition (when the provided function returns true), skipping children of those that fail. """
-    if condition is None:
-        def condition(dp, dns, fns): return True
-    for dirpath, dirnames, filenames in os.walk(root):
-        # ignore folders not matching the condition
-        if not condition(dirpath, dirnames, filenames):
-            # skip all subdirs too
-            dirnames[:] = []
-            continue
-        yield (dirpath, dirnames, filenames)
-
-
 def __file_action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], action_callable: typing.Callable[[os.PathLike, os.PathLike], None], action_past_tense: str, *, overwrite: bool = False, warn_if_exists: bool = True, output: bool = False, **action_kwargs) -> int:
     count = 0
     for src in planned_actions:
@@ -164,41 +146,76 @@ def absolutize_link(link: os.PathLike):
         link.symlink_to(new_target)
 
 
-def delete(file: os.PathLike, not_exist_ok: bool = False, *, output: bool = False, ignore_errors: bool = False):
-    """ Deletes files directly, recursively deletes directories. Works on symlinks, deleting the link without following it (leaves the link's destination intact). """
+def walk_no_op(file: Path, depth: int):
+    pass
 
-    def remove_respect_ignore_errors(file: os.PathLike):
+
+def walk(root: os.PathLike, file_action: typing.Callable[[Path, int], None] = walk_no_op, dir_action: typing.Callable[[Path, int], bool] = walk_no_op, dir_post_action: typing.Callable[[Path, int], bool] = walk_no_op, symlink_action: typing.Callable[[Path, int], bool] = None, not_exist_action: typing.Callable[[Path, int], None] = walk_no_op):
+    """For directories, dir_action is called first. Unless it returns a true value, the contents are recursively walked over. Then dir_post_action is called. 
+
+    If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks."""
+
+    def walk_recursive(file: Path, depth: int):
+        if symlink_action is not None and file.is_symlink():
+            symlink_action(file, depth)
+        elif not file.exists() and not file.is_symlink():
+            # check for symlinks again to make broken symlinks to fall through to the file action
+            not_exist_action(file, depth)
+        elif file.is_dir():
+            # a implicit return value None from dir_action will result in the normal behavior
+            if not dir_action(file, depth):
+                for f in file.iterdir():
+                    walk_recursive(f, depth+1)
+            dir_post_action(file, depth)
+        else:
+            file_action(file, depth)
+
+    walk_recursive(Path(root), 0)
+
+
+def delete(file: os.PathLike, not_exist_ok: bool = False, *, output: bool = False, ignore_errors: bool = False):
+    """ Deletes files directly. Recursively deletes directory contents and then the directory itself. Works on symlinks, deleting the link without following it (leaves the link's destination intact). """
+
+    def remove_respect_ignore_errors(file: Path):
         try:
             os.remove(file)
         except:
             if ignore_errors:
-                print(f"Failed to delete {file}")
-                traceback.print_exc()
+                if output:
+                    print(f"Failed to delete {file}")
+                    traceback.print_exc()
             else:
                 raise
 
-    def delete_recursive(file: os.PathLike, *, output_prefix: str = ""):
-        path = Path(file)
-        if path.is_symlink():
-            remove_respect_ignore_errors(path)
-            if output:
-                print(f"{output_prefix}Deleted symbolic link {path}")
-        elif not path.exists() and not_exist_ok:
-            if output:
-                print(f"{output_prefix}{path} already doesn't exist")
-            # else will raise an error on attempting one of the operations below
-            return
-        elif path.is_dir():
-            if output:
-                print(f"{output_prefix}Deleting directory {path}")
-            for p in path.iterdir():
-                delete_recursive(p, output_prefix=output_prefix + "    ")
-        else:
-            remove_respect_ignore_errors(path)
-            if output:
-                print(f"{output_prefix}Deleted file {path}")
+    def symlink_action(file: Path, depth: int):
+        remove_respect_ignore_errors(file)
+        if output:
+            print(f"{'    ' * depth}{file}: deleted symbolic link")
 
-    delete_recursive(file)
+    def not_exist_action(file: Path, depth: int):
+        if not_exist_ok:
+            if output:
+                print(f"{'    ' * depth}{file}: already does not exist")
+        else:
+            # cause a FileNotFoundError
+            os.remove(file)
+
+    def dir_action(file: Path, depth: int):
+        if output:
+            print(f"{'    ' * depth}{file}: recursing into directory")
+
+    def dir_post_action(file: Path, depth: int):
+        os.rmdir(file)
+        if output:
+            print(f"{'    ' * depth}{file}: deleted directory ")
+
+    def file_action(file: Path, depth: int):
+        remove_respect_ignore_errors(file)
+        if output:
+            print(f"{'    ' * depth}{file}: deleted file ")
+
+    walk(file, file_action=file_action, dir_action=dir_action, dir_post_action=dir_post_action,
+         symlink_action=symlink_action, not_exist_action=not_exist_action)
 
 
 class FileMismatchException(Exception):
