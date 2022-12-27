@@ -8,6 +8,7 @@ import typing
 import zipfile
 from pathlib import Path
 from shutil import copy2 as copy
+from shutil import move
 from zipfile import ZipFile
 
 USERPROFILE = Path(os.environ["USERPROFILE"])
