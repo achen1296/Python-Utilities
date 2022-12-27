@@ -164,6 +164,13 @@ def matches_any(regular_expressions: typing.Iterable[str], s: str, *, flags=0):
     return False
 
 
+def contains_any(substrings: typing.Iterable[str], s: str):
+    for sub in substrings:
+        if sub in s:
+            return True
+    return False
+
+
 class NoPairException(Exception):
     pass
 

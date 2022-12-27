@@ -23,6 +23,14 @@ def name_and_ext(filename: str) -> tuple[str, str]:
     return (name, ext if ext else "")
 
 
+def name(filename: str):
+    return name_and_ext(filename)[0]
+
+
+def ext(filename: str):
+    return name_and_ext(filename)[1]
+
+
 def set(filename: str, tags: typing.Iterable[str]) -> str:
     tags = bset(tags)
     if "" in tags:
@@ -121,7 +129,8 @@ def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, b
                     tags_to_folders[t].add(Path(dirpath, d))
     return tags_to_folders
 
-def tag_by_folder(root:os.PathLike):
+
+def tag_by_folder(root: os.PathLike):
     """ For each subfolder of the root, tags all the files inside with the tags in the subfolder name (as a space-separated list). """
 
     root = Path(root)
@@ -137,9 +146,8 @@ def tag_by_folder(root:os.PathLike):
             new_name = add(file.name, tags)
             if file.name != new_name:
                 planned_moves[file] = file.with_name(new_name)
-    
-    files.move_by_dict(planned_moves)
 
+    files.move_by_dict(planned_moves)
 
 
 if __name__ == "__main__":

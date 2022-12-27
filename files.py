@@ -10,6 +10,9 @@ from pathlib import Path
 from shutil import copy2 as copy
 from zipfile import ZipFile
 
+USERPROFILE = Path(os.environ["USERPROFILE"])
+APPDATA = Path(os.environ["APPDATA"])
+
 
 def create_file(path: os.PathLike, binary=False, **open_kwargs):
     """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use os.makedirs). open_kwargs passed to open(), the result of which is returned. """
