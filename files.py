@@ -150,6 +150,24 @@ def absolutize_link(link: os.PathLike):
         link.symlink_to(new_target)
 
 
+def ignore_dot(dirpath: str, dirnames: list[str], filenames: list[str]) -> bool:
+    """ For use with conditional_walk as a condition. Ignores directories/files that start with a ., the Unix hidden file convention. """
+    return Path(dirpath).name[0] != "."
+
+
+def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool] = None) -> tuple[str, list[str], list[str]]:
+    """ Wraps os.walk, only returning the directory information that passes the condition (when the provided function returns true), skipping children of those that fail. """
+    if condition is None:
+        def condition(dp, dns, fns): return True
+    for dirpath, dirnames, filenames in os.walk(root):
+        # ignore folders not matching the condition
+        if not condition(dirpath, dirnames, filenames):
+            # skip all subdirs too
+            dirnames[:] = []
+            continue
+        yield (dirpath, dirnames, filenames)
+
+
 def walk_no_op(file: Path, depth: int):
     pass
 
