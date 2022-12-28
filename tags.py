@@ -6,53 +6,64 @@ from pathlib import Path
 import re
 
 
-NAME_TAGS_EXT_RE = re.compile("^(.*)(\[.*?\])(\.\w+)?$")
-NAME_EXT_RE = re.compile("^(.*?)(\.\w+)?$")
+NAME_TAGS_SUFFIX_RE = re.compile("^(.*)(\[.*?\])(\.\w+)?$")
+NAME_SUFFIX_RE = re.compile("^(.*?)(\.\w+)?$")
 
 
-def name_and_ext(filename: str) -> tuple[str, str]:
-    match = NAME_TAGS_EXT_RE.match(filename)
+def name_and_suffix(filename: str) -> tuple[str, str]:
+    match = NAME_TAGS_SUFFIX_RE.match(filename)
     if match:
         name = match.group(1)
         ext = match.group(3)
     else:
-        match = NAME_EXT_RE.match(filename)
+        match = NAME_SUFFIX_RE.match(filename)
         name = match.group(1)
         ext = match.group(2)
     # ext can be None
     return (name, ext if ext else "")
 
 
-def name(filename: str):
-    return name_and_ext(filename)[0]
+def name(filename: str) -> str:
+    match = NAME_TAGS_SUFFIX_RE.match(filename)
+    if match:
+        return match.group(1)
+    match = NAME_SUFFIX_RE.match(filename)
+    return match.group(1)
 
 
-def ext(filename: str):
-    return name_and_ext(filename)[1]
+def suffix(filename: str) -> str:
+    """ Differs from Path.suffix by starting the suffix with the LAST . character, not the first. """
+    match = NAME_TAGS_SUFFIX_RE.match(filename)
+    if match:
+        return match.group(3)
+    match = NAME_SUFFIX_RE.match(filename)
+    return match.group(2) or ""
+
+
+def __remove_whitespace(tags: typing.Iterable[str]) -> bset[str]:
+    """ Removes leading and trailing whitespace and removes tags that are entirely whitespace. """
+    return {t.strip() for t in tags if not re.match("^\s*$", t)}
 
 
 def set(filename: str, tags: typing.Iterable[str]) -> str:
-    tags = bset(tags)
-    if "" in tags:
-        tags.remove("")
-    name, ext = name_and_ext(filename)
+    tags = sorted(__remove_whitespace(tags))
+    name, suffix = name_and_suffix(filename)
     if len(tags) == 0:
-        return name + ext
-    return name + "[" + " ".join([t.strip() for t in sorted(tags)]) + "]" + ext
+        return name + suffix
+    return name + "[" + " ".join(tags) + "]" + suffix
 
 
 def get(filename: str) -> bset[str]:
-    match = NAME_TAGS_EXT_RE.match(filename)
+    match = NAME_TAGS_SUFFIX_RE.match(filename)
     if not match:
         return bset()
-    tags = match.group(2)
-    if tags == None:
+    tags_str = match.group(2)
+    if tags_str == None:
         return bset()
     else:
         # remove []
-        tags = tags[1:-1]
-        tags = re.split("\s+", tags)
-        return bset(tags)
+        tags_str = tags_str[1:-1]
+        return bset(re.split("\s+", tags_str))
 
 
 def add(filename: str, new_tags: typing.Iterable[str]) -> str:
@@ -63,70 +74,59 @@ def remove(filename: str, remove_tags: typing.Iterable[str]) -> str:
     return set(filename, get(filename) - bset(remove_tags))
 
 
-def set_name(filename: str, new_name: str) -> str:
-    name, _ = name_and_ext(filename)
-    return new_name + filename[len(name):]
+def rename(filename: str, new_name: str) -> str:
+    return new_name + filename[len(name(filename)):]
 
 
-def tag_in_folder(root: os.PathLike, tags: typing.Iterable[str], *, visit_subdirs: bool = True, remove_tags=False) -> None:
-    """ Adds the tags to all files in the root folder (recursively if visit_subdirs is True). """
+def tag_in_folder(root: os.PathLike, tags: typing.Iterable[str] = [], *, pattern: str = None, match_tags: typing.Iterable[str] = None, recursive: bool = True, remove_tags=[]) -> None:
+    """ Adds/removes the tags to each file in the root folder if its name matches the regular expression pattern and/or set of match tags (the default None parameters match anything). """
     tags = bset(tags)
+    match_tags = bset(match_tags)
     planned_moves = {}
 
-    for dirpath, _, filenames in os.walk(root):
-        for f in filenames:
-            if remove_tags:
-                new_name = remove(f, tags)
-            else:
-                new_name = add(f, tags)
-            if f != new_name:
-                planned_moves[Path(dirpath, f)] = Path(dirpath, new_name)
-        if not visit_subdirs:
-            break
+    def file_action(f: Path, d: int):
+        matches_pattern = pattern is None or re.search(pattern, name(f.name))
+        matches_tags = match_tags is None or (get(f.name) & match_tags)
+        if matches_pattern and matches_tags:
+            new_name = remove(add(f.name, tags), remove_tags)
+            if f.name != new_name:
+                planned_moves[f] = f.with_name(new_name)
 
-    files.move_by_dict(planned_moves)
+    def dir_action(f: Path, d: int):
+        # still go over the top-level folder's contents if not recursive
+        if not recursive:
+            return d > 0
 
-
-def tag_matching(root: os.PathLike, tags: typing.Iterable[str], pattern: str, *, visit_subdirs: bool = True, remove_tags=False) -> None:
-    """ Adds the tags to each file in the root folder (recursively if visit_subdirs is True) if its name matches the regular regular expression pattern. """
-    tags = bset(tags)
-    planned_moves = {}
-
-    for dirpath, _, filenames in os.walk(root):
-        for f in filenames:
-            name, _ = name_and_ext(f)
-            if re.search(pattern, name):
-                if remove_tags:
-                    new_name = remove(f, tags)
-                else:
-                    new_name = add(f, tags)
-                if f != new_name:
-                    planned_moves[Path(dirpath, f)] = Path(dirpath, new_name)
-        if not visit_subdirs:
-            break
+    files.walk(root, file_action=file_action, dir_action=dir_action)
 
     files.move_by_dict(planned_moves)
 
 
 def collect(root: os.PathLike) -> bset[str]:
-    """ Returns all of the tags on files in this folder. """
-    collected_tags = bset()
-    for _, _, filenames in os.walk(root):
-        for f in filenames:
-            collected_tags |= get(f)
+    """ Returns all of the tags on files in this folder, along with counts. """
+    collected_tags = {}
+
+    def file_action(f: Path, d: int):
+        for t in get(f.name):
+            collected_tags[t] = collected_tags.get(t, 0) + 1
+
+    files.walk(root, file_action=file_action)
+
     return collected_tags
 
 
-def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, bset[os.PathLike]]:
-    """ Match each tag to a folders with the tag in its name (as a space-separated list). """
+def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, bset[Path]]:
+    """ Match each tag to a folder with the tag in its name (as a space-separated list). If more than one folder matches a tag, then one is selected arbitrarily. """
+    tags = bset(tags)
     tags_to_folders = {}
-    for dirpath, dirnames, _ in os.walk(root):
-        for d in dirnames:
-            for t in tags:
-                if t in d.split(" "):
-                    if t not in tags_to_folders:
-                        tags_to_folders[t] = bset()
-                    tags_to_folders[t].add(Path(dirpath, d))
+
+    def dir_action(f: Path, d: int):
+        tags_in_name = __remove_whitespace(f.name.split())
+        for t in tags & tags_in_name:
+            tags_to_folders[t] = f
+
+    files.walk(root, dir_action=dir_action)
+
     return tags_to_folders
 
 
@@ -151,13 +151,13 @@ def tag_by_folder(root: os.PathLike):
 
 
 if __name__ == "__main__":
-    result = name_and_ext("file.txt")
+    result = name_and_suffix("file.txt")
     assert result == ("file", ".txt"), result
-    result = name_and_ext("file[tag1].txt")
+    result = name_and_suffix("file[tag1].txt")
     assert result == ("file", ".txt"), result
-    result = name_and_ext("file[tag1 tag2].txt")
+    result = name_and_suffix("file[tag1 tag2].txt")
     assert result == ("file", ".txt"), result
-    result = name_and_ext("asdf")
+    result = name_and_suffix("asdf")
     assert result == ("asdf", ""), result
     result = get("file.txt")
     assert result == bset(), result
