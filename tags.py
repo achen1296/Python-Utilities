@@ -81,7 +81,8 @@ def rename(filename: str, new_name: str) -> str:
 def tag_in_folder(root: os.PathLike, tags: typing.Iterable[str] = [], *, pattern: str = None, match_tags: typing.Iterable[str] = None, recursive: bool = True, remove_tags=[]) -> None:
     """ Adds/removes the tags to each file in the root folder if its name matches the regular expression pattern and/or set of match tags (the default None parameters match anything). """
     tags = bset(tags)
-    match_tags = bset(match_tags)
+    if match_tags is not None:
+        match_tags = bset(match_tags)
     planned_moves = {}
 
     def file_action(f: Path, d: int):
