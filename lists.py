@@ -98,7 +98,7 @@ def random_from(lst: typing.Iterable) -> typing.Any:
             return None
 
 
-def count(lst: typing.Iterable[typing.Hashable], bucket: typing.Callable = lambda x: x) -> dict[typing.Hashable, 5]:
+def count(lst: typing.Iterable[typing.Hashable], bucket: typing.Callable[[typing.Any], typing.Hashable] = lambda x: x) -> dict[typing.Hashable, int]:
     counts = {}
     for i in lst:
         b = bucket(i)
@@ -117,12 +117,15 @@ def histogram(counts: dict, file: os.PathLike = None, *, sort_by="count", bar_ch
         sorted_keys = sorted(counts.keys())
 
     longest_key = max((len(str(k)) for k in counts))
+    longest_count = max((len(str(k)) for k in counts.values()))
+
     hist_str = ""
     for k in sorted_keys:
         # keys padded to length of longest key and right-aligned
         c = counts[k]
-        hist_str += format(k, ">" + str(longest_key)) + \
-            " " + (bar_char * c) + f" {c}\n"
+        hist_str += format(str(k), ">" + str(longest_key)) + \
+            " " + format(str(c), ">" + str(longest_count)) + \
+            " " + (bar_char * c) + "\n"
 
     if file is not None:
         with open(file, "w", encoding=encoding, **open_kwargs) as f:
