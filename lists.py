@@ -106,12 +106,13 @@ def count(lst: typing.Iterable[typing.Hashable], bucket: typing.Callable = lambd
     return counts
 
 
-def histogram(counts: dict, file: os.PathLike = None, *, sort_by=None, bar_char="-", encoding="utf8", **open_kwargs) -> str:
+def histogram(counts: dict, file: os.PathLike = None, *, sort_by="count", bar_char="-", encoding="utf8", **open_kwargs) -> str:
     """ Pass in a dictionary as returned by count(). If file is specified, the result is written to that file. Whether or not it is specified, the result is also returned. sort_by can be a Callable argument for sorted(), "count", or False, which causes the order of iteration over the dict to be used. """
     if sort_by is False:
         sorted_keys = counts.keys()
     elif sort_by == "count":
-        sorted_keys = sorted(counts.keys(), key=lambda k: counts[k])
+        sorted_keys = sorted(
+            counts.keys(), key=lambda k: counts[k], reverse=True)
     else:
         sorted_keys = sorted(counts.keys())
 
