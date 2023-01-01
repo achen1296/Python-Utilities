@@ -224,7 +224,7 @@ class PageBrowser:
             self.driver.switch_to.window(handle)
             yield handle
 
-    def download_all(self, output=True, close_tabs: bool = True, **get_kwargs) -> int:
+    def download_all(self, close_tabs: bool = True, output=True, **get_kwargs) -> int:
         """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads. get_kwargs passed to requests.get"""
         try:
             current = self.driver.current_window_handle
@@ -241,6 +241,10 @@ class PageBrowser:
             self.driver.switch_to.window(current)
         return count
 
+    def switch_tab(self, tab_index: int):
+        """ Specify tab index starting from 0. """
+        self.driver.switch_to.window(self.driver.window_handles[tab_index])
+
 
 def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.Callable] = None):
     actions = {
@@ -248,8 +252,17 @@ def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.
         "a": browser.download_all,
         "o": browser.open,
         "od": browser.open_and_download,
+        "t": browser.switch_tab
     }
+
+    def tab_index_to_int(tab_index: str):
+        return [int(tab_index)]
+
+    def download_all_close_to_bool(close_tab: str = "true"):
+        return [not (close_tab.lower() in {"f", "false"})]
+
+    arg_transform = {"a": download_all_close_to_bool, "t": tab_index_to_int}
     if additional_actions is not None:
         actions.update(additional_actions)
 
-    console.repl(actions)
+    console.repl(actions, arg_transform=arg_transform)
