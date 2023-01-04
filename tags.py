@@ -117,14 +117,16 @@ def collect(root: os.PathLike) -> bset[str]:
 
 
 def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, bset[Path]]:
-    """ Match each tag to a folder with the tag in its name (as a space-separated list). If more than one folder matches a tag, then one is selected arbitrarily. """
+    """ Match each tag to a folder with the tag in its name (as a space-separated list).  """
     tags = bset(tags)
-    tags_to_folders = {}
+    tags_to_folders: dict[str, bset] = {}
 
     def dir_action(f: Path, d: int):
         tags_in_name = __remove_whitespace(f.name.split())
         for t in tags & tags_in_name:
-            tags_to_folders[t] = f
+            if not t in tags_to_folders:
+                tags_to_folders[t] = bset()
+            tags_to_folders[t].add(f)
 
     files.walk(root, dir_action=dir_action)
 
