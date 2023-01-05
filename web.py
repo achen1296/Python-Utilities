@@ -1,3 +1,4 @@
+import files
 import os
 import time
 import typing
@@ -31,6 +32,7 @@ def download_url(url: str, file: os.PathLike = None,  *, output=True, **get_kwar
     """ If file = None, the name is inferred from the last piece of the URL. get_kwargs passed to requests.get. """
     if file is None:
         file = url_filename(url)
+    file = files.remove_forbidden_chars(str(file))
     req = requests.get(url, **get_kwargs)
     if output:
         print(f"Downloading <{url}> -> <{file}>")
