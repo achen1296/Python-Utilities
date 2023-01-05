@@ -38,7 +38,7 @@ def download_url(url: str, file: os.PathLike = None,  *, output=True, **get_kwar
         f.write(req.content)
 
 
-def download_urls(src_dst: dict[str, os.PathLike], *, output=True, wait=0, **get_kwargs):
+def download_urls(src_dst: dict[str, os.PathLike], *, wait=0, output=True, **get_kwargs):
     """ src_dst should be a dictionary defining the order to download and the destination filenames. For None values, the filename is determined from the URL.
 
     Waits for the specified number of seconds in between downloads as an option to avoid pressuring the server; by default does not wait.
@@ -190,17 +190,17 @@ class PageBrowser:
             self.driver.switch_to.window(current)
         return count
 
-    def download(self, output=True, **get_kwargs) -> int:
+    def download(self, wait=0, output=True, **get_kwargs) -> int:
         """Download everything on the current page found by any PageReader. Returns the number of downloads. get_kwargs passed to requests.get."""
         count = 0
         for r in self.readers:
             if r.can_read(self.driver):
                 d = r.to_download(self.driver)
-                download_urls(d, output=output, **get_kwargs)
+                download_urls(d, wait=wait, output=output, **get_kwargs)
                 count += len(d)
         return count
 
-    def open_and_download(self, output=True, **get_kwargs) -> int:
+    def open_and_download(self, wait=0, output=True, **get_kwargs) -> int:
         """Open each link found on the current page, downloads, and closes the tab before moving on to the next one. Returns the number of downloads. get_kwargs passed to requests.get."""
         open_count = 0
         download_count = 0
@@ -214,7 +214,8 @@ class PageBrowser:
                         open_count += 1
                         print(f"{open_count}/{open_total}")
                     self.new_tab(url)
-                    download_count += self.download(output, **get_kwargs)
+                    download_count += self.download(wait=wait,
+                                                    output=output, **get_kwargs)
                     self.close_tab()
             self.driver.switch_to.window(current)
         return download_count
@@ -224,7 +225,7 @@ class PageBrowser:
             self.driver.switch_to.window(handle)
             yield handle
 
-    def download_all(self, close_tabs: bool = True, output=True, **get_kwargs) -> int:
+    def download_all(self, close_tabs: bool = True, wait=0, output=True, **get_kwargs) -> int:
         """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads. get_kwargs passed to requests.get"""
         try:
             current = self.driver.current_window_handle
@@ -233,7 +234,8 @@ class PageBrowser:
             current = None
         count = 0
         for handle in self.iter_tabs():
-            current_count = self.download(output, **get_kwargs)
+            current_count = self.download(
+                wait=wait, output=output, **get_kwargs)
             if current_count > 0 and close_tabs and len(self.driver.window_handles) > 1:
                 self.driver.close()
             count += current_count
@@ -255,13 +257,18 @@ def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.
         "t": browser.switch_tab
     }
 
-    def tab_index_to_int(tab_index: str):
+    def switch_tab_transform(tab_index: str):
         return [int(tab_index)]
 
-    def download_all_close_to_bool(close_tab: str = "true"):
-        return [not (close_tab.lower() in {"f", "false"})]
+    def download_all_transform(close_tab: str = "true", wait: str = '0'):
+        """Transform tab close arg to bool, wait to int."""
+        return [not (close_tab.lower() in {"f", "false"}), int(wait)]
 
-    arg_transform = {"a": download_all_close_to_bool, "t": tab_index_to_int}
+    def open_and_download_transform(wait: str = '0'):
+        return [int(wait)]
+
+    arg_transform = {"a": download_all_transform,
+                     "t": switch_tab_transform, "od": open_and_download_transform}
     if additional_actions is not None:
         actions.update(additional_actions)
 
