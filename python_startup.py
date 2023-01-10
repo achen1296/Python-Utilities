@@ -28,6 +28,8 @@ import sets
 import strings
 import tags
 import web
+from console import signature
 from polynomials import Polynomial
 
 Poly = Polynomial
+sig = signature

@@ -206,6 +206,11 @@ def pause(message: str = "Press Enter to continue...: "):
     input(message)
 
 
+def signature(f):
+    """ Wrapper for inspect.signature that also gives the docstring. """
+    return f"{inspect.signature(f)} {f.__doc__ or ''}"
+
+
 def traceback_wrap(f: typing.Callable, pause_message: str = "Press Enter to continue...") -> typing.Any:
     """ Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     result = None
