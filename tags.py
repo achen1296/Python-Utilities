@@ -87,7 +87,7 @@ def tag_in_folder(root: os.PathLike, tags: typing.Iterable[str] = [], *, pattern
 
     def file_action(f: Path, d: int):
         matches_pattern = pattern is None or re.search(pattern, name(f.name))
-        matches_tags = match_tags is None or (get(f.name) & match_tags)
+        matches_tags = match_tags is None or (get(f.name) > match_tags)
         if matches_pattern and matches_tags:
             new_name = remove(add(f.name, tags), remove_tags)
             if f.name != new_name:
