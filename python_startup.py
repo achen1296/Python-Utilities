@@ -30,6 +30,7 @@ import tags
 import web
 from console import signature
 from polynomials import Polynomial
+from web import By
 
 Poly = Polynomial
 sig = signature
