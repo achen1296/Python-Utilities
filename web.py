@@ -243,6 +243,8 @@ class PageBrowser:
             count += current_count
         if current in self.driver.window_handles:
             self.driver.switch_to.window(current)
+        else:
+            self.switch_tab(0)
         return count
 
     def switch_tab(self, tab_index: int):
