@@ -33,4 +33,8 @@ from polynomials import Polynomial
 from web import By
 
 Poly = Polynomial
-sig = signature
+
+
+def sig(f):
+    """ Prints the signature instead of just returning the string, so it looks nicer in the console. """
+    print(signature(f))

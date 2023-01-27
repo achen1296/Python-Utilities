@@ -207,8 +207,10 @@ def pause(message: str = "Press Enter to continue...: "):
 
 
 def signature(f):
-    """ Wrapper for inspect.signature that also gives the docstring. """
-    return f"{inspect.signature(f)} {f.__doc__ or ''}"
+    """ Wrapper for inspect.signature that also gives the docstring.
+
+    The docstring is modified to remove any indentation. """
+    return re.sub("\n\s+", "\n\n", f"{inspect.signature(f)}\n\n{f.__doc__ or ''}")
 
 
 def traceback_wrap(f: typing.Callable, pause_message: str = "Press Enter to continue...") -> typing.Any:
