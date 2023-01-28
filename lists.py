@@ -87,6 +87,23 @@ def cartesian_product(l1: typing.Iterable, *lists: typing.Iterable, first_fastes
                     yield [i] + combo
 
 
+def combinations(l: typing.Iterable, n: int):
+    """Generate all combinations of n unique elements from the list l exactly one time each. Out-of-bounds values for n are snapped in-bounds, i.e. if n < 0, then only a empty list is yieled, and if n > len(l) then l is yielded."""
+
+    def combinations_recursive(l: list, n: int):
+        if n <= 0:
+            yield []
+            return
+        if n >= len(l):
+            yield l
+            return
+        for i in range(0, len(l) - n + 1):
+            for c in combinations_recursive(l[i+1:], n-1):
+                yield l[i:i+1] + c
+
+    return combinations_recursive(list(l), n)
+
+
 def random_from(lst: typing.Iterable) -> typing.Any:
     while True:
         try:
