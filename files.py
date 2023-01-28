@@ -532,18 +532,18 @@ def delete_empty(root: os.PathLike):
     delete_empty_recursive(root)
 
 
-def list_files(root: os.PathLike, condition: typing.Callable[[os.PathLike], bool] = None):
+def list_files(root: os.PathLike, condition: typing.Callable[[os.PathLike], bool] = None) -> list[Path]:
     """The condition is evaluated on each directory and file. If it returns False for a directory, all of its contents are skipped. If it returns False for a file, that file is excluded."""
 
     result = []
 
     def file_action(p: Path, i: int):
-        if condition(p):
+        if condition is None or condition(p):
             result.append(p)
 
     def dir_action(p: Path, i: int):
         # flip to walk convention
-        return not condition(p)
+        return not (condition is None or condition(p))
 
     walk(root, file_action=file_action, dir_action=dir_action)
 
