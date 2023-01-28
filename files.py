@@ -173,9 +173,11 @@ def walk_no_op(file: Path, depth: int):
 
 
 def walk(root: os.PathLike, file_action: typing.Callable[[Path, int], None] = walk_no_op, dir_action: typing.Callable[[Path, int], bool] = walk_no_op, dir_post_action: typing.Callable[[Path, int], bool] = walk_no_op, symlink_action: typing.Callable[[Path, int], bool] = None, not_exist_action: typing.Callable[[Path, int], None] = walk_no_op):
-    """For directories, dir_action is called first. Unless it returns a true value, the contents are recursively walked over. Then dir_post_action is called. 
+    """For directories, dir_action is called first. Unless it returns a true value (so that an implicit None return value results in the default behavior), the contents are recursively walked over. Then dir_post_action is called. 
 
-    If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks."""
+    If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks.
+
+    The second argument to each action is the depth from the root, which has depth 0."""
 
     def walk_recursive(file: Path, depth: int):
         if symlink_action is not None and file.is_symlink():
@@ -530,10 +532,21 @@ def delete_empty(root: os.PathLike):
     delete_empty_recursive(root)
 
 
-def list_files(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool] = None):
+def list_files(root: os.PathLike, condition: typing.Callable[[os.PathLike], bool] = None):
+    """The condition is evaluated on each directory and file. If it returns False for a directory, all of its contents are skipped. If it returns False for a file, that file is excluded."""
+
     result = []
-    for dirpath, dirnames, filenames in conditional_walk(root, condition):
-        result += [dirpath + os.sep + f for f in filenames]
+
+    def file_action(p: Path, i: int):
+        if condition(p):
+            result.append(p)
+
+    def dir_action(p: Path, i: int):
+        # flip to walk convention
+        return not condition(p)
+
+    walk(root, file_action=file_action, dir_action=dir_action)
+
     return result
 
 
