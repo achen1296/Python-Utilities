@@ -129,8 +129,14 @@ def sleep(time_str: str):
     time.sleep(sleep_time)
 
 
-def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[str] = None, arg_transform: dict[str, typing.Callable] = {}):
-    """ Special actions help/?, sleep/wait, and exit/quit are added on top of the provided actions, overriding any existing with those names. Since the arguments are usually strings, but some existing functions may expect other types, arg_transforms may be specified. """
+def repl(actions: dict[str, typing.Union[typing.Callable, str]], *, input_source: typing.Iterable[str] = None, arg_transform: dict[str, typing.Callable] = {}):
+    """ actions is a dictionary with names that the console user can use to call a function. If the dictionary value is a string instead, it is treated as an alias. 
+
+    input_source is by default console user input. Mainly for testing, it may be set to e.g. a list of strings instead. 
+
+    arg_transforms should have a subset of the names in actions and contain functions to transform console input values from strings to other types. 
+
+    Special actions help/?, sleep/wait, and exit/quit are added on top of the provided actions, overriding any existing with those names. Since the arguments are usually strings, but some existing functions may expect other types, arg_transforms may be specified. """
     if input_source is None:
         input_source = input_generator()
 
@@ -139,19 +145,30 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
         raise Exception(
             f"Extra transformations specified for unknown actions {', '.join(extra_transforms)}")
 
+    builtins = ["help", "?", "sleep", "wait", "exit"]
+
     # add special actions
     def help(*action_names: str):
-        """ Show this help menu. Specify one or more commands to only show their descriptions. """
+        """ Show this help menu. Specify one or more commands to only show their descriptions. Specify "builtins" to see the rest of the built-in commands. """
+        action_names: set[str] = set(action_names)
         if len(action_names) == 0:
-            # get all actions if none are specified
+            # get all actions if none are specified, but the builtins will be excluded except help
             items = [(name, action)
-                     for name, action in actions.items()]
+                     for name, action in actions.items() if name not in builtins or name == "help"]
         else:
+            if "builtins" in action_names:
+                action_names.remove("builtins")
+                action_names.update(builtins)
             items = [(name, actions.get(name))
                      for name in action_names]
+        # sort by name
+        items.sort(key=lambda tup: tup[0])
         for name, a in items:
             if a is None:
                 print(f"Unknown action {name}")
+                continue
+            if isinstance(a, str):
+                print(f"{name}: Alias for \"{a}\"")
                 continue
             if name in arg_transform:
                 sig = f"{inspect.signature(arg_transform[name])} -> "
@@ -160,9 +177,11 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
             sig += str(inspect.signature(a))
             print(f"{name}: {sig} {a.__doc__ or ''}")
 
-    actions["help"] = actions["?"] = help
+    actions["help"] = help
+    actions["?"] = "help"
 
-    actions["sleep"] = actions["wait"] = sleep
+    actions["sleep"] = sleep
+    actions["wait"] = "sleep"
 
     def exit():
         """ Exit. """
@@ -178,6 +197,9 @@ def repl(actions: dict[str, typing.Callable], *, input_source: typing.Iterable[s
             action_name = args[0]
             args = args[1:]
             if action_name in actions:
+                while isinstance(actions[action_name], str):
+                    # follow alias chain
+                    action_name = actions[action_name]
                 if action_name in arg_transform:
                     args = arg_transform[action_name](
                         *args)
