@@ -567,3 +567,18 @@ def watch(file: os.PathLike, callback: typing.Callable[[os.PathLike, time.struct
             last_mod_time = current_mod_time
 
         time.sleep(poll_time)
+
+
+def regex_rename(root: os.PathLike, find: typing.Union[str, re.Pattern[str]], replace: typing.Union[str, typing.Callable[[typing.Union[str, re.Match]], str]]):
+    """ Only moves files. Returns the number of files moved. """
+    find = re.compile(find)
+    moves = {}
+
+    def file_action(p: Path, i: int):
+        new_name = re.sub(find, replace, p.name)
+        if p.name != new_name:
+            moves[p] = p.with_name(new_name)
+
+    walk(root, file_action=file_action)
+
+    return move_by_dict(moves)
