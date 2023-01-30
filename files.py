@@ -79,9 +79,9 @@ class LinkException(Exception):
 def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True):
     """ Creates a link at the path dst that targets the path at src.
 
-    Automatically determines what kind of link to create based on whether or not src is a file or folder (raises and exception if src does not exist). 
+    Automatically determines what kind of link to create based on whether or not src is a file or folder (raises and exception if src does not exist).
 
-    If making a symbolic link and the source is a symbolic link, it is copied instead of linking to the existing link. 
+    If making a symbolic link and the source is a symbolic link, it is copied instead of linking to the existing link.
 
     If src is a relative path, it is absolutized for a non-symbolic link. For a symbolic link it is interpreted relative to the parent of dst (mimicking the behavior of the link itself) to check for existence and is applied to the resulting link as-is. """
 
@@ -173,7 +173,7 @@ def walk_no_op(file: Path, depth: int):
 
 
 def walk(root: os.PathLike, file_action: typing.Callable[[Path, int], None] = walk_no_op, dir_action: typing.Callable[[Path, int], bool] = walk_no_op, dir_post_action: typing.Callable[[Path, int], bool] = walk_no_op, symlink_action: typing.Callable[[Path, int], bool] = None, not_exist_action: typing.Callable[[Path, int], None] = walk_no_op):
-    """For directories, dir_action is called first. Unless it returns a true value (so that an implicit None return value results in the default behavior), the contents are recursively walked over. Then dir_post_action is called. 
+    """For directories, dir_action is called first. Unless it returns a true value (so that an implicit None return value results in the default behavior), the contents are recursively walked over. Then dir_post_action is called.
 
     If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks.
 
@@ -269,7 +269,7 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
             shutil.copy2(src, dst, follow_symlinks=False)
             count += 1
     else:
-        #src is dir
+        # src is dir
         if dst.exists():
             # delete files in dst that do not exist in src
             src_filenames = [f.name for f in src.iterdir()]
@@ -332,7 +332,7 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
             shutil.copy2(path1, path2, follow_symlinks=False)
             count += 1
     elif path2.exists() and path2.is_file():
-        #assert not path1.exists()
+        # assert not path1.exists()
         if output:
             print(f"{output_prefix}Creating file <{path2}> -> <{path1}>")
         shutil.copy2(path2, path1, follow_symlinks=False)
@@ -375,7 +375,7 @@ class ZipException(Exception):
 
 
 def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_root: os.PathLike = None, *, overwrite: bool = True, exclude: list[str] = []):
-    """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience. 
+    """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience.
 
     exclude is a list of regular expressions applied to full file paths with backslahes replaced with forward slashes. Matching files are not zipped. If a directory matches, none of its contents are zipped. Respects whether the original arguments were relative or absolute for this purpose. """
     zip_path = Path(zip_path).with_suffix(".zip")
