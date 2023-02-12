@@ -14,6 +14,7 @@ from urllib.parse import quote, unquote, urlparse
 import selenium
 from PIL import Image
 
+import byte_operations as bop
 import console
 import dictionaries
 import environment
