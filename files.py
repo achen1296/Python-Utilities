@@ -494,10 +494,10 @@ def count(path: os.PathLike):
     return count_recursive(Path(path))
 
 
-def hash(file: os.PathLike, size: int = -1, hex: bool = True) -> int:
-    """ Hash with SHA3-256. """
+def hash(file: os.PathLike, *, hash_function: str = "MD5", size: int = -1, hex: bool = True) -> int:
+    """ Hash with the specified function (default MD5). """
     with open(file, "rb") as f:
-        h = hashlib.sha3_256(f.read(size))
+        h = hashlib.new(hash_function, f.read(size), usedforsecurity=False)
         return h.hexdigest() if hex else h.digest()
 
 

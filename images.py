@@ -1,3 +1,4 @@
+import hashlib
 import os
 import random
 import typing
@@ -104,3 +105,10 @@ def collage(imgs: list[typing.Union[os.PathLike, Image.Image]], width: int, heig
 
     _optional_save(new, output)
     return new
+
+
+def hash(img: typing.Union[os.PathLike, Image.Image], *, hash_function: str = "MD5", hex: bool = True) -> int:
+    """ Hash with the specified function (default MD5). Uses PIL to ignore image metadata. """
+    img = _image_from_file_or_image(img)
+    h = hashlib.new(hash_function, img.tobytes(), usedforsecurity=False)
+    return h.hexdigest() if hex else h.digest()
