@@ -1,3 +1,4 @@
+import lists
 import files
 import os
 import time
@@ -245,7 +246,7 @@ class PageBrowser:
             # window being controlled was closed
             current = None
         count = 0
-        for handle in self.iter_tabs():
+        for _ in self.iter_tabs():
             current_count = self.download(
                 wait=wait, output=output, **get_kwargs)
             if current_count > 0 and close_tabs and len(self.driver.window_handles) > 1:
@@ -261,6 +262,19 @@ class PageBrowser:
         """ Specify tab index starting from 0. """
         self.driver.switch_to.window(self.driver.window_handles[tab_index])
 
+    def save_pages(self, file: os.PathLike):
+        """Save the current pages to a file"""
+        urls = []
+        for _ in self.iter_tabs():
+            urls.append(self.driver.current_url)
+        lists.write_file_list(file, urls)
+
+    def load_pages(self, file: os.PathLike):
+        """Load pages from file"""
+        urls = lists.read_file_list(file)
+        for u in urls:
+            self.new_tab(u)
+
 
 def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.Callable] = None):
     actions = {
@@ -268,7 +282,9 @@ def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.
         "a": browser.download_all,
         "o": browser.open,
         "od": browser.open_and_download,
-        "t": browser.switch_tab
+        "t": browser.switch_tab,
+        "s": browser.save_pages,
+        "l": browser.load_pages
     }
 
     def switch_tab_transform(tab_index: str):
