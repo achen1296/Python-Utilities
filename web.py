@@ -17,15 +17,14 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 import console
 
+from urllib.parse import urlparse
+
 
 def url_filename(url: str):
-    """ Get ending filename in a URL pointing to a file"""
-    last_slash = url.rfind("/")
-    last_q = url.rfind("?")
-    if last_q > last_slash:
-        return url[last_slash + 1:last_q]
-    else:
-        return url[last_slash + 1:]
+    """ Get filename in a URL pointing to a file -- the last path component. """
+    path = urlparse(url).path
+    last_slash = path.rfind("/")
+    return path[last_slash+1:]
 
 
 def download_url(url: str, file: os.PathLike = None,  *, output=True, **get_kwargs):
