@@ -170,7 +170,7 @@ class PageBrowser:
         self.driver = driver
         self.readers = set(readers)
 
-    def new_tab(self, url):
+    def new_tab(self, url: str):
         self.driver.execute_script("window.open('')")
         # switch to last, i.e. newest, window
         self.driver.switch_to.window(
