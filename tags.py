@@ -10,6 +10,14 @@ NAME_TAGS_SUFFIX_RE = re.compile("^(.*)(\[.*?\])(\.\w+)?$")
 NAME_SUFFIX_RE = re.compile("^(.*?)(\.\w+)?$")
 
 
+def remove_forbidden_chars(name: str, name_only=False):
+    """ Variant of files.remove_forbidden_chars that also removes square brackets, intended to be used on files that are known not to have any tags. """
+    name = files.remove_forbidden_chars(name, name_only)
+    for c in ["[", "]"]:
+        name = name.replace(c, "")
+    return name
+
+
 def name_and_suffix(filename: str) -> tuple[str, str]:
     match = NAME_TAGS_SUFFIX_RE.match(filename)
     if match:
