@@ -137,6 +137,9 @@ def scroll_all_elements(driver: WebDriver, css_selector: str, *, interactable_se
 class PageReader:
     """Reads a webpage to search for links to download or open."""
 
+    def __init__(self, download_headers=None):
+        self.download_headers: dict[str, str] = download_headers
+
     def can_read(self, driver: WebDriver) -> bool:
         """Whether or not the current page is readable by this PageReader."""
         return True
@@ -192,11 +195,19 @@ class PageBrowser:
         return count
 
     def download(self, wait=0, output=True, **get_kwargs) -> int:
-        """Download everything on the current page found by any PageReader. Returns the number of downloads. get_kwargs passed to requests.get."""
+        """Download everything on the current page found by any PageReader. Returns the number of downloads.
+
+        get_kwargs passed to requests.get.
+
+        If a PageReader claims to be able to read the page, its download headers are combined with any given as arguments to this function."""
         count = 0
         for r in self.readers:
             if r.can_read(self.driver):
                 d = r.to_download(self.driver)
+                if r.download_headers is not None:
+                    if "headers" not in get_kwargs:
+                        get_kwargs["headers"] = {}
+                    get_kwargs["headers"].update(r.download_headers)
                 download_urls(d, wait=wait, output=output, **get_kwargs)
                 count += len(d)
         return count
