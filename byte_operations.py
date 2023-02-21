@@ -26,11 +26,14 @@ def hex_to_plain(hex: str) -> str:
     return ints_to_plain(hex_to_ints(hex))
 
 
-def xor(ints1: list[int], ints2: list[int]) -> list[int]:
-    """ If the lists are of unequal size, the shorter one is cycled. """
-    l1 = len(ints1)
-    l2 = len(ints2)
-    return [ints1[i % l1] ^ ints2[i % l2] for i in range(0, max(l1, l2))]
+def xor(*int_lists: list[int]) -> list[int]:
+    """ If the lists are of unequal size, shorter ones are cycled. """
+    max_len = max(len(l) for l in int_lists)
+    result = [0 for _ in range(0, max_len)]
+    for l in int_lists:
+        len_l = len(l)
+        result = [result[i] ^ l[i % len_l] for i in range(0, max_len)]
+    return result
 
 
 def random_bytes(length: int):
