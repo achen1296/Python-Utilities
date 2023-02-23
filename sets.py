@@ -1,6 +1,21 @@
 from typing import Hashable, Iterable
 
 
+def nonempty_intersection(s1: set, s2: set) -> bool:
+    len1 = len(s1)
+    len2 = len(s2)
+    if len1 <= len2:
+        small = s1
+        large = s2
+    else:
+        small = s2
+        large = s1
+    for e in small:
+        if e in large:
+            return True
+    return False
+
+
 class Partition:
     """For constructing representations of partitions/equivalence relations. If you have a Partition p, p[key] returns the cell containing the key. Objects can also be removed this way using the del keyword."""
 
