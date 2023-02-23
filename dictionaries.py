@@ -10,11 +10,18 @@ def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str
     """ Reads a dictionary from a list of string entries.
 
     By default each is interpreted as key>value or key>val1|val2|... 
+
     If the k/v separator is not present, the value is automatically filled in with "" (or [] for all_lists=True), and if present multiple times in an entry, those after the first are interpreted as value text.
 
-    ">" is the default key/value separator and "|" is the default value list separator so that file paths can be keys/values. The default comment starter is "#". Use "" for no comments or no value list separator. All string parameters are used as regular expressions.
+    ">" is the default key/value separator and "|" is the default value list separator so that file paths can be keys/values, since these characters are not allowed in filenames. 
 
-    Entries that are one element long are not turned into lists by default. """
+    The default comment starter is "#". Use "" for no comments or no value list separator. It must be at the start of a line, otherwise it is interpreted as key/value text.
+
+    All string parameters are used as regular expressions.
+
+    Entries that are one element long are not turned into lists by default. 
+
+    Undefined behavior for duplicate keys. """
     d = {}
     for entry in iterable_dict:
         # skip whitespace and comments
