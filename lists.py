@@ -104,6 +104,19 @@ def combinations(l: typing.Iterable, n: int):
     return combinations_recursive(list(l), n)
 
 
+def permutations(l: typing.Iterable):
+    """ Generate all permutations of the input """
+    def permutations_recursive(l: list):
+        len_l = len(l)
+        if len_l == 0:
+            yield []
+            return
+        for i in range(0, len_l):
+            for p in permutations_recursive(l[:i]+l[i+1:]):
+                yield [l[i]] + p
+    return permutations_recursive(list(l))
+
+
 def random_from(lst: typing.Iterable) -> typing.Any:
     while True:
         try:
