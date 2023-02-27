@@ -1,4 +1,4 @@
-import typing
+from typing import Iterable
 import os
 from builtins import set as bset
 import files
@@ -48,12 +48,12 @@ def suffix(filename: str) -> str:
     return match.group(2) or ""
 
 
-def __remove_whitespace(tags: typing.Iterable[str]) -> bset[str]:
+def __remove_whitespace(tags: Iterable[str]) -> bset[str]:
     """ Removes leading and trailing whitespace and removes tags that are entirely whitespace. """
     return {t.strip() for t in tags if not re.match("^\s*$", t)}
 
 
-def set(filename: str, tags: typing.Iterable[str]) -> str:
+def set(filename: str, tags: Iterable[str]) -> str:
     tags = sorted(__remove_whitespace(tags))
     name, suffix = name_and_suffix(filename)
     if len(tags) == 0:
@@ -74,11 +74,11 @@ def get(filename: str) -> bset[str]:
         return bset(re.split("\s+", tags_str))
 
 
-def add(filename: str, new_tags: typing.Iterable[str]) -> str:
+def add(filename: str, new_tags: Iterable[str]) -> str:
     return set(filename, get(filename) | bset(new_tags))
 
 
-def remove(filename: str, remove_tags: typing.Iterable[str]) -> str:
+def remove(filename: str, remove_tags: Iterable[str]) -> str:
     return set(filename, get(filename) - bset(remove_tags))
 
 
@@ -86,20 +86,17 @@ def rename(filename: str, new_name: str) -> str:
     return new_name + filename[len(name(filename)):]
 
 
-def tag_in_folder(root: os.PathLike, tags: typing.Iterable[str] = [], *, pattern: str = None, match_tags: typing.Iterable[str] = None, recursive: bool = True, remove_tags=[]) -> None:
-    """ Adds/removes the tags to each file in the root folder if its name matches the regular expression pattern and/or set of match tags (the default None parameters match anything). """
-    tags = bset(tags)
+def matching_files(root: os.PathLike, pattern: str = None, match_tags: Iterable[str] = None, recursive: bool = True) -> Iterable[Path]:
     if match_tags is not None:
         match_tags = bset(match_tags)
-    planned_moves = {}
+
+    file_list = []
 
     def file_action(f: Path, d: int):
         matches_pattern = pattern is None or re.search(pattern, name(f.name))
         matches_tags = match_tags is None or (get(f.name) > match_tags)
         if matches_pattern and matches_tags:
-            new_name = remove(add(f.name, tags), remove_tags)
-            if f.name != new_name:
-                planned_moves[f] = f.with_name(new_name)
+            file_list.append(f)
 
     def dir_action(f: Path, d: int):
         # still go over the top-level folder's contents if not recursive
@@ -107,6 +104,19 @@ def tag_in_folder(root: os.PathLike, tags: typing.Iterable[str] = [], *, pattern
             return d > 0
 
     files.walk(root, file_action=file_action, dir_action=dir_action)
+
+    return file_list
+
+
+def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, pattern: str = None, match_tags: Iterable[str] = None, recursive: bool = True, remove_tags=[]) -> None:
+    """ Adds/removes the tags to each file in the root folder if its name matches the regular expression pattern and/or set of match tags (the default None parameters match anything). """
+    tags = bset(tags)
+    planned_moves = {}
+
+    for f in matching_files(root, pattern, match_tags, recursive):
+        new_name = remove(add(f.name, tags), remove_tags)
+        if f.name != new_name:
+            planned_moves[f] = f.with_name(new_name)
 
     files.move_by_dict(planned_moves)
 
@@ -124,7 +134,7 @@ def collect(root: os.PathLike) -> bset[str]:
     return collected_tags
 
 
-def map_to_folders(root: os.PathLike, tags: typing.Iterable[str]) -> dict[str, bset[Path]]:
+def map_to_folders(root: os.PathLike, tags: Iterable[str]) -> dict[str, bset[Path]]:
     """ Match each tag to a folder with the tag in its name (as a space-separated list).  """
     tags = bset(tags)
     tags_to_folders: dict[str, bset] = {}
