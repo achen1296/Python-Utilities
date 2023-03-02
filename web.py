@@ -1,24 +1,27 @@
-import lists
-import files
 import os
 import time
 import typing
+from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 from selenium import webdriver
 from selenium.common.exceptions import (NoSuchElementException,
-                                        NoSuchWindowException, StaleElementReferenceException)
+                                        NoSuchWindowException,
+                                        StaleElementReferenceException)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+from selenium.webdriver.firefox.service import Service as FirefoxService
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.ui import WebDriverWait
 
 import console
-
-from urllib.parse import urlparse
+import files
+import lists
 
 
 def url_filename(url: str):
@@ -58,13 +61,17 @@ def download_urls(src_dst: dict[str, os.PathLike], *, wait=0, output=True, **get
         download_url(url, src_dst[url], output=output, **get_kwargs)
 
 
-def firefox_driver(**webdriver_kwargs) -> webdriver.Firefox:
-    driver = webdriver.Firefox(**webdriver_kwargs)
+def firefox_driver(**kwargs) -> webdriver.Firefox:
+    # discard log output
+    service = FirefoxService(log_path="NUL:")
+    driver = webdriver.Firefox(service=service, **kwargs)
     driver.implicitly_wait(2)
     return driver
 
 
-def tor_driver(**webdriver_kwargs) -> webdriver.Firefox:
+def tor_driver(**kwargs) -> webdriver.Firefox:
+    # discard log output
+    service = FirefoxService(log_path="NUL:")
     userprofile = os.environ["userprofile"]
     tor = userprofile + r'\Programs\Tor Browser\TorBrowser'
     torexe = os.popen(
@@ -76,7 +83,8 @@ def tor_driver(**webdriver_kwargs) -> webdriver.Firefox:
     profile.set_preference('network.proxy.socks_port', 9050)
     profile.set_preference("network.proxy.socks_remote_dns", False)
 
-    driver = webdriver.Firefox(firefox_profile=profile, **webdriver_kwargs)
+    driver = webdriver.Firefox(
+        firefox_profile=profile, service=service, **kwargs)
     driver.get("http://check.torproject.org")
     return driver
 
@@ -86,8 +94,10 @@ def chrome_driver(profile: str) -> webdriver.Chrome:
     options.add_argument(
         f"user-data-dir={os.environ['LOCALAPPDATA']}\\Google\\Chrome\\User Data")
     options.add_argument(f"profile-directory={profile}")
+    # discard log output
+    service = ChromeService(log_path="NUL:")
     driver = webdriver.Chrome(
-        executable_path=f"{os.environ['HOMEPATH']}\\Programs\\chromedriver.exe", options=options)
+        executable_path=f"{os.environ['HOMEPATH']}\\Programs\\chromedriver.exe", options=options, service=service)
     driver.implicitly_wait(2)
     return driver
 
