@@ -86,16 +86,22 @@ def rename(filename: str, new_name: str) -> str:
     return new_name + filename[len(name(filename)):]
 
 
-def matching_files(root: os.PathLike, pattern: str = None, match_tags: Iterable[str] = None, recursive: bool = True) -> Iterable[Path]:
-    if match_tags is not None:
-        match_tags = bset(match_tags)
+def matching_files(root: os.PathLike, pattern: str = None, include_tags: Iterable[str] = None, exclude_tags: Iterable[str] = None, recursive: bool = True) -> Iterable[Path]:
+    """ All include_tags must be present, and none of the exclude_tags. (To get files with some tags OR some other ones, just do another search.) """
+    if include_tags is not None:
+        include_tags = bset(include_tags)
+    if exclude_tags is not None:
+        exclude_tags = bset(exclude_tags)
 
     file_list = []
 
     def file_action(f: Path, d: int):
         matches_pattern = pattern is None or re.search(pattern, name(f.name))
-        matches_tags = match_tags is None or (get(f.name) > match_tags)
-        if matches_pattern and matches_tags:
+        file_tags = get(f.name)
+        matches_include_tags = include_tags is None or file_tags > include_tags
+        matches_exclude_tags = exclude_tags is not None and (
+            file_tags & exclude_tags)
+        if matches_pattern and matches_include_tags and not matches_exclude_tags:
             file_list.append(f)
 
     def dir_action(f: Path, d: int):
@@ -108,12 +114,12 @@ def matching_files(root: os.PathLike, pattern: str = None, match_tags: Iterable[
     return file_list
 
 
-def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, pattern: str = None, match_tags: Iterable[str] = None, recursive: bool = True, remove_tags=[]) -> None:
+def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, pattern: str = None, match_include_tags: Iterable[str] = None, match_exclude_tags: Iterable[str] = None, recursive: bool = True, remove_tags=[]) -> None:
     """ Adds/removes the tags to each file in the root folder if its name matches the regular expression pattern and/or set of match tags (the default None parameters match anything). """
     tags = bset(tags)
     planned_moves = {}
 
-    for f in matching_files(root, pattern, match_tags, recursive):
+    for f in matching_files(root, pattern, match_include_tags, match_exclude_tags, recursive):
         new_name = remove(add(f.name, tags), remove_tags)
         if f.name != new_name:
             planned_moves[f] = f.with_name(new_name)
