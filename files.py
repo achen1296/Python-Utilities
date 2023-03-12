@@ -525,15 +525,11 @@ def delete_empty(root: os.PathLike):
     delete_empty_recursive(root)
 
 
-def list_files(root: os.PathLike, skip: typing.Callable[[os.PathLike], bool] = None) -> list[Path]:
-    """ The skip condition is evaluated on each directory and file. If it returns True, the file or the entire directoyr are skipped. """
+def list_files(root: os.PathLike, *, skip_file: typing.Callable[[os.PathLike, int], bool] = None, skip_dir: typing.Callable[[os.PathLike, int], bool] = None) -> list[Path]:
 
     def file_action(p: Path, i: int):
-        if skip is None or not skip(p):
+        if skip_file is None or not skip_file(p):
             yield p
-
-    def skip_dir(p: Path, i: int):
-        return skip is not None and skip(p)
 
     return walk(root, file_action=file_action, skip_dir=skip_dir)
 
