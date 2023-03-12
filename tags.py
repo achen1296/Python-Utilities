@@ -104,12 +104,11 @@ def matching_files(root: os.PathLike, pattern: str = None, include_tags: Iterabl
         if matches_pattern and matches_include_tags and not matches_exclude_tags:
             file_list.append(f)
 
-    def dir_action(f: Path, d: int):
+    def skip_dir(f: Path, d: int):
         # still go over the top-level folder's contents if not recursive
-        if not recursive:
-            return d > 0
+        return not recursive and d > 0
 
-    files.walk(root, file_action=file_action, dir_action=dir_action)
+    files.walk(root, file_action=file_action, skip_dir=skip_dir)
 
     return file_list
 

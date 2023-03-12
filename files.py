@@ -150,51 +150,47 @@ def absolutize_link(link: os.PathLike):
         link.symlink_to(new_target)
 
 
-def ignore_dot(dirpath: str, dirnames: list[str], filenames: list[str]) -> bool:
-    """ For use with conditional_walk as a condition. Ignores directories/files that start with a ., the Unix hidden file convention. """
-    return Path(dirpath).name[0] != "."
-
-
-def conditional_walk(root: os.PathLike, condition: typing.Callable[[str, list[str], list[str]], bool] = None) -> tuple[str, list[str], list[str]]:
-    """ Wraps os.walk, only returning the directory information that passes the condition (when the provided function returns true), skipping children of those that fail. """
-    if condition is None:
-        def condition(dp, dns, fns): return True
-    for dirpath, dirnames, filenames in os.walk(root):
-        # ignore folders not matching the condition
-        if not condition(dirpath, dirnames, filenames):
-            # skip all subdirs too
-            dirnames[:] = []
-            continue
-        yield (dirpath, dirnames, filenames)
-
-
-def walk_no_op(file: Path, depth: int):
-    pass
-
-
-def walk(root: os.PathLike, file_action: typing.Callable[[Path, int], None] = walk_no_op, dir_action: typing.Callable[[Path, int], bool] = walk_no_op, dir_post_action: typing.Callable[[Path, int], bool] = walk_no_op, symlink_action: typing.Callable[[Path, int], bool] = None, not_exist_action: typing.Callable[[Path, int], None] = walk_no_op):
-    """For directories, dir_action is called first. Unless it returns a true value (so that an implicit None return value results in the default behavior), the contents are recursively walked over. Then dir_post_action is called.
+def walk(root: os.PathLike, *,
+         file_action: typing.Callable[[
+             Path, int], typing.Optional[typing.Iterable]] = None,
+         skip_dir: typing.Callable[[Path, int], bool] = None,
+         dir_action: typing.Callable[[
+             Path, int], typing.Optional[typing.Iterable]] = None,
+         dir_post_action: typing.Callable[[
+             Path, int], typing.Optional[typing.Iterable]] = None,
+         symlink_action: typing.Callable[[
+             Path, int], typing.Optional[typing.Iterable]] = None,
+         not_exist_action: typing.Callable[[
+             Path, int], typing.Optional[typing.Iterable]] = None):
+    """ For directories, dir_action is called first. Then skip_dir is called, and unless it returns a truthy value, the contents are recursively walked over before dir_post_action is called.
 
     If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks.
 
-    The second argument to each action is the depth from the root, which has depth 0."""
+    The second argument to each action is the depth from the root, which has depth 0.
 
-    def walk_recursive(file: Path, depth: int):
-        if symlink_action is not None and file.is_symlink():
-            symlink_action(file, depth)
-        elif not file.exists() and not file.is_symlink():
+    For all actions (skip_dir is not an action), if the return value is not None, it is yielded from -- so it must be iterable. This is to support using this function as a generator. """
+
+    def walk_recursive(root: Path, depth: int):
+        if symlink_action is not None and root.is_symlink():
+            if (symlink_result := symlink_action(root, depth)) is not None:
+                yield from symlink_result
+        elif not root.exists() and not root.is_symlink():
             # check for symlinks again to make broken symlinks to fall through to the file action
-            not_exist_action(file, depth)
-        elif file.is_dir():
-            # a implicit return value None from dir_action will result in the normal behavior
-            if not dir_action(file, depth):
-                for f in file.iterdir():
-                    walk_recursive(f, depth+1)
-            dir_post_action(file, depth)
+            if not_exist_action is not None and (not_exist_result := not_exist_action(root, depth)) is not None:
+                yield from not_exist_result
+        elif root.is_file():
+            if file_action is not None and (file_result := file_action(root, depth)) is not None:
+                yield from file_result
         else:
-            file_action(file, depth)
+            if dir_action is not None and (dir_result := dir_action(root, depth)) is not None:
+                yield from dir_result
+            if skip_dir is None or not skip_dir(root, depth):
+                for f in root.iterdir():
+                    yield from walk_recursive(f, depth+1)
+                if dir_post_action is not None and (dir_post_result := dir_post_action(root, depth)) is not None:
+                    yield from dir_post_result
 
-    walk_recursive(Path(root), 0)
+    return walk_recursive(Path(root), 0)
 
 
 def delete(file: os.PathLike, not_exist_ok: bool = False, *, output: bool = False, ignore_errors: bool = False):
@@ -415,18 +411,15 @@ def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = None,  ou
         zip.extractall(output_dir, files)
 
 
-def long_names(root: os.PathLike) -> set[str]:
+def long_names(root: os.PathLike) -> typing.Iterable[Path]:
     """ Returns a set of files whose absolute paths are >= 260 characters, which means they are too long for some Windows applications. Not > 260 because, as the page linked below describes, Windows includes the NUL character at the end in the count, while Python strings do not.
 
     docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation """
-    root = Path(root).resolve()
-    long_set = set()
-    for dirpath, _, filenames in os.walk(root):
-        for f in filenames:
-            full = dirpath+os.sep+f
-            if len(full) >= 260:
-                long_set.add(full)
-    return long_set
+    def file_action(f: Path, d: int):
+        if len(str(f)) >= 260:
+            yield f
+
+    return walk(Path(root).resolve(), file_action=file_action)
 
 
 def re_split(file: os.PathLike, separator: str = "\s*\n\s*", *, exclude_empty: bool = True, encoding="utf8", **open_kwargs):
@@ -532,22 +525,17 @@ def delete_empty(root: os.PathLike):
     delete_empty_recursive(root)
 
 
-def list_files(root: os.PathLike, condition: typing.Callable[[os.PathLike], bool] = None) -> list[Path]:
-    """The condition is evaluated on each directory and file. If it returns False for a directory, all of its contents are skipped. If it returns False for a file, that file is excluded."""
-
-    result = []
+def list_files(root: os.PathLike, skip: typing.Callable[[os.PathLike], bool] = None) -> list[Path]:
+    """ The skip condition is evaluated on each directory and file. If it returns True, the file or the entire directoyr are skipped. """
 
     def file_action(p: Path, i: int):
-        if condition is None or condition(p):
-            result.append(p)
+        if skip is None or not skip(p):
+            yield p
 
-    def dir_action(p: Path, i: int):
-        # flip to walk convention
-        return not (condition is None or condition(p))
+    def skip_dir(p: Path, i: int):
+        return skip is not None and skip(p)
 
-    walk(root, file_action=file_action, dir_action=dir_action)
-
-    return result
+    return walk(root, file_action=file_action, skip_dir=skip_dir)
 
 
 def watch(file: os.PathLike, callback: typing.Callable[[os.PathLike, time.struct_time], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
