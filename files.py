@@ -161,14 +161,15 @@ def walk(root: os.PathLike, *,
          symlink_action: typing.Callable[[
              Path, int], typing.Optional[typing.Iterable]] = None,
          not_exist_action: typing.Callable[[
-             Path, int], typing.Optional[typing.Iterable]] = None):
+             Path, int], typing.Optional[typing.Iterable]] = None,
+         side_effects: bool = False):
     """ For directories, dir_action is called first. Then skip_dir is called, and unless it returns a truthy value, the contents are recursively walked over before dir_post_action is called.
 
     If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks.
 
     The second argument to each action is the depth from the root, which has depth 0.
 
-    For all actions (skip_dir is not an action), if the return value is not None, it is yielded from -- so it must be iterable. This is to support using this function as a generator. """
+    For all actions (skip_dir is not an action), if the return value is not None, it is yielded from -- so it must be iterable. This is to support using this function as a generator. However, this means that if it is intended to be used only for side effects, the generator must be consumed -- specify side_effects = True, which will also result in a None return value. """
 
     def walk_recursive(root: Path, depth: int):
         if symlink_action is not None and root.is_symlink():
@@ -190,7 +191,15 @@ def walk(root: os.PathLike, *,
                 if dir_post_action is not None and (dir_post_result := dir_post_action(root, depth)) is not None:
                     yield from dir_post_result
 
-    return walk_recursive(Path(root), 0)
+    gen = walk_recursive(Path(root), 0)
+    if side_effects:
+        try:
+            while True:
+                next(gen)
+        except StopIteration:
+            pass
+    else:
+        return gen
 
 
 def delete(file: os.PathLike, not_exist_ok: bool = False, *, output: bool = False, ignore_errors: bool = False):
@@ -235,7 +244,7 @@ def delete(file: os.PathLike, not_exist_ok: bool = False, *, output: bool = Fals
             print(f"{'    ' * depth}{file}: deleted file ")
 
     walk(file, file_action=file_action, dir_action=dir_action, dir_post_action=dir_post_action,
-         symlink_action=symlink_action, not_exist_action=not_exist_action)
+         symlink_action=symlink_action, not_exist_action=not_exist_action, side_effects=True)
 
 
 class FileMismatchException(Exception):
