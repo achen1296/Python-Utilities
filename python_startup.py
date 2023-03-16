@@ -1,4 +1,3 @@
-from datetime import datetime
 import json
 import math
 import os
@@ -7,6 +6,7 @@ import re
 import shutil
 import sys
 import time
+from datetime import datetime
 from importlib import reload
 from pathlib import Path
 from pprint import pprint
@@ -16,6 +16,7 @@ import selenium
 from PIL import Image
 
 import byte_operations as bop
+import clipboard
 import console
 import dictionaries
 import environment
