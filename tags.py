@@ -93,8 +93,6 @@ def matching_files(root: os.PathLike, pattern: str = None, include_tags: Iterabl
     if exclude_tags is not None:
         exclude_tags = bset(exclude_tags)
 
-    file_list = []
-
     def file_action(f: Path, d: int):
         matches_pattern = pattern is None or re.search(pattern, name(f.name))
         file_tags = get(f.name)
@@ -102,15 +100,13 @@ def matching_files(root: os.PathLike, pattern: str = None, include_tags: Iterabl
         matches_exclude_tags = exclude_tags is not None and (
             file_tags & exclude_tags)
         if matches_pattern and matches_include_tags and not matches_exclude_tags:
-            file_list.append(f)
+            yield f
 
     def skip_dir(f: Path, d: int):
         # still go over the top-level folder's contents if not recursive
         return not recursive and d > 0
 
-    files.walk(root, file_action=file_action, skip_dir=skip_dir)
-
-    return file_list
+    return files.walk(root, file_action=file_action, skip_dir=skip_dir)
 
 
 def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, pattern: str = None, match_include_tags: Iterable[str] = None, match_exclude_tags: Iterable[str] = None, recursive: bool = True, remove_tags=[]) -> None:
@@ -134,7 +130,7 @@ def collect(root: os.PathLike) -> bset[str]:
         for t in get(f.name):
             collected_tags[t] = collected_tags.get(t, 0) + 1
 
-    files.walk(root, file_action=file_action)
+    files.walk(root, file_action=file_action, side_effects=True)
 
     return collected_tags
 
@@ -151,7 +147,7 @@ def map_to_folders(root: os.PathLike, tags: Iterable[str]) -> dict[str, bset[Pat
                 tags_to_folders[t] = bset()
             tags_to_folders[t].add(f)
 
-    files.walk(root, dir_action=dir_action)
+    files.walk(root, dir_action=dir_action, side_effects=True)
 
     return tags_to_folders
 

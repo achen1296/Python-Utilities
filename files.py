@@ -574,7 +574,7 @@ def regex_rename(root: os.PathLike, find: typing.Union[str, re.Pattern[str]], re
         if p.name != new_name:
             moves[p] = p.with_name(new_name)
 
-    walk(root, file_action=file_action)
+    walk(root, file_action=file_action, side_effects=True)
 
     return move_by_dict(moves)
 
