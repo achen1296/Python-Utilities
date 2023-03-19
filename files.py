@@ -1,4 +1,6 @@
 import hashlib
+import io
+import msvcrt
 import os
 import re
 import shutil
@@ -575,3 +577,32 @@ def regex_rename(root: os.PathLike, find: typing.Union[str, re.Pattern[str]], re
     walk(root, file_action=file_action)
 
     return move_by_dict(moves)
+
+
+class LockFile:
+    """ Based on Thomas Lux's answer on https://stackoverflow.com/questions/489861/locking-a-file-in-python """
+
+    def __lock_file(self):
+        self.locked_size = max(os.stat(self.path).st_size, 1)
+        msvcrt.locking(self.fd.fileno(), msvcrt.LK_NBLCK, self.locked_size)
+
+    def __unlock_file(self):
+        msvcrt.locking(self.fd.fileno(), msvcrt.LK_UNLCK, self.locked_size)
+
+    def __init__(self, path: Path, *args, **kwargs):
+        self.path = path
+        self.fd: io.IOBase = open(path, *args, **kwargs)
+        self.__lock_file()
+
+    def __enter__(self):
+        return self.fd
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.__unlock_file()
+        self.fd.close()
+        # do not suppress exceptions
+        return False
+
+
+def open_locked(file: Path, *args, **kwargs):
+    return LockFile(file, *args, **kwargs)
