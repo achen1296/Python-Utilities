@@ -1,6 +1,6 @@
+from typing import Iterable
+
 import lists
-import math
-import typing
 
 
 def primes(max: int):
@@ -28,7 +28,7 @@ def primes(max: int):
             yield p
 
 
-def sieve(numbers: typing.Iterable[int]) -> typing.Iterable[int]:
+def sieve(numbers: Iterable[int]) -> Iterable[int]:
     numbers = sorted(numbers)
     if len(numbers) == 0:
         return []

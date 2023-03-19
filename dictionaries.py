@@ -1,7 +1,6 @@
 import os
 import re
-import typing
-from typing import Callable, Iterable, Union
+from typing import Any, Callable, Iterable, Union
 
 import files
 
@@ -54,7 +53,7 @@ def read_file_dict(filename: os.PathLike, *, encoding="utf8", entry_separator="\
     return read_iterable_dict(files.re_split(filename, entry_separator, encoding=encoding), **kwargs)
 
 
-def write_iterable_dict(dictionary: dict[typing.Any, Union[typing.Any, Iterable[typing.Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|", sort_keys: Callable = str, sort_value_lists: Callable = False) -> list[str]:
+def write_iterable_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|", sort_keys: Callable = str, sort_value_lists: Callable = False) -> list[str]:
     """ Default separators > and |, same as reading dictionaries. 
 
     Keys and values can be of any type and are converted to strings using str(). For iterable values (but not strings), they are converted one at a time with the value list separator inserted. 
@@ -88,12 +87,12 @@ def write_iterable_dict(dictionary: dict[typing.Any, Union[typing.Any, Iterable[
     return l
 
 
-def write_string_dict(dictionary: dict[typing.Any, Union[typing.Any, Iterable[typing.Any]]], *, entry_separator: str = "\n", **kwargs) -> str:
+def write_string_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, entry_separator: str = "\n", **kwargs) -> str:
     """ Joins the results of write_iterable_dict (passing kwargs) with the specified entry separator. """
     return entry_separator.join(write_iterable_dict(dictionary, **kwargs))
 
 
-def write_file_dict(filename: os.PathLike, dictionary: dict[typing.Any, Union[typing.Any, Iterable[typing.Any]]], encoding="utf8", **open_kwargs) -> None:
+def write_file_dict(filename: os.PathLike, dictionary: dict[Any, Union[Any, Iterable[Any]]], encoding="utf8", **open_kwargs) -> None:
     """ Writes the result of write_string_dict to a file. """
     with open(filename, "w", encoding=encoding) as f:
         f.write(write_string_dict(dictionary, **open_kwargs))

@@ -1,7 +1,7 @@
 import os
 import time
-import typing
 from pathlib import Path
+from typing import Callable, Iterable
 from urllib.parse import urlparse
 
 import requests
@@ -9,11 +9,11 @@ from selenium import webdriver
 from selenium.common.exceptions import (NoSuchElementException,
                                         NoSuchWindowException,
                                         StaleElementReferenceException)
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.firefox.service import Service as FirefoxService
-from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions
@@ -176,7 +176,7 @@ class PageReader:
 class PageBrowser:
     """Uses a set of PageReaders to browse."""
 
-    def __init__(self, driver: WebDriver, readers: typing.Iterable[PageReader]):
+    def __init__(self, driver: WebDriver, readers: Iterable[PageReader]):
         self.driver = driver
         self.readers = set(readers)
 
@@ -286,7 +286,7 @@ class PageBrowser:
             self.new_tab(u)
 
 
-def run_page_browser(browser: PageBrowser, additional_actions: dict[str, typing.Callable] = None):
+def run_page_browser(browser: PageBrowser, additional_actions: dict[str, Callable] = None):
     actions = {
         "d": browser.download,
         "a": browser.download_all,

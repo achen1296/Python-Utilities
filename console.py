@@ -1,9 +1,8 @@
-import re
-import traceback
-import typing
-import strings
-import time
 import inspect
+import re
+import time
+import traceback
+from typing import Any, Callable, Iterable, Union
 
 
 class Dots:
@@ -47,7 +46,7 @@ def input_generator(prompt: str = ">> "):
             print("KeyboardInterrupt")
 
 
-def cmd_split(s: str) -> typing.Iterable[list[str]]:
+def cmd_split(s: str) -> Iterable[list[str]]:
     """Splits commands by semicolons, splits arguments by whitespace, but neither when inside a string delimited with ' or ". String arguments can include ' or " using backslash escape."""
 
     def unescape(s: str) -> str:
@@ -129,7 +128,7 @@ def sleep(time_str: str):
     time.sleep(sleep_time)
 
 
-def repl(actions: dict[str, typing.Union[typing.Callable, str]], *, input_source: typing.Iterable[str] = None, arg_transform: dict[str, typing.Callable] = {}):
+def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str] = None, arg_transform: dict[str, Callable] = {}):
     """ actions is a dictionary with names that the console user can use to call a function. If the dictionary value is a string instead, it is treated as an alias. 
 
     input_source is by default console user input. Mainly for testing, it may be set to e.g. a list of strings instead. 
@@ -235,7 +234,7 @@ def signature(f):
     return re.sub("\n\s+", "\n\n", f"{inspect.signature(f)}\n\n{f.__doc__ or ''}")
 
 
-def traceback_wrap(f: typing.Callable, pause_message: str = "Press Enter to continue...") -> typing.Any:
+def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...") -> Any:
     """ Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     result = None
     try:

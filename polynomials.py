@@ -1,10 +1,10 @@
 import re
-import typing
+from typing import Iterable, Union
 
 
 class Polynomial:
     @staticmethod
-    def __remove_high_exp_zeros(coefficients: typing.Iterable[float]):
+    def __remove_high_exp_zeros(coefficients: Iterable[float]):
         coefficients = list(coefficients)
         l = len(coefficients)
         if l == 0:
@@ -65,7 +65,7 @@ class Polynomial:
             combined_coeff[e] += c
         return combined_coeff
 
-    def __init__(self, *coefficients: typing.Union[float, str], high_powers_first=True):
+    def __init__(self, *coefficients: Union[float, str], high_powers_first=True):
         """Specify coefficients in order from high to low exponent.
 
         Alternatively, specify a single str argument with the variable x. Supports optional * between coefficients and the variable x. Both ^ and ** may be used for exponentiation.
@@ -96,7 +96,7 @@ class Polynomial:
     def degree(self):
         return len(self) - 1
 
-    def __getitem__(self, e: typing.Union[int, slice]):
+    def __getitem__(self, e: Union[int, slice]):
         if isinstance(e, int):
             if e < 0:
                 raise IndexError("No negative exponents")
@@ -107,7 +107,7 @@ class Polynomial:
         elif isinstance(e, slice):
             return self.coefficients[e]
 
-    def __setitem__(self, e: typing.Union[int, slice], value):
+    def __setitem__(self, e: Union[int, slice], value):
         if isinstance(e, int):
             if e < 0:
                 raise IndexError("No negative exponents")
@@ -179,7 +179,7 @@ class Polynomial:
 
         return Polynomial(*(self[e] - other[e] for e in range(0, l)), high_powers_first=False)
 
-    def __mul__(self, other: typing.Union["Polynomial", int, float]) -> "Polynomial":
+    def __mul__(self, other: Union["Polynomial", int, float]) -> "Polynomial":
         if isinstance(other, int) or isinstance(other, float):
             other = Polynomial(other)
         l1 = len(self)
@@ -197,7 +197,7 @@ class Polynomial:
         q, _ = divmod(self, other)
         return q
 
-    def __mod__(self, other: typing.Union["Polynomial", int]) -> "Polynomial":
+    def __mod__(self, other: Union["Polynomial", int]) -> "Polynomial":
         if isinstance(other, Polynomial):
             _, r = divmod(self, other)
             return r

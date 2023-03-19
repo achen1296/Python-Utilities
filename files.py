@@ -6,11 +6,11 @@ import re
 import shutil
 import time
 import traceback
-import typing
 import zipfile
 from pathlib import Path
 from shutil import copy2 as copy
 from shutil import move
+from typing import Callable, Iterable, Optional, Union
 from zipfile import ZipFile
 
 USERPROFILE = Path(os.environ["USERPROFILE"])
@@ -28,7 +28,7 @@ def create_file(path: os.PathLike, binary=False, **open_kwargs):
     return open(path, mode, **open_kwargs)
 
 
-def __file_action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], action_callable: typing.Callable[[os.PathLike, os.PathLike], None], action_past_tense: str, *, overwrite: bool = False, warn_if_exists: bool = True, output: bool = False, **action_kwargs) -> int:
+def __file_action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], action_callable: Callable[[os.PathLike, os.PathLike], None], action_past_tense: str, *, overwrite: bool = False, warn_if_exists: bool = True, output: bool = False, **action_kwargs) -> int:
     count = 0
     for src in planned_actions:
         if Path(src).exists():
@@ -153,17 +153,17 @@ def absolutize_link(link: os.PathLike):
 
 
 def walk(root: os.PathLike, *,
-         file_action: typing.Callable[[
-             Path, int], typing.Optional[typing.Iterable]] = None,
-         skip_dir: typing.Callable[[Path, int], bool] = None,
-         dir_action: typing.Callable[[
-             Path, int], typing.Optional[typing.Iterable]] = None,
-         dir_post_action: typing.Callable[[
-             Path, int], typing.Optional[typing.Iterable]] = None,
-         symlink_action: typing.Callable[[
-             Path, int], typing.Optional[typing.Iterable]] = None,
-         not_exist_action: typing.Callable[[
-             Path, int], typing.Optional[typing.Iterable]] = None,
+         file_action: Callable[[
+             Path, int], Optional[Iterable]] = None,
+         skip_dir: Callable[[Path, int], bool] = None,
+         dir_action: Callable[[
+             Path, int], Optional[Iterable]] = None,
+         dir_post_action: Callable[[
+             Path, int], Optional[Iterable]] = None,
+         symlink_action: Callable[[
+             Path, int], Optional[Iterable]] = None,
+         not_exist_action: Callable[[
+             Path, int], Optional[Iterable]] = None,
          side_effects: bool = False):
     """ For directories, dir_action is called first. Then skip_dir is called, and unless it returns a truthy value, the contents are recursively walked over before dir_post_action is called.
 
@@ -253,7 +253,7 @@ class FileMismatchException(Exception):
     pass
 
 
-def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_file_action: typing.Callable[[os.PathLike], None] = delete, output_prefix="") -> int:
+def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_file_action: Callable[[os.PathLike], None] = delete, output_prefix="") -> int:
     """Returns the number of files changed (empty directories do not increase the count). Copies symbolic links instead of following them."""
     count = 0
     src = Path(src)
@@ -296,12 +296,12 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
     return count
 
 
-def mirror_by_dict(mirror_dict: dict[os.PathLike, typing.Union[os.PathLike, typing.Iterable[os.PathLike]]], *, output=False):
+def mirror_by_dict(mirror_dict: dict[os.PathLike, Union[os.PathLike, Iterable[os.PathLike]]], *, output=False):
     """Returns the number of files changed (empty directories do not increase the count)."""
     count = 0
     for src in mirror_dict:
         destinations = mirror_dict[src]
-        if isinstance(destinations, typing.Iterable):
+        if isinstance(destinations, Iterable):
             for dst in destinations:
                 count += mirror(src, dst, output=output)
         else:
@@ -362,7 +362,7 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
     return count
 
 
-def _recursive_zip(files: typing.Iterable[Path], zip: ZipFile, relative_root: Path, exclude: set[Path]):
+def _recursive_zip(files: Iterable[Path], zip: ZipFile, relative_root: Path, exclude: set[Path]):
     for f in files:
         skip = False
         for e in exclude:
@@ -381,7 +381,7 @@ class ZipException(Exception):
     pass
 
 
-def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_root: os.PathLike = None, *, overwrite: bool = True, exclude: list[str] = []):
+def zip(zip_path: os.PathLike, files: Iterable[os.PathLike], relative_root: os.PathLike = None, *, overwrite: bool = True, exclude: list[str] = []):
     """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience.
 
     exclude is a list of regular expressions applied to full file paths with backslahes replaced with forward slashes. Matching files are not zipped. If a directory matches, none of its contents are zipped. Respects whether the original arguments were relative or absolute for this purpose. """
@@ -407,7 +407,7 @@ def zip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike], relative_roo
         _recursive_zip(files, zip, relative_root, exclude)
 
 
-def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = None,  output_dir: os.PathLike = None, *, overwrite: bool = False):
+def unzip(zip_path: os.PathLike, files: Iterable[os.PathLike] = None,  output_dir: os.PathLike = None, *, overwrite: bool = False):
     """ Unzip a set of files using 7-zip. If the path doesn't end with .zip, the extension is added automatically for convenience. If a set of files is not specified, all of them are extracted."""
     zip_path = Path(zip_path).with_suffix(".zip")
     if output_dir == None:
@@ -422,7 +422,7 @@ def unzip(zip_path: os.PathLike, files: typing.Iterable[os.PathLike] = None,  ou
         zip.extractall(output_dir, files)
 
 
-def long_names(root: os.PathLike) -> typing.Iterable[Path]:
+def long_names(root: os.PathLike) -> Iterable[Path]:
     """ Returns a set of files whose absolute paths are >= 260 characters, which means they are too long for some Windows applications. Not > 260 because, as the page linked below describes, Windows includes the NUL character at the end in the count, while Python strings do not.
 
     docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation """
@@ -536,7 +536,7 @@ def delete_empty(root: os.PathLike):
     delete_empty_recursive(root)
 
 
-def list_files(root: os.PathLike, *, skip_file: typing.Callable[[os.PathLike, int], bool] = None, skip_dir: typing.Callable[[os.PathLike, int], bool] = None) -> list[Path]:
+def list_files(root: os.PathLike, *, skip_file: Callable[[os.PathLike, int], bool] = None, skip_dir: Callable[[os.PathLike, int], bool] = None) -> list[Path]:
 
     def file_action(p: Path, i: int):
         if skip_file is None or not skip_file(p):
@@ -545,7 +545,7 @@ def list_files(root: os.PathLike, *, skip_file: typing.Callable[[os.PathLike, in
     return walk(root, file_action=file_action, skip_dir=skip_dir)
 
 
-def watch(file: os.PathLike, callback: typing.Callable[[os.PathLike, time.struct_time], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
+def watch(file: os.PathLike, callback: Callable[[os.PathLike, time.struct_time], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
     """Monitor a file for changes by checking periodicially seeing if its modification time has changed (every 5 seconds by default) (not necessarily increasing, such as if an old copy of the file was moved into the original location). Provides the callback function with the file and its new modification time. Optionally, can also print out that the file was updated and when."""
     file = Path(file)
 
@@ -564,7 +564,7 @@ def watch(file: os.PathLike, callback: typing.Callable[[os.PathLike, time.struct
         time.sleep(poll_time)
 
 
-def regex_rename(root: os.PathLike, find: typing.Union[str, re.Pattern[str]], replace: typing.Union[str, typing.Callable[[typing.Union[str, re.Match]], str]]):
+def regex_rename(root: os.PathLike, find: Union[str, re.Pattern[str]], replace: Union[str, Callable[[Union[str, re.Match]], str]]):
     """ Only moves files. Returns the number of files moved. """
     find = re.compile(find)
     moves = {}

@@ -1,12 +1,12 @@
 import os
 import random
 import re
-import typing
+from typing import Any, Callable, Hashable, Iterable
 
 import files
 
 
-def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#", encoding="utf8") -> typing.Iterable[str]:
+def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#", encoding="utf8") -> Iterable[str]:
     """Read a file as a list of lists. Use comment="" for no comments."""
     for list_str in files.re_split(filename, list_separator, encoding=encoding):
         if comment != "" and re.match(comment, list_str):
@@ -14,7 +14,7 @@ def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_it
         yield re.split(list_item_separator, list_str)
 
 
-def write_file_lists(filename: os.PathLike, lists: typing.Iterable[typing.Iterable], *, list_item_separator: str = ",", list_separator: str = "\n", text_mode="w", encoding="utf8", **open_kwargs) -> None:
+def write_file_lists(filename: os.PathLike, lists: Iterable[Iterable], *, list_item_separator: str = ",", list_separator: str = "\n", text_mode="w", encoding="utf8", **open_kwargs) -> None:
     """Write a list of lists to a file."""
     with open(filename, text_mode, encoding=encoding, **open_kwargs) as f:
         for l in lists:
@@ -28,7 +28,7 @@ def write_file_lists(filename: os.PathLike, lists: typing.Iterable[typing.Iterab
             f.write(list_separator)
 
 
-def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", comment: str = "\s*#", **open_kwargs) -> typing.Iterable[str]:
+def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", comment: str = "\s*#", **open_kwargs) -> Iterable[str]:
     """Read a file as a list. Use comment="" for no comments."""
     for item in files.re_split(filename, separator, **open_kwargs):
         if comment != "" and re.match(comment, item):
@@ -36,7 +36,7 @@ def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", commen
         yield item
 
 
-def write_file_list(filename: os.PathLike, l: typing.Iterable, *, separator: str = "\n", text_mode="w", encoding="utf8", **open_kwargs) -> None:
+def write_file_list(filename: os.PathLike, l: Iterable, *, separator: str = "\n", text_mode="w", encoding="utf8", **open_kwargs) -> None:
     with open(filename, text_mode, encoding=encoding, **open_kwargs) as f:
         first = True
         for i in l:
@@ -72,7 +72,7 @@ def remove_duplicates_in_place(l: list) -> list:
     return l
 
 
-def cartesian_product(l1: typing.Iterable, *lists: typing.Iterable, first_fastest: bool = False) -> typing.Iterable[list]:
+def cartesian_product(l1: Iterable, *lists: Iterable, first_fastest: bool = False) -> Iterable[list]:
     if len(lists) == 0:
         for i in l1:
             yield [i]
@@ -87,7 +87,7 @@ def cartesian_product(l1: typing.Iterable, *lists: typing.Iterable, first_fastes
                     yield [i] + combo
 
 
-def combinations(l: typing.Iterable, n: int):
+def combinations(l: Iterable, n: int):
     """Generate all combinations of n unique elements from the list l exactly one time each. Out-of-bounds values for n are snapped in-bounds, i.e. if n < 0, then only a empty list is yieled, and if n > len(l) then l is yielded."""
 
     def combinations_recursive(l: list, n: int):
@@ -104,7 +104,7 @@ def combinations(l: typing.Iterable, n: int):
     return combinations_recursive(list(l), n)
 
 
-def permutations(l: typing.Iterable):
+def permutations(l: Iterable):
     """ Generate all permutations of the input """
     def permutations_recursive(l: list):
         len_l = len(l)
@@ -117,7 +117,7 @@ def permutations(l: typing.Iterable):
     return permutations_recursive(list(l))
 
 
-def random_from(lst: typing.Iterable) -> typing.Any:
+def random_from(lst: Iterable) -> Any:
     while True:
         try:
             return lst[random.randrange(0, len(lst))]
@@ -128,7 +128,7 @@ def random_from(lst: typing.Iterable) -> typing.Any:
             return None
 
 
-def count(lst: typing.Iterable[typing.Hashable], bucket: typing.Callable[[typing.Any], typing.Hashable] = lambda x: x) -> dict[typing.Hashable, int]:
+def count(lst: Iterable[Hashable], bucket: Callable[[Any], Hashable] = lambda x: x) -> dict[Hashable, int]:
     counts = {}
     for i in lst:
         b = bucket(i)

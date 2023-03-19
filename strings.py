@@ -1,5 +1,5 @@
 import re
-import typing
+from typing import Iterable
 
 
 def unescape(s: str, *, escape_char: str = "\\") -> str:
@@ -15,7 +15,7 @@ def unescape(s: str, *, escape_char: str = "\\") -> str:
     return s
 
 
-def escape(s: str, special_chars: typing.Iterable[str], *, escape_char: str = "\\") -> str:
+def escape(s: str, special_chars: Iterable[str], *, escape_char: str = "\\") -> str:
     """Adds one level of escape characters. Only supports single characters."""
     for c in special_chars:
         if len(c) != 1:
@@ -29,7 +29,7 @@ def escape(s: str, special_chars: typing.Iterable[str], *, escape_char: str = "\
     return s
 
 
-def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_tokens=True, unescape_char="\\", re_flags: int = 0) -> list[str]:
+def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_tokens=True, unescape_char="\\", re_flags: int = 0) -> list[str]:
     """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Arguments for `pairs` and `ignore_internal_pairs` are passed to `find_pairs`. """
 
     # spans that match the separator and that are not also inside of pairs
@@ -83,7 +83,7 @@ def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ig
     return tokens
 
 
-def next_match(regular_expressions: typing.Iterable[str], s: str, *, no_overlap=False, flags=0) -> typing.Generator[tuple[str, re.Match], None, None]:
+def next_match(regular_expressions: Iterable[str], s: str, *, no_overlap=False, flags=0) -> Iterable[tuple[str, re.Match]]:
     """ Generates tuples containing the regular expression that next matches earliest in the string (if start indices tie, earliest end is first) and the match object it produces. """
     # initialize iters
     iters = {}
@@ -125,7 +125,7 @@ def next_match(regular_expressions: typing.Iterable[str], s: str, *, no_overlap=
             yield (next_r, next_match)
 
 
-def last_match(regular_expressions: typing.Iterable[str], s: str, *, no_overlap=False, flags=0) -> typing.Generator[tuple[str, re.Match], None, None]:
+def last_match(regular_expressions: Iterable[str], s: str, *, no_overlap=False, flags=0) -> Iterable[tuple[str, re.Match]]:
     """ Generates tuples containing the regular expression that next matches latest in the string (if end indices tie, latest start is first) and the match object it produces. Unlike next_match, must store all matches at once, since regular expressions are usually evaluated left to right. """
     matches = {}
     for r in regular_expressions:
@@ -157,14 +157,14 @@ def last_match(regular_expressions: typing.Iterable[str], s: str, *, no_overlap=
             yield(last_r, last_match)
 
 
-def matches_any(regular_expressions: typing.Iterable[str], s: str, *, flags=0):
+def matches_any(regular_expressions: Iterable[str], s: str, *, flags=0):
     for r in regular_expressions:
         if re.match(r, s, flags):
             return True
     return False
 
 
-def contains_any(substrings: typing.Iterable[str], s: str):
+def contains_any(substrings: Iterable[str], s: str):
     for sub in substrings:
         if sub in s:
             return True
@@ -180,7 +180,7 @@ class Pair:
 
 
 class Pair:
-    def __init__(self, original_str: str, start_span: tuple[int, int], end_span: tuple[int, int], internal_pairs: typing.Iterable[Pair] = None):
+    def __init__(self, original_str: str, start_span: tuple[int, int], end_span: tuple[int, int], internal_pairs: Iterable[Pair] = None):
         # no zero length start/end strings, therefore <, but they can be directly adjacent, therefore <=
         if not (start_span[0] < start_span[1] <= end_span[0] < end_span[1]) or start_span[0] < 0 or end_span[1] > len(original_str):
             raise Exception(f"Invalid start/end spans {start_span} {end_span}")
@@ -250,7 +250,7 @@ def find_pair(s: str, start: int, **find_pairs_kwargs):
         f"Didn't find a pair beginning at index {start} of {s}")
 
 
-def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: typing.Iterable[str] = None, require_balanced_pairs=True) -> list[Pair]:
+def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, require_balanced_pairs=True) -> list[Pair]:
     """ Finds pairs in the string of the specified expressions and returns the indices of the start and end of each pair (the first index of the matches).
 
     Any unbalanced pairs result in a NoPairException unless require_balanced_pairs is set to False. The expressions for pair starts and ends should not allow overlap with themselves (although pair starts and ends can be the same character, like quotes), otherwise the results are undefined.

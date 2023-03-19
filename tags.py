@@ -1,10 +1,10 @@
-from typing import Iterable
 import os
-from builtins import set as bset
-import files
-from pathlib import Path
 import re
+from builtins import set as bset
+from pathlib import Path
+from typing import Callable, Iterable
 
+import files
 
 NAME_TAGS_SUFFIX_RE = re.compile("^(.*)(\[.*?\])(\.\w+)?$")
 NAME_SUFFIX_RE = re.compile("^(.*?)(\.\w+)?$")
@@ -135,7 +135,7 @@ def collect(root: os.PathLike) -> bset[str]:
     return collected_tags
 
 
-def map_to_folders(root: os.PathLike, tags: Iterable[str]) -> dict[str, bset[Path]]:
+def map_to_folders(root: os.PathLike, tags: Iterable[str], skip_dir: Callable[[Path, int], bool] = None) -> dict[str, bset[Path]]:
     """ Match each tag to a folder with the tag in its name (as a space-separated list).  """
     tags = bset(tags)
     tags_to_folders: dict[str, bset] = {}
@@ -147,7 +147,8 @@ def map_to_folders(root: os.PathLike, tags: Iterable[str]) -> dict[str, bset[Pat
                 tags_to_folders[t] = bset()
             tags_to_folders[t].add(f)
 
-    files.walk(root, dir_action=dir_action, side_effects=True)
+    files.walk(root, dir_action=dir_action,
+               skip_dir=skip_dir, side_effects=True)
 
     return tags_to_folders
 
