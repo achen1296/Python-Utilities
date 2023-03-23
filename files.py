@@ -16,6 +16,9 @@ from zipfile import ZipFile
 USERPROFILE = Path(os.environ["USERPROFILE"])
 APPDATA = Path(os.environ["APPDATA"])
 
+LONG_PATH_PREFIX = "\\\\?\\"
+""" Prefix to allow reading paths >= 260 characters on Windows  """
+
 
 def create_file(path: os.PathLike, binary=False, **open_kwargs):
     """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use os.makedirs). open_kwargs passed to open(), the result of which is returned. """
