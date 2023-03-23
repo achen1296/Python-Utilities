@@ -148,8 +148,10 @@ def scroll_all_elements(driver: WebDriver, css_selector: str, *, interactable_se
 class PageReader:
     """Reads a webpage to search for links to download or open."""
 
-    def __init__(self, download_headers=None):
-        self.download_headers: dict[str, str] = download_headers
+    def __init__(self, get_kwargs=None):
+        if get_kwargs is None:
+            get_kwargs = {}
+        self.get_kwargs: dict[str, str] = get_kwargs
 
     def can_read(self, driver: WebDriver) -> bool:
         """Whether or not the current page is readable by this PageReader."""
@@ -179,6 +181,8 @@ class PageBrowser:
     def __init__(self, driver: WebDriver, readers: Iterable[PageReader]):
         self.driver = driver
         self.readers = set(readers)
+        self.user_agent = self.driver.execute_script(
+            "return navigator.userAgent")
 
     def new_tab(self, url: str):
         self.driver.execute_script("window.open('')")
@@ -205,21 +209,17 @@ class PageBrowser:
             self.driver.switch_to.window(current)
         return count
 
-    def download(self, wait=0, output=True, **get_kwargs) -> int:
-        """Download everything on the current page found by any PageReader. Returns the number of downloads.
-
-        get_kwargs passed to requests.get.
-
-        If a PageReader claims to be able to read the page, its download headers are combined with any given as arguments to this function."""
+    def download(self, wait=0, output=True) -> int:
+        """Download everything on the current page found by any PageReader (using the keyword arguments to requests.get it specifies; the user agent string is also always included). Returns the number of downloads."""
         count = 0
         for r in self.readers:
             if r.can_read(self.driver):
                 d = r.to_download(self.driver)
-                if r.download_headers is not None:
-                    if "headers" not in get_kwargs:
-                        get_kwargs["headers"] = {}
-                    get_kwargs["headers"].update(r.download_headers)
-                download_urls(d, wait=wait, output=output, **get_kwargs)
+                get_kwargs = r.get_kwargs
+                if "headers" not in get_kwargs:
+                    get_kwargs["headers"] = {}
+                get_kwargs["headers"]["User-Agent"] = self.user_agent
+                download_urls(d, wait=wait, output=output, **r.get_kwargs)
                 count += len(d)
         return count
 
