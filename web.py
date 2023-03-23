@@ -31,12 +31,21 @@ def url_filename(url: str):
     return path[last_slash+1:]
 
 
+class DownloadException(Exception):
+    pass
+
+
 def download_url(url: str, file: os.PathLike = None,  *, output=True, **get_kwargs):
-    """ If file = None, the name is inferred from the last piece of the URL. get_kwargs passed to requests.get. """
+    """ If file = None, the name is inferred from the last piece of the URL. get_kwargs passed to requests.get. 
+    
+    If the file name ends up being too long """
     if file is None:
         file = url_filename(url)
     file = files.remove_forbidden_chars(str(file))
     req = requests.get(url, **get_kwargs)
+    if req.status_code != 200:
+        raise DownloadException(url, req.status_code,
+                                req.reason, get_kwargs)
     if output:
         print(f"Downloading <{url}> -> <{file}>")
     with open(file, "wb") as f:
