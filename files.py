@@ -598,14 +598,25 @@ class LockFile:
         self.__lock_file()
 
     def __enter__(self):
+        """ Implement context manager """
         return self.fd
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """ Implement context manager """
         self.__unlock_file()
         self.fd.close()
         # do not suppress exceptions
         return False
 
+    def close(self):
+        """ For explicit closing when not used as a context manager """
+        self.__exit__(None, None, None)
+
+    def __getattr__(self, name):
+        """ Redirect other attributes to the internal opened file. """
+        return getattr(self.fd, name)
+
 
 def open_locked(file: Path, *args, **kwargs):
+    """ Only prevents multiple open instances if this function is used every time a given file is opened instead of only the builtin open. Still prevents external accesses (e.g. via the file explorer). """
     return LockFile(file, *args, **kwargs)
