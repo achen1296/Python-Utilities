@@ -156,17 +156,14 @@ def absolutize_link(link: os.PathLike):
 
 
 def walk(root: os.PathLike, *,
-         file_action: Callable[[
-             Path, int], Optional[Iterable]] = None,
+         file_action: Callable[[Path, int], Optional[Iterable]] = None,
          skip_dir: Callable[[Path, int], bool] = None,
-         dir_action: Callable[[
-             Path, int], Optional[Iterable]] = None,
-         dir_post_action: Callable[[
-             Path, int], Optional[Iterable]] = None,
-         symlink_action: Callable[[
-             Path, int], Optional[Iterable]] = None,
-         not_exist_action: Callable[[
-             Path, int], Optional[Iterable]] = None,
+         dir_action: Callable[[Path, int], Optional[Iterable]] = None,
+         dir_post_action: Callable[[Path, int], Optional[Iterable]] = None,
+         symlink_action: Callable[[Path, int], Optional[Iterable]] = None,
+         not_exist_action: Callable[[Path, int], Optional[Iterable]] = None,
+         error_action: Callable[[Path, int, Exception],
+                                Optional[Iterable]] = None,
          side_effects: bool = False):
     """ For directories, dir_action is called first. Then skip_dir is called, and unless it returns a truthy value, the contents are recursively walked over before dir_post_action is called.
 
@@ -177,24 +174,28 @@ def walk(root: os.PathLike, *,
     For all actions (skip_dir is not an action), if the return value is not None, it is yielded from -- so it must be iterable. This is to support using this function as a generator. However, this means that if it is intended to be used only for side effects, the generator must be consumed -- specify side_effects = True, which will also result in a None return value. """
 
     def walk_recursive(root: Path, depth: int):
-        if symlink_action is not None and root.is_symlink():
-            if (symlink_result := symlink_action(root, depth)) is not None:
-                yield from symlink_result
-        elif not root.exists() and not root.is_symlink():
-            # check for symlinks again to make broken symlinks to fall through to the file action
-            if not_exist_action is not None and (not_exist_result := not_exist_action(root, depth)) is not None:
-                yield from not_exist_result
-        elif root.is_file():
-            if file_action is not None and (file_result := file_action(root, depth)) is not None:
-                yield from file_result
-        else:
-            if dir_action is not None and (dir_result := dir_action(root, depth)) is not None:
-                yield from dir_result
-            if skip_dir is None or not skip_dir(root, depth):
-                for f in root.iterdir():
-                    yield from walk_recursive(f, depth+1)
-                if dir_post_action is not None and (dir_post_result := dir_post_action(root, depth)) is not None:
-                    yield from dir_post_result
+        try:
+            if symlink_action is not None and root.is_symlink():
+                if (symlink_result := symlink_action(root, depth)) is not None:
+                    yield from symlink_result
+            elif not root.exists() and not root.is_symlink():
+                # check for symlinks again to make broken symlinks to fall through to the file action
+                if not_exist_action is not None and (not_exist_result := not_exist_action(root, depth)) is not None:
+                    yield from not_exist_result
+            elif root.is_file():
+                if file_action is not None and (file_result := file_action(root, depth)) is not None:
+                    yield from file_result
+            else:
+                if dir_action is not None and (dir_result := dir_action(root, depth)) is not None:
+                    yield from dir_result
+                if skip_dir is None or not skip_dir(root, depth):
+                    for f in root.iterdir():
+                        yield from walk_recursive(f, depth+1)
+                    if dir_post_action is not None and (dir_post_result := dir_post_action(root, depth)) is not None:
+                        yield from dir_post_result
+        except Exception as x:
+            if error_action is not None:
+                error_action(root, depth, x)
 
     gen = walk_recursive(Path(root), 0)
     if side_effects:
