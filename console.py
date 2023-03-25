@@ -190,9 +190,13 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
     actions["exit"] = exit
 
     def call_action(i: str):
+        command_num = 0
         for args in cmd_split(i):
             if len(args) == 0:
                 continue
+            command_num += 1
+            if command_num > 1:
+                print(">> " + (" ".join(args)))
             action_name = args[0]
             args = args[1:]
             if action_name in actions:
