@@ -543,7 +543,7 @@ def delete_empty(root: os.PathLike):
 def list_files(root: os.PathLike, *, skip_file: Callable[[os.PathLike, int], bool] = None, skip_dir: Callable[[os.PathLike, int], bool] = None) -> list[Path]:
 
     def file_action(p: Path, i: int):
-        if skip_file is None or not skip_file(p):
+        if skip_file is None or not skip_file(p, i):
             yield p
 
     return walk(root, file_action=file_action, skip_dir=skip_dir)
