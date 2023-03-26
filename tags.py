@@ -22,13 +22,13 @@ def name_and_suffix(filename: str) -> tuple[str, str]:
     match = NAME_TAGS_SUFFIX_RE.match(filename)
     if match:
         name = match.group(1)
-        ext = match.group(3)
+        suffix = match.group(3)
     else:
         match = NAME_SUFFIX_RE.match(filename)
         name = match.group(1)
-        ext = match.group(2)
+        suffix = match.group(2)
     # ext can be None
-    return (name, ext if ext else "")
+    return (name, suffix if suffix else "")
 
 
 def name(filename: str) -> str:
@@ -87,14 +87,19 @@ def rename(filename: str, new_name: str) -> str:
 
 
 def matching_files(root: os.PathLike, pattern: str = None, include_tags: Iterable[str] = None, exclude_tags: Iterable[str] = None, recursive: bool = True) -> Iterable[Path]:
-    """ All include_tags must be present, and none of the exclude_tags. (To get files with some tags OR some other ones, just do another search.) """
+    r""" The pattern is used as a regular expression matching ONLY the name and suffix of the file, with the tags removed. It may match any part of this. (For example, a file with the full name "foo[bar baz].txt" will match pattern="foo\\.txt" and include_tags=["bar","baz"].)
+
+    All include_tags must be present, and none of the exclude_tags. (To get files with some tags OR some other ones, just do another search.) """
     if include_tags is not None:
         include_tags = bset(include_tags)
     if exclude_tags is not None:
         exclude_tags = bset(exclude_tags)
 
     def file_action(f: Path, d: int):
-        matches_pattern = pattern is None or re.search(pattern, name(f.name))
+        name, suffix = name_and_suffix(f.name)
+        full_name = name+suffix
+        matches_pattern = pattern is None or re.search(
+            pattern, full_name)
         file_tags = get(f.name)
         matches_include_tags = include_tags is None or file_tags > include_tags
         matches_exclude_tags = exclude_tags is not None and (
