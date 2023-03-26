@@ -15,6 +15,8 @@ from zipfile import ZipFile
 
 USERPROFILE = Path(os.environ["USERPROFILE"])
 APPDATA = Path(os.environ["APPDATA"])
+PROGRAM_FILES = Path(os.environ["PROGRAMFILES"])
+PROGRAM_FILES_x86 = Path(os.environ["PROGRAMFILES(x86)"])
 
 LONG_PATH_PREFIX = "\\\\?\\"
 """ Prefix to allow reading paths >= 260 characters on Windows  """
