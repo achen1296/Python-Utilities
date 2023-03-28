@@ -620,3 +620,10 @@ class LockFile:
 def open_locked(file: Path, *args, **kwargs):
     """ Only prevents multiple open instances if this function is used every time a given file is opened instead of only the builtin open. Still prevents external accesses (e.g. via the file explorer). """
     return LockFile(file, *args, **kwargs)
+
+
+def resolve_with_env(path: os.PathLike):
+    path: str = str(path)
+    for env_var in re.findall("%(.*?)%", path):
+        path = path.replace(f"%{env_var}%", os.environ[env_var])
+    return Path(path).resolve()
