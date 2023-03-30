@@ -174,7 +174,8 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
             else:
                 sig = ""
             sig += str(inspect.signature(a))
-            print(f"{name}: {sig} {a.__doc__ or ''}")
+            doc = (a.__doc__ or "").replace("\n", "\n\t")
+            print(f"{name}: {sig}\n\t{doc}")
 
     actions["help"] = help
     actions["?"] = "help"
