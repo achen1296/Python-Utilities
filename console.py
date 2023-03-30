@@ -231,13 +231,6 @@ def pause(message: str = "Press Enter to continue...: "):
     input(message)
 
 
-def signature(f):
-    """ Wrapper for inspect.signature that also gives the docstring.
-
-    The docstring is modified to remove any indentation. """
-    return re.sub("\n\s+", "\n\n", f"{inspect.signature(f)}\n\n{f.__doc__ or ''}")
-
-
 def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...", pause_on_exc_only=False) -> Any:
     """ Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     try:
