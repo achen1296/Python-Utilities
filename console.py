@@ -238,20 +238,21 @@ def signature(f):
     return re.sub("\n\s+", "\n\n", f"{inspect.signature(f)}\n\n{f.__doc__ or ''}")
 
 
-def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...") -> Any:
+def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...", pause_on_exc_only=False) -> Any:
     """ Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
-    result = None
     try:
-        result = f()
-    except Exception:
-        traceback.print_exc()
+        return f()
+    except (Exception, KeyboardInterrupt) as x:
+        if isinstance(x, KeyboardInterrupt):
+            print("KeyboardInterrupt")
+        else:
+            traceback.print_exc()
         bell()
-    except KeyboardInterrupt:
-        print("KeyboardInterrupt")
-    finally:
-        if pause_message is not None:
+        if pause_on_exc_only and pause_message is not None:
             pause(pause_message)
-        return result
+    finally:
+        if not pause_on_exc_only and pause_message is not None:
+            pause(pause_message)
 
 
 if __name__ == "__main__":
