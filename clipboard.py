@@ -1,4 +1,8 @@
+import platform
 import subprocess
+
+if platform.system() != "Windows":
+    raise NotImplementedError
 
 
 def copy(s: str):

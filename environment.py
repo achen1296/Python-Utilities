@@ -1,10 +1,14 @@
 """ This module is for setting permanent environment variables. For temporary environment variables, os.environ can be used. """
 
 import os
+import platform
 import subprocess
 
 # stores environment variables set recently, since they will otherwise not be registered until the program is restarted
 _cache = {}
+
+if platform.system() != "Windows":
+    raise NotImplementedError
 
 
 def set(name: str, value: str):

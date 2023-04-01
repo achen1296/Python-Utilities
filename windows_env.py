@@ -1,7 +1,11 @@
 """ Common Windows environment variables referring to file locations """
 
 import os
+import platform
 from pathlib import Path
+
+if platform.system() != "Windows":
+    raise NotImplementedError
 
 APP_DATA = Path(os.environ["APPDATA"])
 COMMON_PROGRAM_FILES = Path(os.environ["COMMONPROGRAMFILES"])

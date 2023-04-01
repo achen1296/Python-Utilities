@@ -2,6 +2,7 @@ import hashlib
 import io
 import msvcrt
 import os
+import platform
 import re
 import shutil
 import time
@@ -13,7 +14,8 @@ from shutil import move
 from typing import Callable, Iterable, Optional, Union
 from zipfile import ZipFile
 
-from windows_env import *
+if platform.system() == "Windows":
+    from windows_env import *
 
 LONG_PATH_PREFIX = "\\\\?\\"
 """ Prefix to allow reading paths >= 260 characters on Windows  """
@@ -593,6 +595,8 @@ class LockFile:
         msvcrt.locking(self.fd.fileno(), msvcrt.LK_UNLCK, self.locked_size)
 
     def __init__(self, path: Path, *args, **kwargs):
+        if platform.system() != "Windows":
+            raise NotImplementedError
         self.path = path
         self.fd: io.IOBase = open(path, *args, **kwargs)
         self.__lock_file()

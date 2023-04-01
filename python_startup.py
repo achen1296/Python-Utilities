@@ -1,6 +1,7 @@
 import json
 import math
 import os
+import platform
 import random
 import re
 import shutil
@@ -16,10 +17,8 @@ import selenium
 from PIL import Image
 
 import byte_operations as bop
-import clipboard
 import console
 import dictionaries
-import environment
 import files
 import ftp
 import images
@@ -35,3 +34,8 @@ from polynomials import Polynomial
 from web import By
 
 Poly = Polynomial
+
+
+if platform.system() == "Windows":
+    import clipboard
+    import environment
