@@ -261,6 +261,42 @@ if platform.system() == "Windows":
         """ Uses Windows console virtual terminal sequences, must be on Windows. """
         print(f"{ESC}[{i}D", end="")
 
+    class Spinner:
+        """ For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates.
+
+        Uses Windows console virtual terminal sequences, must be on Windows. """
+
+        def __init__(self, min_count: int = 100, min_time: float = 0.2, spinner_sequence="-/|\\"):
+            if platform.system() != "Windows":
+                raise NotImplementedError
+            self._count = 0
+            self._last_time = time.monotonic()
+            self._min_count = min_count
+            self._min_time = min_time
+            self._spinner_sequence = spinner_sequence
+            self._sequence_index = 0
+            self._sequence_length = len(self._spinner_sequence)
+
+        def spin(self):
+            self._count += 1
+            if self._count >= self._min_count and time.monotonic() - self._last_time >= self._min_time:
+                self.reset()
+                cursor_back(1)
+                print(
+                    self._spinner_sequence[self._sequence_index], end="", flush=True)
+                self._sequence_index = (
+                    self._sequence_index+1) % self._sequence_length
+
+        def reset(self):
+            self._count = 0
+            self._last_time = time.monotonic()
+
+    SPINNER = Spinner()
+
+    def spin():
+        """ Calls spin on shared Spinner object SPINNER """
+        SPINNER.spin()
+
 if __name__ == "__main__":
 
     result = list(cmd_split("a;b;c d"))
