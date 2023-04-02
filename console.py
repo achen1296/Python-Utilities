@@ -125,11 +125,11 @@ def sleep(time_str: str):
 
 
 def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str] = None, arg_transform: dict[str, Callable] = {}):
-    """ actions is a dictionary with names that the console user can use to call a function. If the dictionary value is a string instead, it is treated as an alias. 
+    """ actions is a dictionary with names that the console user can use to call a function. If the dictionary value is a string instead, it is treated as an alias.
 
-    input_source is by default console user input. Mainly for testing, it may be set to e.g. a list of strings instead. 
+    input_source is by default console user input. Mainly for testing, it may be set to e.g. a list of strings instead.
 
-    arg_transforms should have a subset of the names in actions and contain functions to transform console input values from strings to other types. 
+    arg_transforms should have a subset of the names in actions and contain functions to transform console input values from strings to other types.
 
     Special actions help/?, sleep/wait, and exit/quit are added on top of the provided actions, overriding any existing with those names. Since the arguments are usually strings, but some existing functions may expect other types, arg_transforms may be specified. """
     if input_source is None:
