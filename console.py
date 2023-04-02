@@ -3,6 +3,7 @@ import platform
 import re
 import time
 import traceback
+from enum import Enum
 from typing import Any, Callable, Iterable, Union
 
 
@@ -260,6 +261,107 @@ if platform.system() == "Windows":
     def cursor_back(i: int):
         """ Uses Windows console virtual terminal sequences, must be on Windows. """
         print(f"{ESC}[{i}D", end="")
+
+    class Color(Enum):
+        BLACK = 0
+        RED = 1
+        GREEN = 2
+        YELLOW = 3
+        BLUE = 4
+        MAGENTA = 5
+        CYAN = 6
+        WHITE = 7
+        DEFAULT = 9
+
+    def print_formatted(s: str, *,
+                        # general options
+                        italic: bool = False,
+                        underline: bool = False,
+                        negative: bool = False,
+                        obfuscate: bool = False,
+                        strikethrough: bool = False,
+                        double_underline: bool = False,
+                        overline: bool = False,
+                        # foreground
+                        fg_color: Union[Color, tuple[int, int, int]] = None,
+                        fg_bright: bool = False,
+                        fg_dim: bool = False,
+                        # background
+                        bg_color: Union[Color, tuple[int, int, int]] = None,
+                        bg_bright: bool = False,
+                        # print param
+                        end: str = "\n"
+                        ):
+        """ Using a custom color will cause bright options to be ignored (but not fg_dim).
+
+        Specifying negative=True swaps the foreground and background colors. The only case where provides functionality otherwise not achievable (except by using custom colors) is dimming the background color. 
+
+        Uses Windows console virtual terminal sequences, must be on Windows. """
+        """ 
+        for i in range(0, 128):
+            print(f"{ESC}[{i}m{i:03}{ESC}[m")
+
+        reveals a few more options than presented on the Microsoft documentation, these are marked with an asterisk.
+
+        0 reset all
+        1 bold/bright — seems to affect foreground only
+        *2 dim — also seems to affect foreground only, note that combining bright and dim actually does not cancel out, resulting in something between dim and default
+        *3 italic
+        4 underline
+        7 negative — redundant with simply swapping fg/bg options, except that this makes 1 and 2 apply to the background instead
+        *8 obfuscate — text does not display, but e.g. it can still be copied
+        *9 strikethrough
+        *21 double underline
+        30-37 fg color
+        38 fg custom color, 1 has seems to have no effect if this is used
+        39 fg default color
+        40-49 likewise for bg
+        *53 overline
+        90-97 bold/bright fg, redundant with 1
+        100-107 bold/bright bg """
+
+        format_options = []
+
+        if italic:
+            format_options.append(3)
+        if underline:
+            format_options.append(4)
+        if negative:
+            format_options.append(7)
+        if obfuscate:
+            format_options.append(8)
+        if strikethrough:
+            format_options.append(9)
+        if double_underline:
+            format_options.append(21)
+        if overline:
+            format_options.append(53)
+
+        if isinstance(fg_color, Color):
+            format_options.append(str(30 + fg_color.value))
+        elif isinstance(fg_color, tuple):
+            if len(fg_color) != 3:
+                raise Exception("fg_color must be an RGB 3-tuple")
+            format_options.extend((38, 2))
+            format_options.extend(fg_color)
+        if fg_bright:
+            format_options.append(1)
+        if fg_dim:
+            format_options.append(2)
+
+        if isinstance(bg_color, Color):
+            format_options.append(40 + bg_color.value +
+                                  (60 if bg_bright else 0))
+        elif isinstance(bg_color, tuple):
+            if len(bg_color) != 3:
+                raise Exception("bg_color must be an RGB 3-tuple")
+            format_options.extend((48, 2))
+            format_options.extend(bg_color)
+
+        format_specifier = f"{ESC}[" + \
+            ";".join((str(f) for f in format_options)) + "m"
+        format_reset = f"{ESC}[0m"
+        print(format_specifier + s + format_reset, end=end)
 
     class Spinner:
         """ For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates.
