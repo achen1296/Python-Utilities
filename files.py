@@ -197,6 +197,8 @@ def walk(root: os.PathLike, *,
         except Exception as x:
             if error_action is not None:
                 error_action(root, depth, x)
+            else:
+                raise
 
     gen = walk_recursive(Path(root), 0)
     if side_effects:
@@ -631,3 +633,15 @@ def resolve_with_env(path: os.PathLike):
     for env_var in re.findall("%(.*?)%", path):
         path = path.replace(f"%{env_var}%", os.environ[env_var])
     return Path(path).resolve()
+
+
+def search(root: os.PathLike, query: str) -> list[Path]:
+    """ Search for text in files. """
+    def file_action(p: Path, i: int):
+        with open(p, encoding="utf8") as f:
+            for line in f:
+                if query.lower() in line.lower():
+                    yield p
+                    return
+
+    return walk(root, file_action=file_action)
