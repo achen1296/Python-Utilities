@@ -636,7 +636,7 @@ def resolve_with_env(path: os.PathLike):
 
 
 def search(root: os.PathLike, query: str) -> list[Path]:
-    """ Search for text in files. """
+    """ Search for text in files. Intended to be used on the command line, and will not find text that spans in between lines. """
     def file_action(p: Path, i: int):
         with open(p, encoding="utf8") as f:
             for line in f:
@@ -644,4 +644,7 @@ def search(root: os.PathLike, query: str) -> list[Path]:
                     yield p
                     return
 
-    return walk(root, file_action=file_action)
+    def error_action(p: Path, i: int, e: Exception):
+        print("error on " + str(p))
+
+    return walk(root, file_action=file_action, error_action=error_action)
