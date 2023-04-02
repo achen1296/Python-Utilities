@@ -1,4 +1,5 @@
 import inspect
+import platform
 import re
 import time
 import traceback
@@ -244,6 +245,21 @@ def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...
         if not pause_on_exc_only and pause_message is not None:
             pause(pause_message)
 
+
+if platform.system() == "Windows":
+    # learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+    # all of these functions print directly to the console because they are not supposed to be used anywhere else anyway
+
+    ESC = "\x1b"
+    ST = ESC + "\\"
+
+    def change_title(title: str):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}]0{title}{ST}", end="")
+
+    def cursor_back(i: int):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}D", end="")
 
 if __name__ == "__main__":
 
