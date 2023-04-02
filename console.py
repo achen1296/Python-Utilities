@@ -230,7 +230,7 @@ def pause(message: str = "Press Enter to continue...: "):
     input(message)
 
 
-def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...", pause_on_exc_only=False) -> Any:
+def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...", pause_on_exc_only=True) -> Any:
     """ Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     try:
         return f()
