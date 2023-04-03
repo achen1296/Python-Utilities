@@ -219,11 +219,12 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
 
 
 def bell():
-    print('\u0007', end="")  # "bell" ASCII character
+    """ Print the "bell" character. Works cross-platform because it is part of ASCII. """
+    print('\u0007', end="")
 
 
 def pause(message: str = "Press Enter to continue...: "):
-    """ Mimics the Windows pause console command, including the same message by default. """
+    """ Mimics the Windows pause console command (but works on any platform because it just uses the builtin input), including the same message by default. """
     input(message)
 
 
