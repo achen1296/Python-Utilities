@@ -6,6 +6,8 @@ import traceback
 from enum import Enum
 from typing import Any, Callable, Iterable, Union
 
+WINDOWS = platform.system() == "Windows"
+
 
 class Dots:
     """ For printing dots to show that the console is working. Every time dot() is called, a counter increments and the time since the last dot was printed is evaluated. If there were both enough calls and enough time to exceed both the minimum count and the minimum time (in seconds), a dot is printed. """
@@ -245,7 +247,7 @@ def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...
             pause(pause_message)
 
 
-if platform.system() == "Windows":
+if WINDOWS:
     # learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
     # all of these functions print directly to the console because they are not supposed to be used anywhere else anyway
 
@@ -372,8 +374,6 @@ if platform.system() == "Windows":
         Uses Windows console virtual terminal sequences, must be on Windows. """
 
         def __init__(self, min_count: int = 100, min_time: float = 0.2, spinner_sequence="-/|\\"):
-            if platform.system() != "Windows":
-                raise NotImplementedError
             self._count = 0
             self._last_time = time.monotonic()
             self._min_count = min_count
