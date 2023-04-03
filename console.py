@@ -298,15 +298,16 @@ if WINDOWS:
                         bg_bright: bool = False,
                         # print params
                         sep: str = " ",
+                        file=None,
                         ** kwargs
                         ):
-        """ Using a custom color will cause bright options to be ignored (but not fg_dim).
+        """ Uses Windows console virtual terminal sequences, must be on Windows. 
+
+        Using a custom color will cause bright options to be ignored (but not fg_dim).
 
         Specifying negative=True swaps the foreground and background colors. The only case where provides functionality otherwise not achievable (except by using custom colors) is dimming the background color. 
 
-        Specifying reset=False will cause the formatting to persist on all output until different formatting is specified, or it is reset using reset_format.
-
-        Uses Windows console virtual terminal sequences, must be on Windows. """
+        Specifying reset=False will cause the formatting to persist on all output until different formatting is specified, or it is reset using reset_format. """
         """ 
         for i in range(0, 128):
             print(f"{ESC}[{i}m{i:03}{ESC}[m")
@@ -374,13 +375,13 @@ if WINDOWS:
         print(format_specifier + sep.join((str(v)
               for v in values)) + (FORMAT_RESET if reset else ""), **kwargs)
 
-    def reset_format(end="", **kwargs):
+    def reset_format(end="", file=None, **kwargs):
         print(FORMAT_RESET, end=end, **kwargs)
 
     class Spinner:
-        """ For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates.
+        """ Uses Windows console virtual terminal sequences, must be on Windows.
 
-        Uses Windows console virtual terminal sequences, must be on Windows. """
+        For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates. """
 
         def __init__(self, min_count: int = 100, min_time: float = 0.2, spinner_sequence="-/|\\"):
             self._count = 0
@@ -408,7 +409,9 @@ if WINDOWS:
     SPINNER = Spinner()
 
     def spin():
-        """ Calls spin on shared Spinner object SPINNER """
+        """ Uses Windows console virtual terminal sequences, must be on Windows.
+
+        Calls spin on shared Spinner object SPINNER. """
         SPINNER.spin()
 
 if __name__ == "__main__":
