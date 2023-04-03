@@ -1,6 +1,8 @@
 import inspect
+import io
 import platform
 import re
+import sys
 import time
 import traceback
 from enum import Enum
@@ -10,7 +12,9 @@ WINDOWS = platform.system() == "Windows"
 
 
 class Dots:
-    """ For printing dots to show that the console is working. Every time dot() is called, a counter increments and the time since the last dot was printed is evaluated. If there were both enough calls and enough time to exceed both the minimum count and the minimum time (in seconds), a dot is printed. """
+    """ For printing dots to show that the console is working. Every time dot() is called, a counter increments and the time since the last dot was printed is evaluated. If there were both enough calls and enough time to exceed both the minimum count and the minimum time (in seconds), a dot is printed.
+
+    Should only be used for expensive tasks, otherwise Dots itself will take up a lot of time relative to the actual task! """
 
     def __init__(self, min_count: int = 100, min_time: float = 1.0, output_str="."):
         self._count = 0
@@ -258,13 +262,205 @@ if WINDOWS:
     ESC = "\x1b"
     ST = ESC + "\\"
 
+    def cursor_reverse_index():
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}M", end="")
+
+    def cursor_save():
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}7", end="")
+
+    def cursor_restore():
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}8", end="")
+
+    class CursorMoveException(Exception):
+        pass
+
+    def _check_cursor_move(i: int):
+        if not 0 <= i <= 32767:
+            raise CursorMoveException(
+                "Cursor move argument must be between 0 and 32767 inclusive. Note that 0 is treated as 1.")
+
+    def cursor_up(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        _check_cursor_move(i)
+        print(f"{ESC}[{i}A", end="")
+
+    def cursor_down(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        _check_cursor_move(i)
+        print(f"{ESC}[{i}B", end="")
+
+    def cursor_forward(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        _check_cursor_move(i)
+        print(f"{ESC}[{i}C", end="")
+
+    def cursor_back(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        _check_cursor_move(i)
+        print(f"{ESC}[{i}D", end="")
+
+    def cursor_next_line(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        _check_cursor_move(i)
+        print(f"{ESC}[{i}E", end="")
+
+    def cursor_previous_line(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        _check_cursor_move(i)
+        print(f"{ESC}[{i}F", end="")
+
+    def cursor_horizontal_absolute(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        _check_cursor_move(i)
+        print(f"{ESC}[{i}G", end="")
+
+    def cursor_vertical_absolute(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        _check_cursor_move(i)
+        print(f"{ESC}[{i}d", end="")
+
+    def set_cursor_position(x: int = 1, y: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        _check_cursor_move(x)
+        _check_cursor_move(y)
+        print(f"{ESC}[{y};{x}H", end="")
+
+    """ def get_cursor_position() -> tuple[int, int]:
+        print(f"{ESC}[6n", end="", flush=False)
+        pos_str = ""
+        while (c := sys.stdin.read(1)) != "R":
+            pos_str += c
+        assert pos_str[0:1] == ESC + "["
+        y, x = pos_str.split(";")
+        return int(x), int(y) """
+
+    def cursor_blink(blink: bool = True):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        if blink:
+            print(f"{ESC}[?12h", end="")
+        else:
+            print(f"{ESC}[?12l", end="")
+
+    def cursor_show(show: bool = True):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        if show:
+            print(f"{ESC}[?25h", end="")
+        else:
+            print(f"{ESC}[?25l", end="")
+
+    class CursorShape(Enum):
+        DEFAULT = 0
+        BLINKING_BLOCK = 1
+        STEADY_BLOCK = 2
+        BLINKING_UNDERLINE = 3
+        STEADY_UNDERLINE = 4
+        BLINKING_BAR = 5
+        STEADY_BAR = 6
+
+    def cursor_shape(shape: CursorShape):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{shape.value} q", end="")
+
+    def scroll_down(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}S", end="")
+
+    def scroll_up(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}T", end="")
+
+    def insert_characters(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}@", end="")
+
+    def delete_characters(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}P", end="")
+
+    def backspace(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        cursor_back(1)
+        delete_characters(1)
+
+    def erase_characters(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}X", end="")
+
+    def insert_lines(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}L", end="")
+
+    def delete_lines(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}M", end="")
+
+    def set_tab_stop():
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}H", end="")
+
+    def tab_forward(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}I", end="")
+
+    def tab_backward(i: int = 1):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{i}Z", end="")
+
+    def clear_tab_stop():
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[0g", end="")
+
+    def clear_all_tab_stops():
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[3g", end="")
+
+    def set_scroll_region(top: int = None, bottom: int = None):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{top or ''};{bottom or ''}r", end="")
+
     def change_title(title: str):
         """ Uses Windows console virtual terminal sequences, must be on Windows. """
         print(f"{ESC}]0;{title}{ST}", end="")
 
-    def cursor_back(i: int):
+    def use_alternate_screen_buffer():
         """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}D", end="")
+        print(f"{ESC}[?1049h", end="")
+
+    def use_main_screen_buffer():
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[?1049l", end="")
+
+    def soft_reset():
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[!p", end="")
+
+    class EraseException(Exception):
+        pass
+
+    def _erase_mode(from_cursor: bool, to_cursor: bool):
+        if from_cursor:
+            if to_cursor:
+                # entire line/display
+                return 2
+            else:
+                return 0
+        else:
+            if to_cursor:
+                return 1
+            else:
+                raise EraseException(
+                    "At least one of from_cursor and to_cursor must be True")
+
+    def erase_display(from_cursor: bool = True, to_cursor: bool = True):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{_erase_mode(from_cursor, to_cursor)}J", end="")
+
+    def erase_line(from_cursor: bool = True, to_cursor: bool = True):
+        """ Uses Windows console virtual terminal sequences, must be on Windows. """
+        print(f"{ESC}[{_erase_mode(from_cursor, to_cursor)}K", end="")
 
     class Color(Enum):
         BLACK = 0
@@ -381,9 +577,11 @@ if WINDOWS:
     class Spinner:
         """ Uses Windows console virtual terminal sequences, must be on Windows.
 
-        For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates. """
+        For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates. 
 
-        def __init__(self, min_count: int = 100, min_time: float = 0.2, spinner_sequence="-/|\\"):
+        Should only be used for expensive tasks, otherwise the Spinner itself will take up a lot of time relative to the actual task! """
+
+        def __init__(self, min_count: int = 100, min_time: float = 0.2, spinner_sequence="-\\|/"):
             self._count = 0
             self._last_time = time.monotonic()
             self._min_count = min_count
