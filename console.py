@@ -47,9 +47,6 @@ def input_generator(prompt: str = ">> "):
 def cmd_split(s: str) -> Iterable[list[str]]:
     """Splits commands by semicolons, splits arguments by whitespace, but neither when inside a string delimited with ' or ". String arguments can include ' or " using backslash escape."""
 
-    def unescape(s: str) -> str:
-        return s.replace('\\"', '"').replace("\\'", "'")
-
     start = -1
     end = -1
     quote = None
