@@ -236,9 +236,13 @@ def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...
         return f()
     except (Exception, KeyboardInterrupt) as x:
         if isinstance(x, KeyboardInterrupt):
-            print("KeyboardInterrupt")
+            err_text = "KeyboardInterrupt"
         else:
-            traceback.print_exc()
+            err_text = traceback.format_exc()
+        if WINDOWS:
+            print_formatted(err_text, fg_color=Color.RED)
+        else:
+            print(err_text)
         bell()
         if pause_on_exc_only and pause_message is not None:
             pause(pause_message)
