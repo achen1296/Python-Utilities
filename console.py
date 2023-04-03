@@ -294,7 +294,8 @@ if WINDOWS:
                         bg_color: Union[Color, tuple[int, int, int]] = None,
                         bg_bright: bool = False,
                         # print params
-                        **kwargs
+                        sep: str = " ",
+                        ** kwargs
                         ):
         """ Using a custom color will cause bright options to be ignored (but not fg_dim).
 
@@ -365,9 +366,6 @@ if WINDOWS:
         format_specifier = f"{ESC}[" + \
             ";".join((str(f) for f in format_options)) + "m"
         format_reset = f"{ESC}[0m"
-
-        sep = kwargs["sep"]
-        del kwargs["sep"]
 
         print(format_specifier + sep.join((str(v)
               for v in values)) + format_reset, **kwargs)
