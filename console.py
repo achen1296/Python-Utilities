@@ -256,7 +256,7 @@ if platform.system() == "Windows":
 
     def change_title(title: str):
         """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}]0{title}{ST}", end="")
+        print(f"{ESC}]0;{title}{ST}", end="")
 
     def cursor_back(i: int):
         """ Uses Windows console virtual terminal sequences, must be on Windows. """
