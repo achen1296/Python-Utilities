@@ -1,6 +1,5 @@
 import hashlib
 import io
-import msvcrt
 import os
 import platform
 import re
@@ -14,11 +13,15 @@ from shutil import move
 from typing import Callable, Iterable, Optional, Union
 from zipfile import ZipFile
 
-if platform.system() == "Windows":
+WINDOWS = platform.system() == "Windows"
+if WINDOWS:
+    import msvcrt
+    import winreg
+
     from windows_env import *
 
-LONG_PATH_PREFIX = "\\\\?\\"
-""" Prefix to allow reading paths >= 260 characters on Windows  """
+    LONG_PATH_PREFIX = "\\\\?\\"
+    """ Prefix to allow reading paths >= 260 characters on Windows  """
 
 
 def create_file(path: os.PathLike, binary=False, **open_kwargs):
@@ -586,55 +589,6 @@ def regex_rename(root: os.PathLike, find: Union[str, re.Pattern[str]], replace: 
     return move_by_dict(moves)
 
 
-class LockFile:
-    """ Based on Thomas Lux's answer on https://stackoverflow.com/questions/489861/locking-a-file-in-python """
-
-    def __lock_file(self):
-        self.locked_size = max(os.stat(self.path).st_size, 1)
-        msvcrt.locking(self.fd.fileno(), msvcrt.LK_NBLCK, self.locked_size)
-
-    def __unlock_file(self):
-        msvcrt.locking(self.fd.fileno(), msvcrt.LK_UNLCK, self.locked_size)
-
-    def __init__(self, path: Path, *args, **kwargs):
-        if platform.system() != "Windows":
-            raise NotImplementedError
-        self.path = path
-        self.fd: io.IOBase = open(path, *args, **kwargs)
-        self.__lock_file()
-
-    def __enter__(self):
-        """ Implement context manager """
-        return self.fd
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """ Implement context manager """
-        self.__unlock_file()
-        self.fd.close()
-        # do not suppress exceptions
-        return False
-
-    def close(self):
-        """ For explicit closing when not used as a context manager """
-        self.__exit__(None, None, None)
-
-    def __getattr__(self, name):
-        """ Redirect other attributes to the internal opened file. """
-        return getattr(self.fd, name)
-
-
-def open_locked(file: Path, *args, **kwargs):
-    """ Only prevents multiple open instances if this function is used every time a given file is opened instead of only the builtin open. Still prevents external accesses (e.g. via the file explorer). """
-    return LockFile(file, *args, **kwargs)
-
-
-def resolve_with_env(path: os.PathLike):
-    path: str = str(path)
-    for env_var in re.findall("%(.*?)%", path):
-        path = path.replace(f"%{env_var}%", os.environ[env_var])
-    return Path(path).resolve()
-
-
 def search(root: os.PathLike, query: str) -> list[Path]:
     """ Search for text in files. Intended to be used on the command line, and will not find text that spans in between lines. """
     def file_action(p: Path, i: int):
@@ -648,3 +602,51 @@ def search(root: os.PathLike, query: str) -> list[Path]:
         print("error on " + str(p))
 
     return walk(root, file_action=file_action, error_action=error_action)
+
+
+if WINDOWS:
+
+    class LockFile:
+        """ Based on Thomas Lux's answer on https://stackoverflow.com/questions/489861/locking-a-file-in-python """
+
+        def __lock_file(self):
+            self.locked_size = max(os.stat(self.path).st_size, 1)
+            msvcrt.locking(self.fd.fileno(), msvcrt.LK_NBLCK, self.locked_size)
+
+        def __unlock_file(self):
+            msvcrt.locking(self.fd.fileno(), msvcrt.LK_UNLCK, self.locked_size)
+
+        def __init__(self, path: Path, *args, **kwargs):
+            if platform.system() != "Windows":
+                raise NotImplementedError
+            self.path = path
+            self.fd: io.IOBase = open(path, *args, **kwargs)
+            self.__lock_file()
+
+        def __enter__(self):
+            """ Implement context manager """
+            return self.fd
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            """ Implement context manager """
+            self.__unlock_file()
+            self.fd.close()
+            # do not suppress exceptions
+            return False
+
+        def close(self):
+            """ For explicit closing when not used as a context manager """
+            self.__exit__(None, None, None)
+
+        def __getattr__(self, name):
+            """ Redirect other attributes to the internal opened file. """
+            return getattr(self.fd, name)
+
+    def open_locked(file: Path, *args, **kwargs):
+        """ Only prevents multiple open instances if this function is used every time a given file is opened instead of only the builtin open. Still prevents external accesses (e.g. via the file explorer). """
+        return LockFile(file, *args, **kwargs)
+
+    def resolve_with_env(path: os.PathLike):
+        path: str = str(path)
+        winreg.ExpandEnvironmentStrings(path)
+        return Path(path).resolve()
