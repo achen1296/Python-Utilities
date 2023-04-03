@@ -277,6 +277,8 @@ if WINDOWS:
         WHITE = 7
         DEFAULT = 9
 
+    FORMAT_RESET = f"{ESC}[0m"
+
     def print_formatted(*values,
                         # general options
                         italic: bool = False,
@@ -286,6 +288,7 @@ if WINDOWS:
                         strikethrough: bool = False,
                         double_underline: bool = False,
                         overline: bool = False,
+                        reset: bool = True,
                         # foreground
                         fg_color: Union[Color, tuple[int, int, int]] = None,
                         fg_bright: bool = False,
@@ -300,6 +303,8 @@ if WINDOWS:
         """ Using a custom color will cause bright options to be ignored (but not fg_dim).
 
         Specifying negative=True swaps the foreground and background colors. The only case where provides functionality otherwise not achievable (except by using custom colors) is dimming the background color. 
+
+        Specifying reset=False will cause the formatting to persist on all output until different formatting is specified, or it is reset using reset_format.
 
         Uses Windows console virtual terminal sequences, must be on Windows. """
         """ 
@@ -365,10 +370,12 @@ if WINDOWS:
 
         format_specifier = f"{ESC}[" + \
             ";".join((str(f) for f in format_options)) + "m"
-        format_reset = f"{ESC}[0m"
 
         print(format_specifier + sep.join((str(v)
-              for v in values)) + format_reset, **kwargs)
+              for v in values)) + (FORMAT_RESET if reset else ""), **kwargs)
+
+    def reset_format(end="", **kwargs):
+        print(FORMAT_RESET, end=end, **kwargs)
 
     class Spinner:
         """ For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates.
