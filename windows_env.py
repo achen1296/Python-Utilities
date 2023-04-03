@@ -39,18 +39,21 @@ ENVIRONMENT_NAME = {
 }
 
 
+__all__ = ['APP_DATA',
+           'COMMON_PROGRAMFILES_x86',
+           'COMMON_PROGRAM_FILES',
+           'HOME_DRIVE',
+           'LOCAL_APP_DATA',
+           'PROGRAM_DATA',
+           'PROGRAM_FILES',
+           'PROGRAM_FILES_x86',
+           'PUBLIC',
+           'SYSTEM_DRIVE',
+           'SYSTEM_ROOT',
+           'TEMP',
+           'USER_PROFILE',
+           ]
+
+
 def __dir__():
-    return ['APP_DATA',
-            'COMMON_PROGRAMFILES_x86',
-            'COMMON_PROGRAM_FILES',
-            'HOME_DRIVE',
-            'LOCAL_APP_DATA',
-            'PROGRAM_DATA',
-            'PROGRAM_FILES',
-            'PROGRAM_FILES_x86',
-            'PUBLIC',
-            'SYSTEM_DRIVE',
-            'SYSTEM_ROOT',
-            'TEMP',
-            'USER_PROFILE',
-            ]
+    return __all__
