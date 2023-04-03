@@ -270,7 +270,7 @@ if platform.system() == "Windows":
         WHITE = 7
         DEFAULT = 9
 
-    def print_formatted(s: str, *,
+    def print_formatted(*values,
                         # general options
                         italic: bool = False,
                         underline: bool = False,
@@ -286,8 +286,8 @@ if platform.system() == "Windows":
                         # background
                         bg_color: Union[Color, tuple[int, int, int]] = None,
                         bg_bright: bool = False,
-                        # print param
-                        end: str = "\n"
+                        # print params
+                        **kwargs
                         ):
         """ Using a custom color will cause bright options to be ignored (but not fg_dim).
 
@@ -358,7 +358,12 @@ if platform.system() == "Windows":
         format_specifier = f"{ESC}[" + \
             ";".join((str(f) for f in format_options)) + "m"
         format_reset = f"{ESC}[0m"
-        print(format_specifier + s + format_reset, end=end)
+
+        sep = kwargs["sep"]
+        del kwargs["sep"]
+
+        print(format_specifier + sep.join((str(v)
+              for v in values)) + format_reset, **kwargs)
 
     class Spinner:
         """ For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates.
