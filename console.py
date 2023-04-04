@@ -472,7 +472,7 @@ def print_formatted(*print_values,
                     italic: bool = False,
                     underline: bool = False,
                     negative: bool = False,
-                    obfuscate: bool = False,
+                    hide: bool = False,
                     strikethrough: bool = False,
                     double_underline: bool = False,
                     overline: bool = False,
@@ -491,7 +491,7 @@ def print_formatted(*print_values,
                     ):
     """ Using a custom color will cause bright options to be ignored (but not fg_dim).
 
-    Specifying negative=True swaps the foreground and background colors. The only case where provides functionality otherwise not achievable (except by using custom colors) is dimming the background color. 
+    Specifying negative=True swaps the foreground and background colors. The only case where provides functionality otherwise not achievable (except by using custom colors) is dimming the background color.
 
     Specifying reset=False will cause the formatting to persist on all output until different formatting is specified, or it is reset using reset_format. """
     """
@@ -525,7 +525,7 @@ def print_formatted(*print_values,
         format_options.append(4)
     if negative:
         format_options.append(7)
-    if obfuscate:
+    if hide:
         format_options.append(8)
     if strikethrough:
         format_options.append(9)
