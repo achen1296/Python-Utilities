@@ -1,3 +1,4 @@
+from shutil import get_terminal_size
 import inspect
 import re
 import time
@@ -445,7 +446,7 @@ class Color(Enum):
 FORMAT_RESET = f"{ESC}[0m"
 
 
-def print_formatted(*values,
+def print_formatted(*print_values,
                     # general options
                     italic: bool = False,
                     underline: bool = False,
@@ -465,7 +466,7 @@ def print_formatted(*values,
                     # print params
                     sep: str = " ",
                     file=None,
-                    ** kwargs
+                    ** print_kwargs
                     ):
     """ Using a custom color will cause bright options to be ignored (but not fg_dim).
 
@@ -537,11 +538,11 @@ def print_formatted(*values,
         ";".join((str(f) for f in format_options)) + "m"
 
     print(format_specifier + sep.join((str(v)
-                                       for v in values)) + (FORMAT_RESET if reset else ""), **kwargs)
+                                       for v in print_values)) + (FORMAT_RESET if reset else ""), **print_kwargs)
 
 
-def reset_format(end="", file=None, **kwargs):
-    print(FORMAT_RESET, end=end, **kwargs)
+def reset_format(end="", file=None, **print_args):
+    print(FORMAT_RESET, end=end, **print_args)
 
 
 class Spinner:
