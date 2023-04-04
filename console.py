@@ -95,12 +95,14 @@ def sleep(time_str: str):
     time.sleep(sleep_time)
 
 
-def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str] = None, arg_transform: dict[str, Callable] = {}):
+def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str] = None, arg_transform: dict[str, Callable] = {}, default: Union[Callable, str] = None):
     """actions is a dictionary with names that the console user can use to call a function. If the dictionary value is a string instead, it is treated as an alias.
 
     input_source is by default console user input. Mainly for testing, it may be set to e.g. a list of strings instead.
 
     arg_transforms should have a subset of the names in actions and contain functions to transform console input values from strings to other types.
+
+    If an unknown command is given and default is specified, then all of the arguments *including the first one that was attempted as a command name* are given to it. If specified as a string, then that is used as an alias for an action to call.
 
     Special actions help/?, sleep/wait, and exit/quit are added on top of the provided actions, overriding any existing with those names. Since the arguments are usually strings, but some existing functions may expect other types, arg_transforms may be specified. """
     if input_source is None:
@@ -166,7 +168,10 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
             if command_num > 1:
                 print(">> " + (" ".join(args)))
             action_name = args[0]
-            args = args[1:]
+            if action_name not in actions and isinstance(default, str):
+                action_name = default
+            else:
+                args = args[1:]
             if action_name in actions:
                 while isinstance(actions[action_name], str):
                     # follow alias chain
@@ -178,7 +183,10 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
                 if result is not None:
                     print(result)
             else:
-                print(f"Unknown action {action_name}")
+                if isinstance(default, Callable):
+                    default(action_name, *args)
+                else:
+                    print(f"Unknown action {action_name}")
 
     try:
         for i in input_source:
