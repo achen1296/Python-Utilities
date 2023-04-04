@@ -582,7 +582,7 @@ def format(s: str,
 
 
 class Spinner:
-    """ For printing a spinner to show that the console is working. 
+    """ For printing a spinner to show that the console is working.
 
     Should only be used for expensive tasks, otherwise the Spinner itself will take up a lot of time relative to the actual task! """
 
@@ -611,6 +611,22 @@ SPINNER = Spinner()
 def spin():
     """ Calls spin on shared Spinner object SPINNER. """
     SPINNER.spin()
+
+
+def measure_lines(text: str, terminal_width: int = None):
+    """ Measure how many lines tall the text would be in a terminal of the given width. If not given a terminal width, gets the current one. """
+    if terminal_width is None:
+        terminal_width = get_terminal_size().columns
+    lines = text.split("\n")
+    count = len(lines)
+    for l in lines:
+        len_l = len(l)
+        if len_l == 0:
+            # avoid negatives in the equation below
+            continue
+        # decrement length because exactly filling the terminal does not go onto the next line
+        count += (len_l - 1) // terminal_width
+    return count
 
 
 class Progress:
@@ -642,7 +658,7 @@ class Progress:
 
         Under the assumption that all progress values are between 0 and max inclusive, this should keep the text width consistent. Otherwise, it is up to the user to keep the width consistent.
 
-        Nothing else should be printed from the moment of construction until it is no longer needed (presumably finishing with a clear() call). Use the comment parameter to add additional text below. 
+        Nothing else should be printed from the moment of construction until it is no longer needed (presumably finishing with a clear() call). Use the comment parameter to add additional text below.
         """
         self.max = max
         self.show_fraction = show_fraction
@@ -677,6 +693,7 @@ class Progress:
 
     def update_progress(self, value: Union[int, float], comment: str = None):
         """ Set and print the updated progress value. Comments are appended after the progress text (with a space in between). If the comment is not specified, any prior comments are not cleared (specify "") to clear comments. """
+        cursor_save()
         now = time.monotonic()
         if self.last_update_time is not None and now < self.last_update_time + self.min_update_time:
             return
@@ -687,11 +704,8 @@ class Progress:
 
         if comment is not None:
             erase_display(from_cursor=True, to_cursor=False)
-            print(comment, end="")
-            cursor_up(comment.count("\n"))
-
-        # in case of subclass override
-        cursor_up(prog_text.count("\n"))
+            print(comment, end="", flush=True)
+        cursor_up(measure_lines(prog_text + (comment or ""))-1)
         cursor_horizontal_absolute(1)
 
     def clear(self):
@@ -757,16 +771,16 @@ if __name__ == "__main__":
     def progress_test():
         # ints
         prog = ProgressBar(100)
-        for i in range(0, 101):
+        for i in range(0,  101):
             prog.update_progress(i, f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
             time.sleep(0.05)
         prog.clear()
 
-        # floats
+        # floats, long comments
         prog = ProgressBar(100.)
         for i in range(0, 101):
             prog.update_progress(
-                float(i), f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
+                float(i), "long comment "*15)
             time.sleep(0.05)
         prog.clear()
 
