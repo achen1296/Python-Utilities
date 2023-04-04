@@ -214,10 +214,10 @@ def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...
         return f()
     except (Exception, KeyboardInterrupt) as x:
         if isinstance(x, KeyboardInterrupt):
-            err_text = "KeyboardInterrupt"
+            err_text = "KeyboardInterrupt\n"
         else:
             err_text = traceback.format_exc()
-        print(format(err_text, fg_color=Color.RED))
+        print(format(err_text, fg_color=Color.RED), end="")
         bell()
         if pause_on_exc_only and pause_message is not None:
             pause(pause_message)
@@ -769,8 +769,12 @@ if __name__ == "__main__":
     def test_transform(x: str):
         return int(x)
 
+    def test_exc():
+        raise Exception
+
     repl({
-        "test": test_action
+        "test": test_action,
+        "e": test_exc,
     }, arg_transform={
-        "test": test_transform
+        "test": test_transform,
     })
