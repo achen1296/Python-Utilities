@@ -732,35 +732,6 @@ class ProgressBar(Progress):
 
 
 if __name__ == "__main__":
-    # ints
-    prog = ProgressBar(100)
-    for i in range(0, 101):
-        prog.update_progress(i, f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
-        time.sleep(0.05)
-    prog.clear()
-
-    # floats
-    prog = ProgressBar(100.)
-    for i in range(0, 101):
-        prog.update_progress(
-            float(i), f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
-        time.sleep(0.05)
-    prog.clear()
-
-    # comment persistence, rate limit
-    prog = ProgressBar(100, min_update_time=.5)
-    prog.update_progress(0, "persistent comment")
-    for i in range(1, 101):
-        prog.update_progress(i)
-        time.sleep(0.05)
-    prog.clear()
-
-    # test rate limit
-    for _ in range(0, 100):
-        spin()
-        time.sleep(0.05)
-    backspace()
-
     result = list(cmd_split("a;b;c d"))
     assert result == [["a"], ["b"], ["c", "d"]], result
 
@@ -777,9 +748,40 @@ if __name__ == "__main__":
     def test_exc():
         raise Exception
 
+    def progress_test():
+        # ints
+        prog = ProgressBar(100)
+        for i in range(0, 101):
+            prog.update_progress(i, f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
+            time.sleep(0.05)
+        prog.clear()
+
+        # floats
+        prog = ProgressBar(100.)
+        for i in range(0, 101):
+            prog.update_progress(
+                float(i), f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
+            time.sleep(0.05)
+        prog.clear()
+
+        # comment persistence, rate limit
+        prog = ProgressBar(100, min_update_time=.5)
+        prog.update_progress(0, "persistent comment")
+        for i in range(1, 101):
+            prog.update_progress(i)
+            time.sleep(0.05)
+        prog.clear()
+
+        # test rate limit
+        for _ in range(0, 100):
+            spin()
+            time.sleep(0.05)
+        backspace()
+
     repl({
         "test": test_action,
         "e": test_exc,
+        "p": progress_test
     }, arg_transform={
         "test": test_transform,
     })
