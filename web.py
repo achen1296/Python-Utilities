@@ -28,46 +28,53 @@ def url_filename(url: str):
     """ Get filename in a URL pointing to a file -- the last path component. """
     path = urlparse(url).path
     last_slash = path.rfind("/")
-    return path[last_slash+1:]
+    return files.remove_forbidden_chars(path[last_slash+1:], name_only=True)
 
 
 class DownloadException(Exception):
     pass
 
 
-def download_url(url: str, file: os.PathLike = None,  *, output=True, **get_kwargs):
+def _parse_download_destination(url: str, dst: os.PathLike):
+    if dst is None:
+        return url_filename(url)
+    else:
+        return files.remove_forbidden_chars(str(dst))
+
+
+def download_url(url: str, dst: os.PathLike = None,  *, output=True, **get_kwargs):
     """ If file = None, the name is inferred from the last piece of the URL. get_kwargs passed to requests.get. 
-    
+
     If the file name ends up being too long """
-    if file is None:
-        file = url_filename(url)
-    file = files.remove_forbidden_chars(str(file))
+    dst = _parse_download_destination(url, dst)
     req = requests.get(url, **get_kwargs)
     if req.status_code != 200:
         raise DownloadException(url, req.status_code,
                                 req.reason, get_kwargs)
     if output:
-        print(f"Downloading <{url}> -> <{file}>")
-    with open(file, "wb") as f:
+        print(f"Downloading <{url}> -> <{dst}>")
+    with open(dst, "wb") as f:
         f.write(req.content)
 
 
-def download_urls(src_dst: dict[str, os.PathLike], *, wait=0, output=True, **get_kwargs):
-    """ src_dst should be a dictionary defining the order to download and the destination filenames. For None values, the filename is determined from the URL.
+def download_urls(plan: dict[str, tuple[os.PathLike, dict[str, str]]], *, wait=0, output=True):
+    """ plan should be a dictionary mapping a URL to a tuple containing the download destination and a dictionary of keyword arguments for requests.get. If the destination is given as None, it will be in the current working directory with a name determined from the end of the URL path. 
 
-    Waits for the specified number of seconds in between downloads as an option to avoid pressuring the server; by default does not wait.
-
-    get_kwargs passed to requests.get. """
+    Optionally waits for the specified number of seconds in between downloads to avoid pressuring the server; by default does not wait. """
     if output:
+        prog = console.Progress(len(plan))
         counter = 0
-        total = len(src_dst)
-    for url in src_dst:
+    for url in plan:
+        dst, get_kwargs = plan[url]
         if wait > 0:
             time.sleep(wait)
         if output:
             counter += 1
-            print(f"{counter}/{total}: ", end="")
-        download_url(url, src_dst[url], output=output, **get_kwargs)
+            # parse now for output, otherwise redundant
+            dst = _parse_download_destination(url, dst)
+            prog.update_progress(counter, f"<{url}> -> <{dst}>")
+        # output False because it is handled above
+        download_url(url, dst, output=False, **get_kwargs)
 
 
 def firefox_driver(**kwargs) -> webdriver.Firefox:
@@ -194,6 +201,7 @@ class PageBrowser:
             "return navigator.userAgent")
 
     def new_tab(self, url: str):
+        """ Open a new tab and switch to it """
         self.driver.execute_script("window.open('')")
         # switch to last, i.e. newest, window
         self.driver.switch_to.window(
@@ -201,6 +209,7 @@ class PageBrowser:
         self.driver.get(url)
 
     def close_tab(self):
+        """ Close the current tab and switch to the last one """
         self.driver.close()
         # switch to new last window, somewhat mimicking normal tab close behavior
         self.driver.switch_to.window(
@@ -218,9 +227,9 @@ class PageBrowser:
             self.driver.switch_to.window(current)
         return count
 
-    def download(self, wait=0, output=True) -> int:
-        """Download everything on the current page found by any PageReader (using the keyword arguments to requests.get it specifies; the user agent string is also always included). Returns the number of downloads."""
-        count = 0
+    def _plan_download(self) -> dict[str, tuple[os.PathLike, dict[str, str]]]:
+        """ Analyze the current page using PageReaders and return an accumulated dictionary of planned downloads. """
+        plan = {}
         for r in self.readers:
             if r.can_read(self.driver):
                 d = r.to_download(self.driver)
@@ -228,28 +237,32 @@ class PageBrowser:
                 if "headers" not in get_kwargs:
                     get_kwargs["headers"] = {}
                 get_kwargs["headers"]["User-Agent"] = self.user_agent
-                download_urls(d, wait=wait, output=output, **r.get_kwargs)
-                count += len(d)
-        return count
+                plan.update({
+                    url: (filename, get_kwargs)
+                    for url, filename in d.items()
+                })
+        return plan
 
-    def open_and_download(self, wait=0, output=True, **get_kwargs) -> int:
-        """Open each link found on the current page, downloads, and closes the tab before moving on to the next one. Returns the number of downloads. get_kwargs passed to requests.get."""
-        open_count = 0
+    def download_current_page(self, wait=0, output=True) -> int:
+        """Download everything on the current page found by any PageReader (using the keyword arguments to requests.get it specifies; the user agent string is also always included). Returns the number of downloads."""
+        plan = self._plan_download()
+        download_urls(plan, wait=wait, output=output)
+        return len(plan)
+
+    def open_and_download(self, wait=0, output=True) -> int:
+        """Open each link found on the current page, analyzes, and closes the tab before moving on to the next one,, then downloads everything. Returns the number of downloads. get_kwargs passed to requests.get."""
         download_count = 0
         current = self.driver.current_window_handle
+        plan = {}
         for r in self.readers:
             if r.can_read(self.driver):
                 to_open = r.to_open(self.driver)
-                open_total = len(to_open)
                 for url in to_open:
-                    if output:
-                        open_count += 1
-                        print(f"{open_count}/{open_total}")
                     self.new_tab(url)
-                    download_count += self.download(wait=wait,
-                                                    output=output, **get_kwargs)
+                    plan.update(self._plan_download())
                     self.close_tab()
             self.driver.switch_to.window(current)
+        download_urls(plan, wait=wait, output=output)
         return download_count
 
     def iter_tabs(self):
@@ -257,25 +270,29 @@ class PageBrowser:
             self.driver.switch_to.window(handle)
             yield handle
 
-    def download_all(self, close_tabs: bool = True, wait=0, output=True, **get_kwargs) -> int:
-        """Download everything on all open tabs found by any PageReader. Optionally closes each page after doing so if anything was downloaded. Returns the number of downloads. get_kwargs passed to requests.get"""
+    def download_all(self, close_tabs: bool = True, wait=0, output=True) -> int:
+        """Download everything on all open tabs found by any PageReader. Optionally closes each page after analyzing it if anything was downloaded. Returns the number of downloads. get_kwargs passed to requests.get"""
         try:
             current = self.driver.current_window_handle
         except NoSuchWindowException:
             # window being controlled was closed
             current = None
-        count = 0
+        plan = {}
         for _ in self.iter_tabs():
-            current_count = self.download(
-                wait=wait, output=output, **get_kwargs)
-            if current_count > 0 and close_tabs and len(self.driver.window_handles) > 1:
+            page_plan = self._plan_download()
+            if len(page_plan) > 0 and close_tabs and len(self.driver.window_handles) > 1:
                 self.driver.close()
-            count += current_count
+            plan.update(page_plan)
+
         if current in self.driver.window_handles:
+            # return to the original active tab
             self.driver.switch_to.window(current)
         else:
+            # switch to the first tab
             self.switch_tab(0)
-        return count
+
+        download_urls(plan, wait=wait, output=output)
+        return len(plan)
 
     def switch_tab(self, tab_index: int):
         """ Specify tab index starting from 0. """
@@ -297,7 +314,7 @@ class PageBrowser:
 
 def run_page_browser(browser: PageBrowser, additional_actions: dict[str, Callable] = None):
     actions = {
-        "d": browser.download,
+        "d": browser.download_current_page,
         "a": browser.download_all,
         "o": browser.open,
         "od": browser.open_and_download,
