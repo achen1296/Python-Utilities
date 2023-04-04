@@ -683,7 +683,7 @@ class Progress:
         self.last_update_time = now
 
         prog_text = self.progress_text(value, comment)
-        print(prog_text, end="")
+        print(prog_text, end="", flush=True)
 
         if comment is not None:
             erase_display(from_cursor=True, to_cursor=False)
