@@ -287,7 +287,7 @@ def cursor_vertical_absolute(i: int = 1):
     print(f"{ESC}[{i}d", end="")
 
 
-def set_cursor_position(x: int = 1, y: int = 1):
+def cursor_set_position(x: int = 1, y: int = 1):
     _check_cursor_move(x)
     _check_cursor_move(y)
     print(f"{ESC}[{y};{x}H", end="")
