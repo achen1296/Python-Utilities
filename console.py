@@ -1,45 +1,9 @@
 import inspect
-import io
-import platform
 import re
-import sys
 import time
 import traceback
 from enum import Enum
 from typing import Any, Callable, Iterable, Union
-
-WINDOWS = platform.system() == "Windows"
-
-
-class Dots:
-    """ For printing dots to show that the console is working. Every time dot() is called, a counter increments and the time since the last dot was printed is evaluated. If there were both enough calls and enough time to exceed both the minimum count and the minimum time (in seconds), a dot is printed.
-
-    Should only be used for expensive tasks, otherwise Dots itself will take up a lot of time relative to the actual task! """
-
-    def __init__(self, min_count: int = 100, min_time: float = 1.0, output_str="."):
-        self._count = 0
-        self._last_time = time.monotonic()
-        self._min_count = min_count
-        self._min_time = min_time
-        self._output_str = output_str
-
-    def dot(self):
-        self._count += 1
-        if self._count >= self._min_count and time.monotonic() - self._last_time >= self._min_time:
-            self.reset()
-            print(self._output_str, end="", flush=True)
-
-    def reset(self):
-        self._count = 0
-        self._last_time = time.monotonic()
-
-
-DOTS = Dots()
-
-
-def dot():
-    """ Calls dot on shared Dots object DOTS """
-    DOTS.dot()
 
 
 def input_generator(prompt: str = ">> "):
@@ -103,7 +67,7 @@ def cmd_split(s: str) -> Iterable[list[str]]:
 
 
 def sleep(time_str: str):
-    """ Pause execution for a certain amount of time, specified in h:mm:ss, m:ss, or s format. """
+    """Pause execution for a certain amount of time, specified in h:mm:ss, m:ss, or s format. """
     match: re.Match = re.match("^(\d+):(\d{2}):(\d{2})$", time_str)
     if match:
         hours = int(match.group(1))
@@ -130,7 +94,7 @@ def sleep(time_str: str):
 
 
 def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str] = None, arg_transform: dict[str, Callable] = {}):
-    """ actions is a dictionary with names that the console user can use to call a function. If the dictionary value is a string instead, it is treated as an alias.
+    """actions is a dictionary with names that the console user can use to call a function. If the dictionary value is a string instead, it is treated as an alias.
 
     input_source is by default console user input. Mainly for testing, it may be set to e.g. a list of strings instead.
 
@@ -149,7 +113,7 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
 
     # add special actions
     def help(*action_names: str):
-        """ Show this help menu. Specify one or more commands to only show their descriptions. Specify "builtins" to see the rest of the built-in commands. """
+        """Show this help menu. Specify one or more commands to only show their descriptions. Specify "builtins" to see the rest of the built-in commands. """
         action_names: set[str] = set(action_names)
         if len(action_names) == 0:
             # get all actions if none are specified, but the builtins will be excluded except help
@@ -185,7 +149,7 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
     actions["wait"] = "sleep"
 
     def exit():
-        """ Exit. """
+        """Exit. """
         nonlocal exited
         exited = True
 
@@ -225,17 +189,17 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
 
 
 def bell():
-    """ Print the "bell" character. Works cross-platform because it is part of ASCII. """
+    """Print the "bell" character. """
     print('\u0007', end="")
 
 
 def pause(message: str = "Press Enter to continue...: "):
-    """ Mimics the Windows pause console command (but works on any platform because it just uses the builtin input), including the same message by default. """
+    """Mimics the Windows pause console command (but works on any platform because it just uses the builtin input), including the same message by default. """
     input(message)
 
 
 def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...", pause_on_exc_only=True) -> Any:
-    """ Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
+    """Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     try:
         return f()
     except (Exception, KeyboardInterrupt) as x:
@@ -243,10 +207,7 @@ def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...
             err_text = "KeyboardInterrupt"
         else:
             err_text = traceback.format_exc()
-        if WINDOWS:
-            print_formatted(err_text, fg_color=Color.RED)
-        else:
-            print(err_text)
+        print_formatted(err_text, fg_color=Color.RED)
         bell()
         if pause_on_exc_only and pause_message is not None:
             pause(pause_message)
@@ -255,362 +216,370 @@ def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...
             pause(pause_message)
 
 
-if WINDOWS:
-    # learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-    # all of these functions print directly to the console because they are not supposed to be used anywhere else anyway
+# en.wikipedia.org/wiki/ANSI_escape_code
+# learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+# all of these functions print directly to the console because they are not supposed to be used anywhere else anyway
 
-    ESC = "\x1b"
-    ST = ESC + "\\"
+ESC = "\x1b"
+ST = ESC + "\\"
 
-    def cursor_reverse_index():
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}M", end="")
 
-    def cursor_save():
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}7", end="")
+def cursor_reverse_index():
+    print(f"{ESC}M", end="")
 
-    def cursor_restore():
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}8", end="")
 
-    class CursorMoveException(Exception):
-        pass
+def cursor_save():
+    print(f"{ESC}7", end="")
 
-    def _check_cursor_move(i: int):
-        if not 0 <= i <= 32767:
-            raise CursorMoveException(
-                "Cursor move argument must be between 0 and 32767 inclusive. Note that 0 is treated as 1.")
 
-    def cursor_up(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        _check_cursor_move(i)
-        print(f"{ESC}[{i}A", end="")
+def cursor_restore():
+    print(f"{ESC}8", end="")
 
-    def cursor_down(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        _check_cursor_move(i)
-        print(f"{ESC}[{i}B", end="")
 
-    def cursor_forward(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        _check_cursor_move(i)
-        print(f"{ESC}[{i}C", end="")
+class CursorMoveException(Exception):
+    pass
 
-    def cursor_back(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        _check_cursor_move(i)
-        print(f"{ESC}[{i}D", end="")
 
-    def cursor_next_line(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        _check_cursor_move(i)
-        print(f"{ESC}[{i}E", end="")
+def _check_cursor_move(i: int):
+    if not 0 <= i <= 32767:
+        raise CursorMoveException(
+            "Cursor move argument must be between 0 and 32767 inclusive. Note that 0 is treated as 1.")
 
-    def cursor_previous_line(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        _check_cursor_move(i)
-        print(f"{ESC}[{i}F", end="")
 
-    def cursor_horizontal_absolute(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        _check_cursor_move(i)
-        print(f"{ESC}[{i}G", end="")
+def cursor_up(i: int = 1):
+    _check_cursor_move(i)
+    print(f"{ESC}[{i}A", end="")
 
-    def cursor_vertical_absolute(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        _check_cursor_move(i)
-        print(f"{ESC}[{i}d", end="")
 
-    def set_cursor_position(x: int = 1, y: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        _check_cursor_move(x)
-        _check_cursor_move(y)
-        print(f"{ESC}[{y};{x}H", end="")
+def cursor_down(i: int = 1):
+    _check_cursor_move(i)
+    print(f"{ESC}[{i}B", end="")
 
-    """ def get_cursor_position() -> tuple[int, int]:
-        print(f"{ESC}[6n", end="", flush=False)
-        pos_str = ""
-        while (c := sys.stdin.read(1)) != "R":
-            pos_str += c
-        assert pos_str[0:1] == ESC + "["
-        y, x = pos_str.split(";")
-        return int(x), int(y) """
 
-    def cursor_blink(blink: bool = True):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        if blink:
-            print(f"{ESC}[?12h", end="")
+def cursor_forward(i: int = 1):
+    _check_cursor_move(i)
+    print(f"{ESC}[{i}C", end="")
+
+
+def cursor_back(i: int = 1):
+    _check_cursor_move(i)
+    print(f"{ESC}[{i}D", end="")
+
+
+def cursor_next_line(i: int = 1):
+    _check_cursor_move(i)
+    print(f"{ESC}[{i}E", end="")
+
+
+def cursor_previous_line(i: int = 1):
+    _check_cursor_move(i)
+    print(f"{ESC}[{i}F", end="")
+
+
+def cursor_horizontal_absolute(i: int = 1):
+    _check_cursor_move(i)
+    print(f"{ESC}[{i}G", end="")
+
+
+def cursor_vertical_absolute(i: int = 1):
+    _check_cursor_move(i)
+    print(f"{ESC}[{i}d", end="")
+
+
+def set_cursor_position(x: int = 1, y: int = 1):
+    _check_cursor_move(x)
+    _check_cursor_move(y)
+    print(f"{ESC}[{y};{x}H", end="")
+
+
+"""def get_cursor_position() -> tuple[int, int]:
+    print(f"{ESC}[6n", end="", flush=False)
+    pos_str = ""
+    while (c := sys.stdin.read(1)) != "R":
+        pos_str += c
+    assert pos_str[0:1] == ESC + "["
+    y, x = pos_str.split(";")
+    return int(x), int(y) """
+
+
+def cursor_blink(blink: bool = True):
+    if blink:
+        print(f"{ESC}[?12h", end="")
+    else:
+        print(f"{ESC}[?12l", end="")
+
+
+def cursor_show(show: bool = True):
+    if show:
+        print(f"{ESC}[?25h", end="")
+    else:
+        print(f"{ESC}[?25l", end="")
+
+
+class CursorShape(Enum):
+    DEFAULT = 0
+    BLINKING_BLOCK = 1
+    STEADY_BLOCK = 2
+    BLINKING_UNDERLINE = 3
+    STEADY_UNDERLINE = 4
+    BLINKING_BAR = 5
+    STEADY_BAR = 6
+
+
+def cursor_shape(shape: CursorShape):
+    print(f"{ESC}[{shape.value} q", end="")
+
+
+def scroll_down(i: int = 1):
+    print(f"{ESC}[{i}S", end="")
+
+
+def scroll_up(i: int = 1):
+    print(f"{ESC}[{i}T", end="")
+
+
+def insert_characters(i: int = 1):
+    print(f"{ESC}[{i}@", end="")
+
+
+def delete_characters(i: int = 1):
+    print(f"{ESC}[{i}P", end="")
+
+
+def backspace(i: int = 1):
+    cursor_back(i)
+    delete_characters(i)
+
+
+def erase_characters(i: int = 1):
+    print(f"{ESC}[{i}X", end="")
+
+
+def insert_lines(i: int = 1):
+    print(f"{ESC}[{i}L", end="")
+
+
+def delete_lines(i: int = 1):
+    print(f"{ESC}[{i}M", end="")
+
+
+def set_tab_stop():
+    print(f"{ESC}H", end="")
+
+
+def tab_forward(i: int = 1):
+    print(f"{ESC}[{i}I", end="")
+
+
+def tab_backward(i: int = 1):
+    print(f"{ESC}[{i}Z", end="")
+
+
+def clear_tab_stop():
+    print(f"{ESC}[0g", end="")
+
+
+def clear_all_tab_stops():
+    print(f"{ESC}[3g", end="")
+
+
+def set_scroll_region(top: int = None, bottom: int = None):
+    print(f"{ESC}[{top or ''};{bottom or ''}r", end="")
+
+
+def change_title(title: str):
+    print(f"{ESC}]0;{title}{ST}", end="")
+
+
+def use_alternate_screen_buffer():
+    print(f"{ESC}[?1049h", end="")
+
+
+def use_main_screen_buffer():
+    print(f"{ESC}[?1049l", end="")
+
+
+def soft_reset():
+    print(f"{ESC}[!p", end="")
+
+
+class EraseException(Exception):
+    pass
+
+
+def _erase_mode(from_cursor: bool, to_cursor: bool):
+    if from_cursor:
+        if to_cursor:
+            # entire line/display
+            return 2
         else:
-            print(f"{ESC}[?12l", end="")
-
-    def cursor_show(show: bool = True):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        if show:
-            print(f"{ESC}[?25h", end="")
+            return 0
+    else:
+        if to_cursor:
+            return 1
         else:
-            print(f"{ESC}[?25l", end="")
+            raise EraseException(
+                "At least one of from_cursor and to_cursor must be True")
 
-    class CursorShape(Enum):
-        DEFAULT = 0
-        BLINKING_BLOCK = 1
-        STEADY_BLOCK = 2
-        BLINKING_UNDERLINE = 3
-        STEADY_UNDERLINE = 4
-        BLINKING_BAR = 5
-        STEADY_BAR = 6
 
-    def cursor_shape(shape: CursorShape):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{shape.value} q", end="")
+def erase_display(from_cursor: bool = True, to_cursor: bool = True):
+    print(f"{ESC}[{_erase_mode(from_cursor, to_cursor)}J", end="")
 
-    def scroll_down(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}S", end="")
 
-    def scroll_up(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}T", end="")
+def erase_line(from_cursor: bool = True, to_cursor: bool = True):
+    print(f"{ESC}[{_erase_mode(from_cursor, to_cursor)}K", end="")
 
-    def insert_characters(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}@", end="")
 
-    def delete_characters(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}P", end="")
+class Color(Enum):
+    BLACK = 0
+    RED = 1
+    GREEN = 2
+    YELLOW = 3
+    BLUE = 4
+    MAGENTA = 5
+    CYAN = 6
+    WHITE = 7
+    DEFAULT = 9
 
-    def backspace(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        cursor_back(1)
-        delete_characters(1)
 
-    def erase_characters(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}X", end="")
+FORMAT_RESET = f"{ESC}[0m"
 
-    def insert_lines(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}L", end="")
 
-    def delete_lines(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}M", end="")
+def print_formatted(*values,
+                    # general options
+                    italic: bool = False,
+                    underline: bool = False,
+                    negative: bool = False,
+                    obfuscate: bool = False,
+                    strikethrough: bool = False,
+                    double_underline: bool = False,
+                    overline: bool = False,
+                    reset: bool = True,
+                    # foreground
+                    fg_color: Union[Color, tuple[int, int, int]] = None,
+                    fg_bright: bool = False,
+                    fg_dim: bool = False,
+                    # background
+                    bg_color: Union[Color, tuple[int, int, int]] = None,
+                    bg_bright: bool = False,
+                    # print params
+                    sep: str = " ",
+                    file=None,
+                    ** kwargs
+                    ):
+    """ Using a custom color will cause bright options to be ignored (but not fg_dim).
 
-    def set_tab_stop():
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}H", end="")
+    Specifying negative=True swaps the foreground and background colors. The only case where provides functionality otherwise not achievable (except by using custom colors) is dimming the background color. 
 
-    def tab_forward(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}I", end="")
+    Specifying reset=False will cause the formatting to persist on all output until different formatting is specified, or it is reset using reset_format. """
+    """
+    for i in range(0, 128):
+        print(f"{ESC}[{i}m{i:03}{ESC}[m")
 
-    def tab_backward(i: int = 1):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{i}Z", end="")
+    reveals a few more options than presented on the Microsoft documentation, these are marked with an asterisk.
 
-    def clear_tab_stop():
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[0g", end="")
+    0 reset all
+    1 bold/bright — seems to affect foreground only
+    *2 dim — also seems to affect foreground only, note that combining bright and dim actually does not cancel out, resulting in something between dim and default
+    *3 italic
+    4 underline
+    7 negative — redundant with simply swapping fg/bg options, except that this makes 1 and 2 apply to the background instead
+    *8 obfuscate — text does not display, but e.g. it can still be copied
+    *9 strikethrough
+    *21 double underline
+    30-37 fg color
+    38 fg custom color, 1 has seems to have no effect if this is used
+    39 fg default color
+    40-49 likewise for bg
+    *53 overline
+    90-97 bold/bright fg, redundant with 1
+    100-107 bold/bright bg """
 
-    def clear_all_tab_stops():
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[3g", end="")
+    format_options = []
 
-    def set_scroll_region(top: int = None, bottom: int = None):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{top or ''};{bottom or ''}r", end="")
+    if italic:
+        format_options.append(3)
+    if underline:
+        format_options.append(4)
+    if negative:
+        format_options.append(7)
+    if obfuscate:
+        format_options.append(8)
+    if strikethrough:
+        format_options.append(9)
+    if double_underline:
+        format_options.append(21)
+    if overline:
+        format_options.append(53)
 
-    def change_title(title: str):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}]0;{title}{ST}", end="")
+    if isinstance(fg_color, Color):
+        format_options.append(str(30 + fg_color.value))
+    elif isinstance(fg_color, tuple):
+        if len(fg_color) != 3:
+            raise Exception("fg_color must be an RGB 3-tuple")
+        format_options.extend((38, 2))
+        format_options.extend(fg_color)
+    if fg_bright:
+        format_options.append(1)
+    if fg_dim:
+        format_options.append(2)
 
-    def use_alternate_screen_buffer():
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[?1049h", end="")
+    if isinstance(bg_color, Color):
+        format_options.append(40 + bg_color.value +
+                              (60 if bg_bright else 0))
+    elif isinstance(bg_color, tuple):
+        if len(bg_color) != 3:
+            raise Exception("bg_color must be an RGB 3-tuple")
+        format_options.extend((48, 2))
+        format_options.extend(bg_color)
 
-    def use_main_screen_buffer():
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[?1049l", end="")
+    format_specifier = f"{ESC}[" + \
+        ";".join((str(f) for f in format_options)) + "m"
 
-    def soft_reset():
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[!p", end="")
+    print(format_specifier + sep.join((str(v)
+                                       for v in values)) + (FORMAT_RESET if reset else ""), **kwargs)
 
-    class EraseException(Exception):
-        pass
 
-    def _erase_mode(from_cursor: bool, to_cursor: bool):
-        if from_cursor:
-            if to_cursor:
-                # entire line/display
-                return 2
-            else:
-                return 0
-        else:
-            if to_cursor:
-                return 1
-            else:
-                raise EraseException(
-                    "At least one of from_cursor and to_cursor must be True")
+def reset_format(end="", file=None, **kwargs):
+    print(FORMAT_RESET, end=end, **kwargs)
 
-    def erase_display(from_cursor: bool = True, to_cursor: bool = True):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{_erase_mode(from_cursor, to_cursor)}J", end="")
 
-    def erase_line(from_cursor: bool = True, to_cursor: bool = True):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. """
-        print(f"{ESC}[{_erase_mode(from_cursor, to_cursor)}K", end="")
+class Spinner:
+    """ For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates. 
 
-    class Color(Enum):
-        BLACK = 0
-        RED = 1
-        GREEN = 2
-        YELLOW = 3
-        BLUE = 4
-        MAGENTA = 5
-        CYAN = 6
-        WHITE = 7
-        DEFAULT = 9
+    Should only be used for expensive tasks, otherwise the Spinner itself will take up a lot of time relative to the actual task! """
 
-    FORMAT_RESET = f"{ESC}[0m"
+    def __init__(self, min_count: int = 100, min_time: float = 0.2, spinner_sequence="-\\|/"):
+        self._count = 0
+        self._last_time = time.monotonic()
+        self._min_count = min_count
+        self._min_time = min_time
+        self._spinner_sequence = spinner_sequence
+        self._sequence_index = 0
+        self._sequence_length = len(self._spinner_sequence)
 
-    def print_formatted(*values,
-                        # general options
-                        italic: bool = False,
-                        underline: bool = False,
-                        negative: bool = False,
-                        obfuscate: bool = False,
-                        strikethrough: bool = False,
-                        double_underline: bool = False,
-                        overline: bool = False,
-                        reset: bool = True,
-                        # foreground
-                        fg_color: Union[Color, tuple[int, int, int]] = None,
-                        fg_bright: bool = False,
-                        fg_dim: bool = False,
-                        # background
-                        bg_color: Union[Color, tuple[int, int, int]] = None,
-                        bg_bright: bool = False,
-                        # print params
-                        sep: str = " ",
-                        file=None,
-                        ** kwargs
-                        ):
-        """ Uses Windows console virtual terminal sequences, must be on Windows. 
+    def spin(self):
+        self._count += 1
+        if self._count >= self._min_count and time.monotonic() - self._last_time >= self._min_time:
+            self.reset()
+            cursor_back(1)
+            print(
+                self._spinner_sequence[self._sequence_index], end="", flush=True)
+            self._sequence_index = (
+                self._sequence_index+1) % self._sequence_length
 
-        Using a custom color will cause bright options to be ignored (but not fg_dim).
+    def reset(self):
+        self._count = 0
+        self._last_time = time.monotonic()
 
-        Specifying negative=True swaps the foreground and background colors. The only case where provides functionality otherwise not achievable (except by using custom colors) is dimming the background color. 
 
-        Specifying reset=False will cause the formatting to persist on all output until different formatting is specified, or it is reset using reset_format. """
-        """ 
-        for i in range(0, 128):
-            print(f"{ESC}[{i}m{i:03}{ESC}[m")
+SPINNER = Spinner()
 
-        reveals a few more options than presented on the Microsoft documentation, these are marked with an asterisk.
 
-        0 reset all
-        1 bold/bright — seems to affect foreground only
-        *2 dim — also seems to affect foreground only, note that combining bright and dim actually does not cancel out, resulting in something between dim and default
-        *3 italic
-        4 underline
-        7 negative — redundant with simply swapping fg/bg options, except that this makes 1 and 2 apply to the background instead
-        *8 obfuscate — text does not display, but e.g. it can still be copied
-        *9 strikethrough
-        *21 double underline
-        30-37 fg color
-        38 fg custom color, 1 has seems to have no effect if this is used
-        39 fg default color
-        40-49 likewise for bg
-        *53 overline
-        90-97 bold/bright fg, redundant with 1
-        100-107 bold/bright bg """
+def spin():
+    """ Calls spin on shared Spinner object SPINNER. """
+    SPINNER.spin()
 
-        format_options = []
-
-        if italic:
-            format_options.append(3)
-        if underline:
-            format_options.append(4)
-        if negative:
-            format_options.append(7)
-        if obfuscate:
-            format_options.append(8)
-        if strikethrough:
-            format_options.append(9)
-        if double_underline:
-            format_options.append(21)
-        if overline:
-            format_options.append(53)
-
-        if isinstance(fg_color, Color):
-            format_options.append(str(30 + fg_color.value))
-        elif isinstance(fg_color, tuple):
-            if len(fg_color) != 3:
-                raise Exception("fg_color must be an RGB 3-tuple")
-            format_options.extend((38, 2))
-            format_options.extend(fg_color)
-        if fg_bright:
-            format_options.append(1)
-        if fg_dim:
-            format_options.append(2)
-
-        if isinstance(bg_color, Color):
-            format_options.append(40 + bg_color.value +
-                                  (60 if bg_bright else 0))
-        elif isinstance(bg_color, tuple):
-            if len(bg_color) != 3:
-                raise Exception("bg_color must be an RGB 3-tuple")
-            format_options.extend((48, 2))
-            format_options.extend(bg_color)
-
-        format_specifier = f"{ESC}[" + \
-            ";".join((str(f) for f in format_options)) + "m"
-
-        print(format_specifier + sep.join((str(v)
-              for v in values)) + (FORMAT_RESET if reset else ""), **kwargs)
-
-    def reset_format(end="", file=None, **kwargs):
-        print(FORMAT_RESET, end=end, **kwargs)
-
-    class Spinner:
-        """ Uses Windows console virtual terminal sequences, must be on Windows.
-
-        For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates. 
-
-        Should only be used for expensive tasks, otherwise the Spinner itself will take up a lot of time relative to the actual task! """
-
-        def __init__(self, min_count: int = 100, min_time: float = 0.2, spinner_sequence="-\\|/"):
-            self._count = 0
-            self._last_time = time.monotonic()
-            self._min_count = min_count
-            self._min_time = min_time
-            self._spinner_sequence = spinner_sequence
-            self._sequence_index = 0
-            self._sequence_length = len(self._spinner_sequence)
-
-        def spin(self):
-            self._count += 1
-            if self._count >= self._min_count and time.monotonic() - self._last_time >= self._min_time:
-                self.reset()
-                cursor_back(1)
-                print(
-                    self._spinner_sequence[self._sequence_index], end="", flush=True)
-                self._sequence_index = (
-                    self._sequence_index+1) % self._sequence_length
-
-        def reset(self):
-            self._count = 0
-            self._last_time = time.monotonic()
-
-    SPINNER = Spinner()
-
-    def spin():
-        """ Uses Windows console virtual terminal sequences, must be on Windows.
-
-        Calls spin on shared Spinner object SPINNER. """
-        SPINNER.spin()
 
 if __name__ == "__main__":
 
