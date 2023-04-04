@@ -1,9 +1,10 @@
-from shutil import get_terminal_size
 import inspect
+import math
 import re
 import time
 import traceback
 from enum import Enum
+from shutil import get_terminal_size
 from typing import Any, Callable, Iterable, Union
 
 
@@ -567,7 +568,7 @@ def reset_format(end="", file=None, **print_args):
 
 
 class Spinner:
-    """ For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates. 
+    """ For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates.
 
     Should only be used for expensive tasks, otherwise the Spinner itself will take up a lot of time relative to the actual task! """
 
@@ -603,7 +604,146 @@ def spin():
     SPINNER.spin()
 
 
+class Progress:
+    """ Controls a progress indicator in the console that can show a fraction (e.g. "5/100"), a percentage (e.g. "5%"), or both (e.g. "5/100 5%"), optionally with explanation text. """
+
+    def __init__(self,
+                 max: Union[int, float],
+                 *,
+
+                 show_fraction: bool = True,
+                 numerator_format: str = None,
+                 denominator_format: str = None,
+
+                 show_percent: bool = True,
+                 percent_format: str = None,
+
+                 text_length: int = None
+                 ):
+        """ Leaving the format arguments as None will automatically:
+        - For fraction numerator/denominator:
+            - Format integers with no decimal points
+            - Format floats with 2 digits after the decimal point
+                - The type of the numerator should be the same as the denominator
+            - Give the numerator the same amount of space as is taken by the denominator, padding with spaces
+        - For the percentage:
+            - Use 2 decimal digits for the percentage
+            - Make it 7 characters wide (the length of "100.00%")
+        - Align right
+
+        Under the assumption that all progress values are between 0 and max inclusive, this should keep the text width consistent. Otherwise, it is up to the user to keep the width consistent.
+
+        If text_length is not given, then it is computed by evaluating the progress text for the max value and then is not updated.
+
+        Nothing else should be printed from the moment of construction until it is no longer needed (presumably finishing with a finish() call to clear the progress text).
+        """
+        self.max = max
+        self.show_fraction = show_fraction
+        self.show_percent = show_percent
+
+        self.denominator_format = denominator_format or (
+            "d" if isinstance(max, int) else ".2f")
+        self.denominator = f"{max:{self.denominator_format}}"
+        self.number_width = len(self.denominator)
+
+        self.numerator_format = numerator_format or (
+            f" >{self.number_width}d" if isinstance(max, int) else f" >{self.number_width}.2f")
+
+        self.percent_format = percent_format or " >7.2%"
+
+        self.last_comment_lines = 0
+
+        self.text_length = len(self.progress_text(max))
+
+    def progress_text(self, value: Union[int, float]):
+        prog_text = ""
+        if self.show_fraction:
+            prog_text += f"{value:{self.numerator_format}}/{self.denominator}"
+            if self.show_percent:
+                prog_text += " "
+
+        if self.show_percent:
+            prog_text += f"{value/self.max:{self.percent_format}}"
+        return prog_text
+
+    def update_progress(self, value: Union[int, float], comment: str = None, clear_last_comment: bool = True):
+        """ Set and print the updated progress value. The comment is appended after the progress text (with a space in between). """
+        prog_text = self.progress_text(value)
+        print(prog_text, end="")
+
+        if clear_last_comment:
+            erase_display(from_cursor=True, to_cursor=False)
+        if comment:  # not None and not empty str
+            print(" " + comment, end="")
+            cursor_up(comment.count("\n"))
+
+        cursor_horizontal_absolute(1)
+
+    def finish(self):
+        """ Clear the progress display. """
+        # assumes cursor just reset at end of update_progress
+        erase_display(from_cursor=True, to_cursor=False)
+
+
+class ProgressBar(Progress):
+    """ Display a visual bar along with Progress text. """
+
+    def __init__(self, max: Union[int, float], *, left: str = "|", right: str = "|", incomplete: str = " ", complete: str = "\u2588", width: Union[int, None] = None, **progress_kwargs):
+        """ left and right: bar boundary characters
+        incomplete: the initial character the bar is filled with
+        complete: the character the bar is replaced with as progress increases
+        width: the width that ALL of the characters, including the progress text and the bar, may take up; leave as None to adapt to the current terminal width on each update (via get_terminal_size) """
+        super().__init__(max=max, **progress_kwargs)
+        self.left = left
+        self.right = right
+        self.incomplete = incomplete
+        self.complete = complete
+        self.width = width
+
+    def update_progress(self, value: Union[int, float], comment: str = None, clear_last_comment: bool = True):
+        total_width = self.width or get_terminal_size().columns
+        bar_width = total_width - (
+            # progress text
+            self.text_length
+            # space separator
+            + 1
+            + len(self.left) + len(self.right)
+        )
+
+        complete_chars = math.floor((value/self.max) * bar_width + 0.5)
+        incomplete_chars = bar_width - complete_chars
+        bar = self.left + (self.complete * complete_chars) + \
+            (self.incomplete * incomplete_chars) + self.right
+
+        # push the comment onto the next line
+        if comment and not comment.startswith("\n"):
+            bar += "\n"
+        super().update_progress(value, bar + (comment or ""), clear_last_comment)
+
+
 if __name__ == "__main__":
+    # ints
+    prog = ProgressBar(100)
+    for i in range(0, 101):
+        prog.update_progress(i, f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
+        time.sleep(0.05)
+    prog.finish()
+
+    # floats
+    prog = ProgressBar(100.)
+    for i in range(0, 101):
+        prog.update_progress(
+            float(i), f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
+        time.sleep(0.05)
+    prog.finish()
+
+    # comment persistence
+    prog = ProgressBar(100)
+    prog.update_progress(0, "persistent comment")
+    for i in range(1, 101):
+        prog.update_progress(i, clear_last_comment=False)
+        time.sleep(0.05)
+    prog.finish()
 
     result = list(cmd_split("a;b;c d"))
     assert result == [["a"], ["b"], ["c", "d"]], result
