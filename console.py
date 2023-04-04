@@ -503,7 +503,7 @@ def format(s: str,
 
     Specifying negative=True swaps the foreground and background colors. The only case where provides functionality otherwise not achievable (except by using custom colors) is dimming the background color.
 
-    Specifying reset=False will cause the formatting to persist on all output until different formatting is specified, or it is reset using reset_format. """
+    Specifying reset=False will cause the formatting to persist on all output until different formatting is specified, or it is reset using print(FORMAT_RESET, end=""). """
     """
     for i in range(0, 128):
         print(f"{ESC}[{i}m{i:03}{ESC}[m")
