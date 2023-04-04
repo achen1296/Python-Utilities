@@ -571,32 +571,27 @@ def format(s: str,
 
 
 class Spinner:
-    """ For printing a spinner to show that the console is working. Every time spin() is called, a counter increments and the time since the last visual update is evaluated. If there were both enough calls and enough time the spinner updates.
+    """ For printing a spinner to show that the console is working. 
 
     Should only be used for expensive tasks, otherwise the Spinner itself will take up a lot of time relative to the actual task! """
 
-    def __init__(self, min_count: int = 100, min_time: float = 0.2, spinner_sequence="-\\|/"):
-        self._count = 0
-        self._last_time = time.monotonic()
-        self._min_count = min_count
-        self._min_time = min_time
-        self._spinner_sequence = spinner_sequence
-        self._sequence_index = 0
-        self._sequence_length = len(self._spinner_sequence)
+    def __init__(self, min_update_time: float = 0.2, spinner_sequence="-\\|/"):
+        self.last_update_time = None
+        self.min_update_time = min_update_time
+        self.spinner_sequence = spinner_sequence
+        self.sequence_index = 0
+        self.sequence_length = len(self.spinner_sequence)
 
     def spin(self):
-        self._count += 1
-        if self._count >= self._min_count and time.monotonic() - self._last_time >= self._min_time:
-            self.reset()
-            cursor_back(1)
-            print(
-                self._spinner_sequence[self._sequence_index], end="", flush=True)
-            self._sequence_index = (
-                self._sequence_index+1) % self._sequence_length
-
-    def reset(self):
-        self._count = 0
-        self._last_time = time.monotonic()
+        now = time.monotonic()
+        if self.last_update_time is not None and now < self.last_update_time + self.min_update_time:
+            return
+        self.last_update_time = now
+        cursor_back(1)
+        print(
+            self.spinner_sequence[self.sequence_index], end="", flush=True)
+        self.sequence_index = (
+            self.sequence_index+1) % self.sequence_length
 
 
 SPINNER = Spinner()
@@ -619,7 +614,9 @@ class Progress:
                  denominator_format: str = None,
 
                  show_percent: bool = True,
-                 percent_format: str = None
+                 percent_format: str = None,
+
+                 min_update_time: float = 0,
                  ):
         """ Leaving the format arguments as None will automatically:
         - For fraction numerator/denominator:
@@ -650,7 +647,8 @@ class Progress:
 
         self.percent_format = percent_format or " >7.2%"
 
-        self.last_comment_lines = 0
+        self.min_update_time = min_update_time
+        self.last_update_time = None
 
     def progress_text(self, value: Union[int, float], comment: str):
         prog_text = ""
@@ -668,6 +666,11 @@ class Progress:
 
     def update_progress(self, value: Union[int, float], comment: str = None):
         """ Set and print the updated progress value. Comments are appended after the progress text (with a space in between). If the comment is not specified, any prior comments are not cleared (specify "") to clear comments. """
+        now = time.monotonic()
+        if self.last_update_time is not None and now < self.last_update_time + self.min_update_time:
+            return
+        self.last_update_time = now
+
         prog_text = self.progress_text(value, comment)
         print(prog_text, end="")
 
@@ -739,13 +742,19 @@ if __name__ == "__main__":
         time.sleep(0.05)
     prog.clear()
 
-    # comment persistence
-    prog = ProgressBar(100)
+    # comment persistence, rate limit
+    prog = ProgressBar(100, min_update_time=.5)
     prog.update_progress(0, "persistent comment")
     for i in range(1, 101):
         prog.update_progress(i)
         time.sleep(0.05)
     prog.clear()
+
+    # test rate limit
+    for _ in range(0, 100):
+        spin()
+        time.sleep(0.05)
+    backspace()
 
     result = list(cmd_split("a;b;c d"))
     assert result == [["a"], ["b"], ["c", "d"]], result
