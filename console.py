@@ -100,7 +100,7 @@ def sleep(time_str: str):
     time.sleep(sleep_time)
 
 
-def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str] = None, arg_transform: dict[str, Callable] = {}, default: Union[Callable, str] = None):
+def repl(actions: dict[str, Union[Callable, str]] = None, *, input_source: Iterable[str] = None, arg_transform: dict[str, Callable] = None, default: Union[Callable, str] = None):
     """actions is a dictionary with names that the console user can use to call a function. If the dictionary value is a string instead, it is treated as an alias.
 
     input_source is by default console user input. Mainly for testing, it may be set to e.g. a list of strings instead.
@@ -110,8 +110,14 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
     If an unknown command is given and default is specified, then all of the arguments *including the first one that was attempted as a command name* are given to it. If specified as a string, then that is used as an alias for an action to call.
 
     Special actions help/?, sleep/wait, and exit/quit are added on top of the provided actions, overriding any existing with those names. Since the arguments are usually strings, but some existing functions may expect other types, arg_transforms may be specified. """
+    if actions is None:
+        actions = {}
+
     if input_source is None:
         input_source = input_generator()
+
+    if arg_transform is None:
+        arg_transform = {}
 
     extra_transforms = set(arg_transform) - set(actions)
     if len(extra_transforms) > 0:
