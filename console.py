@@ -217,7 +217,7 @@ def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...
             err_text = "KeyboardInterrupt"
         else:
             err_text = traceback.format_exc()
-        print_formatted(err_text, fg_color=Color.RED)
+        print(format(err_text, fg_color=Color.RED))
         bell()
         if pause_on_exc_only and pause_message is not None:
             pause(pause_message)
@@ -476,28 +476,24 @@ class Color(Enum):
 FORMAT_RESET = f"{ESC}[0m"
 
 
-def print_formatted(*print_values,
-                    # general options
-                    italic: bool = False,
-                    underline: bool = False,
-                    negative: bool = False,
-                    hide: bool = False,
-                    strikethrough: bool = False,
-                    double_underline: bool = False,
-                    overline: bool = False,
-                    reset: bool = True,
-                    # foreground
-                    fg_color: Union[Color, tuple[int, int, int]] = None,
-                    fg_bright: bool = False,
-                    fg_dim: bool = False,
-                    # background
-                    bg_color: Union[Color, tuple[int, int, int]] = None,
-                    bg_bright: bool = False,
-                    # print params
-                    sep: str = " ",
-                    file=None,
-                    ** print_kwargs
-                    ):
+def format(s: str,
+           # general options
+           italic: bool = False,
+           underline: bool = False,
+           negative: bool = False,
+           hide: bool = False,
+           strikethrough: bool = False,
+           double_underline: bool = False,
+           overline: bool = False,
+           reset: bool = True,
+           # foreground
+           fg_color: Union[Color, tuple[int, int, int]] = None,
+           fg_bright: bool = False,
+           fg_dim: bool = False,
+           # background
+           bg_color: Union[Color, tuple[int, int, int]] = None,
+           bg_bright: bool = False,
+           ):
     """ Using a custom color will cause bright options to be ignored (but not fg_dim).
 
     Specifying negative=True swaps the foreground and background colors. The only case where provides functionality otherwise not achievable (except by using custom colors) is dimming the background color.
@@ -564,15 +560,14 @@ def print_formatted(*print_values,
         format_options.extend((48, 2))
         format_options.extend(bg_color)
 
+    if not format_options:
+        # no formatting
+        return s
+
     format_specifier = f"{ESC}[" + \
         ";".join((str(f) for f in format_options)) + "m"
 
-    print(format_specifier + sep.join((str(v)
-                                       for v in print_values)) + (FORMAT_RESET if reset else ""), **print_kwargs)
-
-
-def reset_format(end="", file=None, **print_args):
-    print(FORMAT_RESET, end=end, **print_args)
+    return format_specifier + s + (FORMAT_RESET if reset else "")
 
 
 class Spinner:
