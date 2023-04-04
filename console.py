@@ -244,50 +244,71 @@ class CursorMoveException(Exception):
 def _check_cursor_move(i: int):
     if not 0 <= i <= 32767:
         raise CursorMoveException(
-            "Cursor move argument must be between 0 and 32767 inclusive. Note that 0 is treated as 1.")
+            "Cursor move argument must be between 0 and 32767 inclusive.")
 
 
 def cursor_up(i: int = 1):
+    # 0 is treated as 1 if sent normally!
+    if i == 0:
+        return
     _check_cursor_move(i)
     print(f"{ESC}[{i}A", end="")
 
 
 def cursor_down(i: int = 1):
+    # 0 is treated as 1 if sent normally!
+    if i == 0:
+        return
     _check_cursor_move(i)
     print(f"{ESC}[{i}B", end="")
 
 
 def cursor_forward(i: int = 1):
+    # 0 is treated as 1 if sent normally!
+    if i == 0:
+        return
     _check_cursor_move(i)
     print(f"{ESC}[{i}C", end="")
 
 
 def cursor_back(i: int = 1):
+    # 0 is treated as 1 if sent normally!
+    if i == 0:
+        return
     _check_cursor_move(i)
     print(f"{ESC}[{i}D", end="")
 
 
 def cursor_next_line(i: int = 1):
+    # 0 is treated as 1 if sent normally!
+    if i == 0:
+        return
     _check_cursor_move(i)
     print(f"{ESC}[{i}E", end="")
 
 
 def cursor_previous_line(i: int = 1):
+    # 0 is treated as 1 if sent normally!
+    if i == 0:
+        return
     _check_cursor_move(i)
     print(f"{ESC}[{i}F", end="")
 
 
 def cursor_horizontal_absolute(i: int = 1):
+    """ Note that 0 is treated as 1 """
     _check_cursor_move(i)
     print(f"{ESC}[{i}G", end="")
 
 
 def cursor_vertical_absolute(i: int = 1):
+    """ Note that 0 is treated as 1 """
     _check_cursor_move(i)
     print(f"{ESC}[{i}d", end="")
 
 
 def cursor_set_position(x: int = 1, y: int = 1):
+    """ Note that 0 is treated as 1 for both coordinates """
     _check_cursor_move(x)
     _check_cursor_move(y)
     print(f"{ESC}[{y};{x}H", end="")
