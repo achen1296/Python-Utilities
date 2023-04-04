@@ -619,9 +619,7 @@ class Progress:
                  denominator_format: str = None,
 
                  show_percent: bool = True,
-                 percent_format: str = None,
-
-                 text_length: int = None
+                 percent_format: str = None
                  ):
         """ Leaving the format arguments as None will automatically:
         - For fraction numerator/denominator:
@@ -636,9 +634,7 @@ class Progress:
 
         Under the assumption that all progress values are between 0 and max inclusive, this should keep the text width consistent. Otherwise, it is up to the user to keep the width consistent.
 
-        If text_length is not given, then it is computed by evaluating the progress text for the max value and then is not updated.
-
-        Nothing else should be printed from the moment of construction until it is no longer needed (presumably finishing with a finish() call to clear the progress text).
+        Nothing else should be printed from the moment of construction until it is no longer needed (presumably finishing with a clear() call). Use the comment parameter to add additional text below. 
         """
         self.max = max
         self.show_fraction = show_fraction
@@ -656,9 +652,7 @@ class Progress:
 
         self.last_comment_lines = 0
 
-        self.text_length = len(self.progress_text(max))
-
-    def progress_text(self, value: Union[int, float]):
+    def progress_text(self, value: Union[int, float], comment: str):
         prog_text = ""
         if self.show_fraction:
             prog_text += f"{value:{self.numerator_format}}/{self.denominator}"
@@ -667,23 +661,27 @@ class Progress:
 
         if self.show_percent:
             prog_text += f"{value/self.max:{self.percent_format}}"
+
+        if comment:  # not None or ""
+            prog_text += " "
         return prog_text
 
-    def update_progress(self, value: Union[int, float], comment: str = None, clear_last_comment: bool = True):
-        """ Set and print the updated progress value. The comment is appended after the progress text (with a space in between). """
-        prog_text = self.progress_text(value)
+    def update_progress(self, value: Union[int, float], comment: str = None):
+        """ Set and print the updated progress value. Comments are appended after the progress text (with a space in between). If the comment is not specified, any prior comments are not cleared (specify "") to clear comments. """
+        prog_text = self.progress_text(value, comment)
         print(prog_text, end="")
 
-        if clear_last_comment:
+        if comment is not None:
             erase_display(from_cursor=True, to_cursor=False)
-        if comment:  # not None and not empty str
-            print(" " + comment, end="")
+            print(comment, end="")
             cursor_up(comment.count("\n"))
 
+        # in case of subclass override
+        cursor_up(prog_text.count("\n"))
         cursor_horizontal_absolute(1)
 
-    def finish(self):
-        """ Clear the progress display. """
+    def clear(self):
+        """ Clear the progress display (usually when finished). """
         # assumes cursor just reset at end of update_progress
         erase_display(from_cursor=True, to_cursor=False)
 
@@ -703,15 +701,15 @@ class ProgressBar(Progress):
         self.complete = complete
         self.width = width
 
-    def update_progress(self, value: Union[int, float], comment: str = None, clear_last_comment: bool = True):
+    def progress_text(self, value: Union[int, float], comment: str = None):
+        """ Append the progress bar onto the normal progress text and push comments onto the next line. """
+        prog_text = super().progress_text(value, comment)
+        if not prog_text.endswith(" "):
+            prog_text += " "
+
         total_width = self.width or get_terminal_size().columns
-        bar_width = total_width - (
-            # progress text
-            self.text_length
-            # space separator
-            + 1
-            + len(self.left) + len(self.right)
-        )
+        bar_width = total_width - \
+            (len(prog_text) + len(self.left) + len(self.right))
 
         complete_chars = math.floor((value/self.max) * bar_width + 0.5)
         incomplete_chars = bar_width - complete_chars
@@ -721,7 +719,8 @@ class ProgressBar(Progress):
         # push the comment onto the next line
         if comment and not comment.startswith("\n"):
             bar += "\n"
-        super().update_progress(value, bar + (comment or ""), clear_last_comment)
+
+        return prog_text + bar
 
 
 if __name__ == "__main__":
@@ -730,7 +729,7 @@ if __name__ == "__main__":
     for i in range(0, 101):
         prog.update_progress(i, f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
         time.sleep(0.05)
-    prog.finish()
+    prog.clear()
 
     # floats
     prog = ProgressBar(100.)
@@ -738,15 +737,15 @@ if __name__ == "__main__":
         prog.update_progress(
             float(i), f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
         time.sleep(0.05)
-    prog.finish()
+    prog.clear()
 
     # comment persistence
     prog = ProgressBar(100)
     prog.update_progress(0, "persistent comment")
     for i in range(1, 101):
-        prog.update_progress(i, clear_last_comment=False)
+        prog.update_progress(i)
         time.sleep(0.05)
-    prog.finish()
+    prog.clear()
 
     result = list(cmd_split("a;b;c d"))
     assert result == [["a"], ["b"], ["c", "d"]], result
