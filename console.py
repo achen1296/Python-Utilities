@@ -8,12 +8,17 @@ from shutil import get_terminal_size
 from typing import Any, Callable, Iterable, Union
 
 
+def print_as_exc(s: str, **print_kwargs):
+    print(format(s, fg_color=Color.RED), **print_kwargs)
+    bell()
+
+
 def input_generator(prompt: str = ">> "):
     while True:
         try:
             yield input(prompt)
         except KeyboardInterrupt:
-            print("KeyboardInterrupt")
+            print_as_exc("KeyboardInterrupt")
 
 
 def cmd_split(s: str) -> Iterable[list[str]]:
@@ -133,7 +138,7 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
         items.sort(key=lambda tup: tup[0])
         for name, a in items:
             if a is None:
-                print(f"Unknown action {name}")
+                print_as_exc(f"Unknown action {name}")
                 continue
             if isinstance(a, str):
                 print(f"{name}: Alias for \"{a}\"")
@@ -186,7 +191,7 @@ def repl(actions: dict[str, Union[Callable, str]], *, input_source: Iterable[str
                 if isinstance(default, Callable):
                     default(action_name, *args)
                 else:
-                    print(f"Unknown action {action_name}")
+                    print_as_exc(f"Unknown action {action_name}")
 
     try:
         for i in input_source:
@@ -217,8 +222,8 @@ def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...
             err_text = "KeyboardInterrupt\n"
         else:
             err_text = traceback.format_exc()
-        print(format(err_text, fg_color=Color.RED), end="")
-        bell()
+        # traceback.format_exc includes a \n
+        print_as_exc(err_text, end="")
         if pause_on_exc_only and pause_message is not None:
             pause(pause_message)
     finally:
