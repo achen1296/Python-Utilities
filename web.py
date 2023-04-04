@@ -75,6 +75,8 @@ def download_urls(plan: dict[str, tuple[os.PathLike, dict[str, str]]], *, wait=0
             prog.update_progress(counter, f"<{url}> -> <{dst}>")
         # output False because it is handled above
         download_url(url, dst, output=False, **get_kwargs)
+    if output:
+        prog.clear()
 
 
 def firefox_driver(**kwargs) -> webdriver.Firefox:
