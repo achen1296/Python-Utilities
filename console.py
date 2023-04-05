@@ -773,7 +773,7 @@ if __name__ == "__main__":
         return x+1
 
     def test_transform(x: str):
-        return int(x)
+        return [int(x)]
 
     def test_exc():
         raise Exception
