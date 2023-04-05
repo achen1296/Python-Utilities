@@ -604,6 +604,10 @@ class Spinner:
         self.sequence_index = (
             self.sequence_index+1) % self.sequence_length
 
+    @staticmethod
+    def clear():
+        backspace()
+
 
 SPINNER = Spinner()
 
@@ -676,6 +680,7 @@ class Progress:
 
         self.min_update_time = min_update_time
         self.last_update_time = None
+        self.last_progress = 0
 
     def progress_text(self, value: Union[int, float], comment: str):
         prog_text = ""
@@ -693,6 +698,8 @@ class Progress:
 
     def update_progress(self, value: Union[int, float], comment: str = None):
         """ Set and print the updated progress value. Comments are appended after the progress text (with a space in between). If the comment is not specified, any prior comments are not cleared (specify "") to clear comments. """
+        self.last_progress = value
+
         cursor_save()
         now = time.monotonic()
         if self.last_update_time is not None and now < self.last_update_time + self.min_update_time:
@@ -707,6 +714,9 @@ class Progress:
             print(comment, end="", flush=True)
         cursor_up(measure_lines(prog_text + (comment or ""))-1)
         cursor_horizontal_absolute(1)
+
+    def increase_progress(self, value: Union[int, float], comment: str = None):
+        self.update_progress(self.last_progress + value, comment)
 
     def clear(self):
         """ Clear the progress display (usually when finished). """
