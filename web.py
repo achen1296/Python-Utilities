@@ -43,40 +43,66 @@ def _parse_download_destination(url: str, dst: os.PathLike):
 
 
 def download_url(url: str, dst: os.PathLike = None,  *, output=True, **get_kwargs):
-    """ If file = None, the name is inferred from the last piece of the URL. get_kwargs passed to requests.get. 
+    """ If file = None, the name is inferred from the last piece of the URL. get_kwargs passed to requests.get.
 
     If the file name ends up being too long """
     dst = _parse_download_destination(url, dst)
-    req = requests.get(url, **get_kwargs)
-    if req.status_code != 200:
-        raise DownloadException(url, req.status_code,
-                                req.reason, get_kwargs)
-    if output:
-        print(f"Downloading <{url}> -> <{dst}>")
-    with open(dst, "wb") as f:
-        f.write(req.content)
+    with requests.get(url, stream=True, **get_kwargs) as req:
+        if req.status_code != 200:
+            raise DownloadException(url, req.status_code,
+                                    req.reason, get_kwargs)
+        if output:
+            content_length = int(req.headers.get("content-length", "0"))
+            if content_length == 0:
+                # not specified in the response
+                prog = console.Spinner()
+                download_info_str = f"Downloading <{url}> -> <{dst}>"
+                print(download_info_str)
+
+                def increase_progress(*_):
+                    prog.spin()
+
+                def clear():
+                    console.cursor_up(
+                        console.measure_lines(download_info_str))
+                    console.cursor_horizontal_absolute(1)
+                    console.erase_display(from_cursor=True, to_cursor=False)
+            else:
+                prog = console.ProgressBar(content_length)
+                increase_progress = prog.increase_progress
+                clear = prog.clear
+                prog.update_progress(0, f"Downloading <{url}> -> <{dst}>")
+        with open(dst, "wb") as f:
+            for chunk in req.iter_content(8192):
+                if output:
+                    increase_progress(len(chunk))
+                f.write(chunk)
+        if output:
+            clear()
 
 
 def download_urls(plan: dict[str, tuple[os.PathLike, dict[str, str]]], *, wait=0, output=True):
-    """ plan should be a dictionary mapping a URL to a tuple containing the download destination and a dictionary of keyword arguments for requests.get. If the destination is given as None, it will be in the current working directory with a name determined from the end of the URL path. 
+    """ plan should be a dictionary mapping a URL to a tuple containing the download destination and a dictionary of keyword arguments for requests.get. If the destination is given as None, it will be in the current working directory with a name determined from the end of the URL path.
 
     Optionally waits for the specified number of seconds in between downloads to avoid pressuring the server; by default does not wait. """
     if output:
-        prog = console.Progress(len(plan))
         counter = 0
+        total = len(plan)
+        num_width = len(str(total))
     for url in plan:
         dst, get_kwargs = plan[url]
         if wait > 0:
             time.sleep(wait)
         if output:
             counter += 1
-            # parse now for output, otherwise redundant
-            dst = _parse_download_destination(url, dst)
-            prog.update_progress(counter, f"<{url}> -> <{dst}>")
-        # output False because it is handled above
-        download_url(url, dst, output=False, **get_kwargs)
+            print(f"{counter: >{num_width}}/{total}")
+        download_url(url, dst, output=output, **get_kwargs)
+        if output:
+            # to rewrite the download count
+            console.cursor_up(1)
     if output:
-        prog.clear()
+        # to remove the download count
+        console.erase_line()
 
 
 def firefox_driver(**kwargs) -> webdriver.Firefox:
