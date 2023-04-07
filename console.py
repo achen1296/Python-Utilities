@@ -1,3 +1,4 @@
+import cmd
 import inspect
 import math
 import re
@@ -6,6 +7,8 @@ import traceback
 from enum import Enum
 from shutil import get_terminal_size
 from typing import Any, Callable, Iterable, Union
+
+import strings
 
 
 def print_as_exc(s: str, **print_kwargs):
@@ -19,58 +22,6 @@ def input_generator(prompt: str = ">> "):
             yield input(prompt)
         except KeyboardInterrupt:
             print_as_exc("KeyboardInterrupt")
-
-
-def cmd_split(s: str) -> Iterable[list[str]]:
-    """Splits commands by semicolons, splits arguments by whitespace, but neither when inside a string delimited with ' or ". String arguments can include ' or " using backslash escape."""
-
-    start = -1
-    end = -1
-    quote = None
-    args = []
-
-    s_len = len(s)
-    for i in range(0, s_len):
-        if i == 0:
-            last = None
-        else:
-            last = s[i-1]
-        c = s[i]
-        if (c in ['"', "'"] and last != "\\"):
-            if quote is None:
-                # found the beginning of a string
-                quote = c
-                start = i
-
-                semicolon_split = s[end+1:start].split(";")
-                semi_len = len(semicolon_split)
-                if semi_len > 1:
-                    yield args + semicolon_split[0].split()
-                    for cmd in semicolon_split[1:-1]:
-                        yield cmd.split()
-                    args = []
-                if semi_len >= 1:
-                    args += semicolon_split[-1].split()
-
-            elif quote == c:
-                # found the end of a string
-                quote = None
-                end = i
-                args.append(s[start+1:end])
-
-    if quote is not None:
-        raise Exception("Unbalanced quotes")
-
-    semicolon_split = s[end+1:].split(";")
-    semi_len = len(semicolon_split)
-    if semi_len > 1:
-        yield args + semicolon_split[0].split()
-        for cmd in semicolon_split[1:-1]:
-            yield cmd.split()
-        args = []
-    if semi_len >= 1:
-        args += semicolon_split[-1].split()
-    yield args
 
 
 def sleep(time_str: str):
@@ -100,113 +51,133 @@ def sleep(time_str: str):
     time.sleep(sleep_time)
 
 
-def repl(actions: dict[str, Union[Callable, str]] = None, *, input_source: Iterable[str] = None, arg_transform: dict[str, Callable] = None, default: Union[Callable, str] = None):
-    """actions is a dictionary with names that the console user can use to call a function. If the dictionary value is a string instead, it is treated as an alias.
+class Cmd(cmd.Cmd):
+    """ Adds some more features onto cmd.Cmd:
+    - pre-includes these actions:
+        - help/? (as in the superclass)
+        - exit/quit
+        - wait/sleep
+    - enter multiple commands at once separated by semicolons, but not ones in quoted strings
+    - arguments are split by whitespace, but not whitespace in quoted strings, and these arguments are sent to functions separately using * unpacking
+        - the first split item is the command prefix, overriding the default behavior using identifier characters, and this item is not sent to the function
+            - it is still sent to the default function, similar to the superclass sending the entire command string
+        - commands may have aliases
+            - ? is an alias of help (as in the superclass)
+            - quit is an alias of exit
+            - wait is an alias of sleep
+            - added a help section for aliases
+        - for compatibility with the superclass, if this does not work, the arguments are re-joined using spaces and that is sent to the method as one argument
+    - Python Exceptions and keyboard interrupts are caught and printed
+    - help shows function signatures
+    - help adapts its output to the current terminal size
+    """
+    # override
+    prompt = ">> "
+    # new attribute
+    aliases_header = "Aliases:"
 
-    input_source is by default console user input. Mainly for testing, it may be set to e.g. a list of strings instead.
+    def __init__(self, aliases: dict[str, str] = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if aliases is None:
+            aliases = {}
+        self.aliases = aliases
+        self.aliases.update({
+            "?": "help",
+            "quit": "exit",
+            "wait": "sleep",
+        })
 
-    arg_transforms should have a subset of the names in actions and contain functions to transform console input values from strings to other types.
+    def do_exit(self):
+        """ Exit the console. """
+        # stop flag
+        return True
 
-    If an unknown command is given and default is specified, then all of the arguments *including the first one that was attempted as a command name* are given to it. If specified as a string, then that is used as an alias for an action to call.
+    def do_sleep(self, time_str: str):
+        sleep(time_str)
 
-    Special actions help/?, sleep/wait, and exit/quit are added on top of the provided actions, overriding any existing with those names. Since the arguments are usually strings, but some existing functions may expect other types, arg_transforms may be specified. """
-    if actions is None:
-        actions = {}
+    do_sleep.__doc__ = sleep.__doc__
 
-    if input_source is None:
-        input_source = input_generator()
+    def precmd(self, line: str):
+        """ Split commands by semicolons and enqueue all but the rest, and split arguments into string lists by whitespace """
 
-    if arg_transform is None:
-        arg_transform = {}
+        cmds = strings.argument_split(line, sep="\s*;\s*")
+        if len(cmds) <= 1:
+            return line
+        self.cmdqueue += cmds[1:]
+        return cmds[0]
 
-    extra_transforms = set(arg_transform) - set(actions)
-    if len(extra_transforms) > 0:
-        raise Exception(
-            f"Extra transformations specified for unknown actions {', '.join(extra_transforms)}")
+    def onecmd(self, line: str):
+        """Interpret the argument as though it had been typed in response
+        to the prompt.
 
-    builtins = ["help", "?", "sleep", "wait", "exit"]
+        Overridden and modified from the superclass to split arguments into lists of strings by whitespace and catch and print Python Exceptions and keyboard interrupts. 
+        """
+        line = line.strip()
+        if not line:
+            return self.emptyline()
+        cmd, *args = strings.argument_split(line)
+        while cmd in self.aliases:
+            cmd = self.aliases[cmd]
+        try:
+            func = getattr(self, 'do_' + cmd)
+        except AttributeError:
+            func = self.default
+            args = [cmd] + args
+        self.lastcmd = line
 
-    # add special actions
-    def help(*action_names: str):
-        """Show this help menu. Specify one or more commands to only show their descriptions. Specify "builtins" to see the rest of the built-in commands. """
-        action_names: set[str] = set(action_names)
-        if len(action_names) == 0:
-            # get all actions if none are specified, but the builtins will be excluded except help
-            items = [(name, action)
-                     for name, action in actions.items() if name not in builtins or name == "help"]
+        def call_action():
+            try:
+                return func(*args)
+            except TypeError:
+                return func(" ".join(args))
+
+        return traceback_wrap(call_action, pause_message=None)
+
+    def do_help(self, *cmds: str):
+        'List available commands with "help" or detailed help with "help cmd".'
+        if cmds:
+            for cmd in cmds:
+                try:
+                    help_func = getattr(self, 'help_' + cmd)
+                except AttributeError:
+                    if cmd in self.aliases:
+                        print(
+                            f"Alias for {self.aliases[cmd]}", file=self.stdout)
+                        continue
+                    else:
+                        try:
+                            cmd_func = getattr(self, 'do_' + cmd)
+                            print(inspect.signature(cmd_func),
+                                  file=self.stdout)
+                            doc = cmd_func.__doc__
+                            if doc:
+                                print(doc, file=self.stdout)
+                                continue
+                        except AttributeError:
+                            pass
+                        print(str(self.nohelp % (cmd,)), file=self.stdout)
+                        continue
+                help_func()
         else:
-            if "builtins" in action_names:
-                action_names.remove("builtins")
-                action_names.update(builtins)
-            items = [(name, actions.get(name))
-                     for name in action_names]
-        # sort by name
-        items.sort(key=lambda tup: tup[0])
-        for name, a in items:
-            if a is None:
-                print_as_exc(f"Unknown action {name}")
-                continue
-            if isinstance(a, str):
-                print(f"{name}: Alias for \"{a}\"")
-                continue
-            if name in arg_transform:
-                sig = f"{inspect.signature(arg_transform[name])} -> "
-            else:
-                sig = ""
-            sig += str(inspect.signature(a))
-            doc = (a.__doc__ or "").replace("\n", "\n\t")
-            print(f"{name}: {sig}\n\t{doc}")
+            names = sorted(set(dir(self)))
+            cmds = {name[3:] for name in names if name[:3] == 'do_'}
+            help = {name[5:] for name in names if name[:5] == 'help_'}
 
-    actions["help"] = help
-    actions["?"] = "help"
-
-    actions["sleep"] = sleep
-    actions["wait"] = "sleep"
-
-    def exit():
-        """Exit. """
-        nonlocal exited
-        exited = True
-
-    actions["exit"] = exit
-
-    def call_action(i: str):
-        command_num = 0
-        for args in cmd_split(i):
-            if len(args) == 0:
-                continue
-            command_num += 1
-            if command_num > 1:
-                print(">> " + (" ".join(args)))
-            action_name = args[0]
-            if action_name not in actions and isinstance(default, str):
-                action_name = default
-            else:
-                args = args[1:]
-            if action_name in actions:
-                while isinstance(actions[action_name], str):
-                    # follow alias chain
-                    action_name = actions[action_name]
-                if action_name in arg_transform:
-                    args = arg_transform[action_name](
-                        *args)
-                result = actions[action_name](*args)
-                if result is not None:
-                    print(result)
-            else:
-                if isinstance(default, Callable):
-                    default(action_name, *args)
-                else:
-                    print_as_exc(f"Unknown action {action_name}")
-
-    try:
-        for i in input_source:
-            exited = False
-            traceback_wrap(lambda: call_action(i), pause_message=None)
-            if exited:
-                break
-    except EOFError:
-        return
+            cmds_doc = {cmd for cmd in cmds if getattr(
+                self, "do_" + cmd).__doc__} | (help & cmds)
+            misc_topics = help - cmds
+            cmds_undoc = cmds - cmds_doc
+            print(self.doc_leader, file=self.stdout)
+            terminal_width = get_terminal_size().columns
+            # the cmdlen argument is strangely not used in the superclass, so I have replaced it with None
+            self.print_topics(self.doc_header, list(
+                cmds_doc), None, terminal_width)
+            self.print_topics(self.misc_header, list(misc_topics),
+                              None, terminal_width)
+            self.print_topics(self.aliases_header,
+                              list(self.aliases), None, terminal_width)
+            self.print_topics(self.undoc_header, list(cmds_undoc),
+                              None, terminal_width)
 
 
 def bell():
@@ -761,57 +732,52 @@ class ProgressBar(Progress):
         return prog_text + bar
 
 
+def test():
+    class CmdTest(Cmd):
+        def __init__(self):
+            super().__init__()
+            self.do_help2 = self.do_help
+
+        def do_a(self, x: int):
+            "Add 1 to x"
+            print(int(x)+1)
+
+        def do_e(self, _):
+            raise Exception
+
+        def do_p(self, _):
+            # ints
+            prog = ProgressBar(100)
+            for i in range(0,  101):
+                prog.update_progress(
+                    i, f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
+                time.sleep(0.05)
+            prog.clear()
+
+            # floats, long comments
+            prog = ProgressBar(100.)
+            for i in range(0, 101):
+                prog.update_progress(
+                    float(i), "long comment "*15)
+                time.sleep(0.05)
+            prog.clear()
+
+            # comment persistence, rate limit
+            prog = ProgressBar(100, min_update_time=.5)
+            prog.update_progress(0, "persistent comment")
+            for i in range(1, 101):
+                prog.update_progress(i)
+                time.sleep(0.05)
+            prog.clear()
+
+            # test rate limit
+            for _ in range(0, 100):
+                spin()
+                time.sleep(0.05)
+            backspace()
+
+    CmdTest().cmdloop()
+
+
 if __name__ == "__main__":
-    result = list(cmd_split("a;b;c d"))
-    assert result == [["a"], ["b"], ["c", "d"]], result
-
-    result = list(cmd_split("'a';\"b;\\\"c\" d"))
-    assert result == [["a"], ["b;\\\"c", "d"]], result
-
-    def test_action(x: int):
-        "Add 1 to x"
-        return x+1
-
-    def test_transform(x: str):
-        return [int(x)]
-
-    def test_exc():
-        raise Exception
-
-    def progress_test():
-        # ints
-        prog = ProgressBar(100)
-        for i in range(0,  101):
-            prog.update_progress(i, f"{i:03}"*((100-i)//30+1) + "\n\ncomment")
-            time.sleep(0.05)
-        prog.clear()
-
-        # floats, long comments
-        prog = ProgressBar(100.)
-        for i in range(0, 101):
-            prog.update_progress(
-                float(i), "long comment "*15)
-            time.sleep(0.05)
-        prog.clear()
-
-        # comment persistence, rate limit
-        prog = ProgressBar(100, min_update_time=.5)
-        prog.update_progress(0, "persistent comment")
-        for i in range(1, 101):
-            prog.update_progress(i)
-            time.sleep(0.05)
-        prog.clear()
-
-        # test rate limit
-        for _ in range(0, 100):
-            spin()
-            time.sleep(0.05)
-        backspace()
-
-    repl({
-        "test": test_action,
-        "e": test_exc,
-        "p": progress_test
-    }, arg_transform={
-        "test": test_transform,
-    })
+    test()
