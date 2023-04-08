@@ -29,11 +29,10 @@ def escape(s: str, special_chars: Iterable[str], *, escape_char: str = "\\") -> 
     return s
 
 
-def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_tokens=True, unescape_char="\\", re_flags: int = 0) -> list[str]:
-    """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Arguments for `pairs` and `ignore_internal_pairs` are passed to `find_pairs`. """
+def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_args=True, unescape_char="\\", re_flags: int = 0) -> list[str]:
+    """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Furthermore, adjacent compounds are also split apart (for example, `"'a''b'"` turns into two arguments).
 
-    # spans that match the separator and that are not also inside of pairs
-    splits: list[tuple[int, int]] = []
+    Arguments for `pairs` and `ignore_internal_pairs` are passed to `find_pairs`. """
 
     found_pairs = find_pairs(
         s, pairs=pairs, ignore_internal_pairs=ignore_internal_pairs)
@@ -41,29 +40,41 @@ def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ig
     def in_any_pair(span: tuple[int, int]):
         # only outermost pairs matter
         for p in found_pairs:
-            if span_include_inclusive(p.span(), span):
+            if span_include_inclusive(p.span, span):
                 return True
         return False
 
+    # indices at which to slice, so every two indices are a span to include
+    slices: list[int] = [0]
+
     for m in re.finditer(sep, s, re_flags):
-        if not in_any_pair(m.span()):
-            splits.append(m.span())
+        sp = m.span()
+        if not in_any_pair(sp):
+            slices.extend(sp)
 
-    # convert splits, i.e. slices to exclude, into slices to include
-    slices = [0]
-    for sp in splits:
-        slices.append(sp[0])
-        slices.append(sp[1])
-    slices.append(len(s))
+    len_s = len(s)
+    slices.append(len_s)
 
-    tokens = [s[slices[i]:slices[i+1]] for i in range(0, len(slices), 2)]
-    if remove_empty_tokens:
-        tokens = [t for t in tokens if t != ""]
+    # also slice between adjacent compounds, i.e. top-level pairs, for cases such as "'a''b'"
+    # besides agreeing with shell behavior, this also prevents remove_outer from creating an argument like a''b with the example above
+    for i in range(0, len(found_pairs)-1):
+        p1 = found_pairs[i]
+        p2 = found_pairs[i+1]
+        p1_end = p1.span[1]
+        if p1_end == p2.span[0]:
+            slices.append(p1_end)
+            slices.append(p1_end)
+
+    if slices[-1] != len_s:
+        # appended some for adjacent pairs
+        slices.sort()
+
+    args = [s[slices[i]:slices[i+1]] for i in range(0, len(slices), 2)]
     if unescape_char != None:
-        tokens = [unescape(t, escape_char=unescape_char) for t in tokens]
-    if remove_outer != None and len(remove_outer) > 0:
-        new_tokens = []
-        for t in tokens:
+        args = [unescape(t, escape_char=unescape_char) for t in args]
+    if remove_outer:
+        new_args = []
+        for t in args:
             for o in remove_outer:
                 m = re.match(o, t)
                 if m != None:
@@ -74,13 +85,15 @@ def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ig
                         last_match = m
                     if last_match.end() < len(t):
                         raise Exception(
-                            f"While removing outer pair, pair end <{last_match}> was not actually last found at the end of the token <{t}>")
+                            f"While removing outer pair, pair end <{last_match}> was not actually last found at the end of the argument <{t}>")
                     t = t[:m.start()]
                     # only remove one outer pair
                     break
-            new_tokens.append(t)
-        tokens = new_tokens
-    return tokens
+            new_args.append(t)
+        args = new_args
+    if remove_empty_args:
+        args = [t for t in args if t != ""]
+    return args
 
 
 def next_match(regular_expressions: Iterable[str], s: str, *, no_overlap=False, flags=0) -> Iterable[tuple[str, re.Match]]:
@@ -154,7 +167,7 @@ def last_match(regular_expressions: Iterable[str], s: str, *, no_overlap=False, 
             matches[last_r] = last_list[1:]
         if last_start < last_end and (not no_overlap or last_end <= prev_start):
             prev_start = last_start
-            yield(last_r, last_match)
+            yield (last_r, last_match)
 
 
 def matches_any(regular_expressions: Iterable[str], s: str, *, flags=0):
@@ -196,8 +209,17 @@ class Pair:
         self.internal_pairs.append(internal)
         list.sort(self.internal_pairs)
 
+    @property
     def span(self) -> tuple[int, int]:
         return (self.start_span[0], self.end_span[1])
+
+    @property
+    def start_delimiter(self) -> str:
+        return self.original_str[self.start_span[0], self.start_span[1]]
+
+    @property
+    def end_delimiter(self) -> str:
+        return self.original_str[self.end_span[0], self.end_span[1]]
 
     def __repr__(self) -> str:
         return "Pair("+repr(self.original_str) + "," + repr(self.start_span) + "," + repr(self.end_span) + (","+repr(self.internal_pairs) if self.internal_pairs != [] else "") + ")"
@@ -275,15 +297,15 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: I
     pair_ends_gen = next_match(pairs.values(), s)
 
     # return value, collected index pairs
-    pair_list = []
+    pair_list: list[Pair] = []
     # stack of pair starts
     start_stack = []
-    next_start = next(pair_starts_gen, None)
+    next_start: tuple[str, re.Match] = next(pair_starts_gen, None)
     ignoring_internal = False
     while True:
         # get the next pair end
         try:
-            next_end = next(pair_ends_gen)
+            next_end: tuple[str, re.Match] = next(pair_ends_gen)
         except StopIteration:
             # exhausted all pair ends
             break
@@ -333,7 +355,7 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: I
         # pair matched
         new_pair = Pair(s, popped_start[1].span(), next_end[1].span())
         # nest prior pairs inside the new one if they are included inside it
-        while len(pair_list) > 0 and span_include_exclusive(new_pair.span(), pair_list[-1].span()):
+        while len(pair_list) > 0 and span_include_exclusive(new_pair.span, pair_list[-1].span):
             new_pair.add_internal(pair_list[-1])
             pair_list = pair_list[:-1]
         pair_list.append(new_pair)
