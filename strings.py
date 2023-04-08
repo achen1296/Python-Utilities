@@ -29,8 +29,8 @@ def escape(s: str, special_chars: Iterable[str], *, escape_char: str = "\\") -> 
     return s
 
 
-def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_args=True, unescape_char="\\", re_flags: int = 0) -> list[str]:
-    """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Furthermore, adjacent compounds are also split apart (for example, `"'a''b'"` turns into two arguments).
+def argument_split(s: str, sep: str = "\s+", *,  pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_args=True, unescape_char="\\", re_flags: int = 0, split_compounds: bool = True) -> list[str]:
+    """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Furthermore, if this behavior is not disabled, adjacent compounds are also split apart (for example, `"'a''b'"` turns into two arguments).
 
     Arguments for `pairs` and `ignore_internal_pairs` are passed to `find_pairs`. """
 
@@ -57,17 +57,18 @@ def argument_split(s: str, *, sep: str = "\s+", pairs: dict[str, str] = None, ig
 
     # also slice between adjacent compounds, i.e. top-level pairs, for cases such as "'a''b'"
     # besides agreeing with shell behavior, this also prevents remove_outer from creating an argument like a''b with the example above
-    for i in range(0, len(found_pairs)-1):
-        p1 = found_pairs[i]
-        p2 = found_pairs[i+1]
-        p1_end = p1.span[1]
-        if p1_end == p2.span[0]:
-            slices.append(p1_end)
-            slices.append(p1_end)
+    if split_compounds:
+        for i in range(0, len(found_pairs)-1):
+            p1 = found_pairs[i]
+            p2 = found_pairs[i+1]
+            p1_end = p1.span[1]
+            if p1_end == p2.span[0]:
+                slices.append(p1_end)
+                slices.append(p1_end)
 
-    if slices[-1] != len_s:
-        # appended some for adjacent pairs
-        slices.sort()
+        if slices[-1] != len_s:
+            # appended some for adjacent pairs
+            slices.sort()
 
     args = [s[slices[i]:slices[i+1]] for i in range(0, len(slices), 2)]
     if unescape_char != None:
