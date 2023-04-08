@@ -1,10 +1,12 @@
 import cmd
 import inspect
 import math
+import os
 import re
 import time
 import traceback
 from enum import Enum
+from pathlib import Path
 from shutil import get_terminal_size
 from typing import Any, Callable, Iterable, Union
 
@@ -73,10 +75,14 @@ class Cmd(cmd.Cmd):
     """
     # override
     prompt = ">> "
-    # new attribute
+    # new attributes
     aliases_header = "Aliases:"
+    scripts_header = "Scripts: "
+    command_sep = "\s*;\s*"
+    comment = "\s*#"
 
-    def __init__(self, aliases: dict[str, str] = None, *args, **kwargs):
+    def __init__(self, aliases: dict[str, str] = None, scripts_dir: os.PathLike = None, script_suffix=".script", *args, **kwargs):
+        """ If scripts_dir is not specified, command execution will not attempt to find scripts. """
         super().__init__(*args, **kwargs)
         if aliases is None:
             aliases = {}
@@ -86,6 +92,8 @@ class Cmd(cmd.Cmd):
             "quit": "exit",
             "wait": "sleep",
         })
+        self.scripts_dir = Path(scripts_dir)
+        self.script_suffix = script_suffix
 
     def do_exit(self):
         """ Exit the console. """
@@ -98,31 +106,47 @@ class Cmd(cmd.Cmd):
     do_sleep.__doc__ = sleep.__doc__
 
     def precmd(self, line: str):
-        """ Split commands by semicolons and enqueue all but the rest, and split arguments into string lists by whitespace """
-
-        cmds = strings.argument_split(line, sep="\s*;\s*")
+        """ Split commands by semicolons. """
+        if isinstance(line, list):
+            # pass through pre-parsed command
+            return line
+        cmds = strings.argument_split(
+            line, self.command_sep, split_compounds=False)
         if len(cmds) <= 1:
             return line
-        self.cmdqueue += cmds[1:]
+        # add new commands onto the FRONT of the queue so that things will execute in the expected order in case nested
+        self.cmdqueue = cmds[1:] + self.cmdqueue
         return cmds[0]
 
-    def onecmd(self, line: str):
-        """Interpret the argument as though it had been typed in response
+    def onecmd(self, line: Union[str, list[str]]):
+        """ Interpret the argument as though it had been typed in response
         to the prompt.
 
-        Overridden and modified from the superclass to split arguments into lists of strings by whitespace and catch and print Python Exceptions and keyboard interrupts. 
+        Overridden and modified from the superclass to split arguments into lists of strings by whitespace and catch and print Python Exceptions and keyboard interrupts. Also accepts pre-split arguments (such as from script enequeueing).
         """
-        line = line.strip()
-        if not line:
-            return self.emptyline()
-        cmd, *args = strings.argument_split(line)
+        if isinstance(line, str):
+            line = line.strip()
+            if not line:
+                return self.emptyline()
+            cmd, *args = strings.argument_split(line)
+        elif isinstance(line, list):
+            cmd, *args = line
+        else:
+            raise TypeError(
+                "Input must be a string or a pre-parsed list of strings")
         while cmd in self.aliases:
             cmd = self.aliases[cmd]
         try:
             func = getattr(self, 'do_' + cmd)
         except AttributeError:
-            func = self.default
-            args = [cmd] + args
+            if self.scripts_dir is not None and (script_path := self._script_path(cmd)).exists():
+                func = self.execute_script
+                # pass the script path to execute_script
+                args = [script_path] + args
+            else:
+                func = self.default
+                # pass the first split argument to default
+                args = [cmd] + args
         self.lastcmd = line
 
         def call_action():
@@ -133,8 +157,13 @@ class Cmd(cmd.Cmd):
 
         return traceback_wrap(call_action, pause_message=None)
 
+    def _script_path(self, script_name):
+        return self.scripts_dir.joinpath(script_name).with_suffix(self.script_suffix)
+
     def do_help(self, *cmds: str):
-        'List available commands with "help" or detailed help with "help cmd".'
+        """ List available commands with "help" or detailed help with "help cmd".
+
+        If the class was instantiated with a scripts_dir, can find script files as well, and if there is a comment (a line *starting* with a #, though command arguments may contain #'s) on the first non-empty line, will print that as a docstring. """
         if cmds:
             for cmd in cmds:
                 try:
@@ -155,6 +184,25 @@ class Cmd(cmd.Cmd):
                                 continue
                         except AttributeError:
                             pass
+
+                        script_path = self._script_path(cmd)
+                        if script_path.exists():
+                            found_script_doc_comment = False
+                            with open(script_path) as f:
+                                for line in f:
+                                    line = line.strip()
+                                    if not line:
+                                        continue
+                                    if match := re.match(self.comment, line):
+                                        print(line[match.end():],
+                                              file=self.stdout)
+                                        found_script_doc_comment = True
+                                    else:
+                                        # found a non-comment first
+                                        break
+                        if found_script_doc_comment:
+                            continue
+
                         print(str(self.nohelp % (cmd,)), file=self.stdout)
                         continue
                 help_func()
@@ -167,6 +215,8 @@ class Cmd(cmd.Cmd):
                 self, "do_" + cmd).__doc__} | (help & cmds)
             misc_topics = help - cmds
             cmds_undoc = cmds - cmds_doc
+            scripts = [f.stem for f in self.scripts_dir.iterdir()
+                       if f.suffix == self.script_suffix]
             print(self.doc_leader, file=self.stdout)
             terminal_width = get_terminal_size().columns
             # the cmdlen argument is strangely not used in the superclass, so I have replaced it with None
@@ -174,10 +224,66 @@ class Cmd(cmd.Cmd):
                 cmds_doc), None, terminal_width)
             self.print_topics(self.misc_header, list(misc_topics),
                               None, terminal_width)
-            self.print_topics(self.aliases_header,
-                              list(self.aliases), None, terminal_width)
             self.print_topics(self.undoc_header, list(cmds_undoc),
                               None, terminal_width)
+            self.print_topics(self.aliases_header,
+                              list(self.aliases), None, terminal_width)
+            self.print_topics(self.scripts_header,
+                              list(scripts), None, terminal_width)
+
+    def execute_script(self, script: os.PathLike, *args):
+        """ Used before the default method if the class was instantiated with a scripts_dir.
+
+        Searches for text files in the scripts_dir with a name matching the first argument and the right suffix. The remaining arguments are used to replace $0, $1, etc. in each command in the script *only* if they appear as the entire argument. If not enough arguments are given, the extras are completely dropped. Can also use $0-, $1-, etc. for all arguments including and after, so e.g. $0- captures all of the arguments. The arguments will not actually be packaged back into a single input string, so they will not be split up again, meaning it is safe to have arguments with spaces.
+
+        For example, using the default arguments, if the current directory contains a file named "example.script" which contains:
+
+        ``sleep $0``
+
+        ``help $1 $2``
+
+        then entering
+
+        ``example 5 quit``
+
+        into the console will sleep for 5 seconds, then print out the help text for ``quit`` ($3 gets dropped). """
+
+        cmds = []
+
+        len_args = len(args)
+
+        with open(script) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    # empty line
+                    continue
+                if re.match(self.comment, line):
+                    # comment
+                    continue
+                for cmd in strings.argument_split(line, self.command_sep, split_compounds=False):
+                    cmd_args = strings.argument_split(cmd)
+                    new_cmd_args = []
+                    for la in cmd_args:
+                        if (match := re.match("^\$(\d+)(-?)$", la)):
+                            index = int(match.group(1))
+                            # empty or not
+                            if match.group(2):
+                                # capture all arguments after the given index
+                                new_cmd_args += args[index:]
+                            else:
+                                # only add the specific argument, if it was given
+                                if len_args > index:
+                                    new_cmd_args.append(args[index])
+                        else:
+                            # no replacement
+                            new_cmd_args.append(la)
+                    cmds.append(new_cmd_args)
+
+        # add new commands onto the FRONT of the queue so that things will execute in the expected order in case nested
+        self.cmdqueue = cmds + self.cmdqueue
+
+        # enqueued commands will begin being executed automatically
 
 
 def bell():
@@ -735,7 +841,7 @@ class ProgressBar(Progress):
 def test():
     class CmdTest(Cmd):
         def __init__(self):
-            super().__init__()
+            super().__init__(scripts_dir=".")
             self.do_help2 = self.do_help
 
         def do_a(self, x: int):
@@ -775,6 +881,15 @@ def test():
                 spin()
                 time.sleep(0.05)
             backspace()
+
+        def do_echo(self, *args):
+            print(args)
+
+        def do_write(self):
+            with open("example.script", "w") as f:
+                f.write("# example script doc comment\n")
+                f.write("echo $0 $1 $2\n")
+                f.write("echo $0- last\n")
 
     CmdTest().cmdloop()
 
