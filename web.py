@@ -219,14 +219,20 @@ class PageReader:
         return [u for u in urls if u is not None]
 
 
-class PageBrowser:
+class PageBrowser(console.Cmd):
     """Uses a set of PageReaders to browse."""
 
-    def __init__(self, driver: WebDriver, readers: Iterable[PageReader]):
+    def __init__(self, driver: WebDriver, readers: Iterable[PageReader], *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.driver = driver
         self.readers = set(readers)
         self.user_agent = self.driver.execute_script(
             "return navigator.userAgent")
+
+        # --Cmd functions with no argument transformations required--
+        self.do_o = self.open
+        self.do_s = self.save_pages
+        self.do_l = self.load_pages
 
     def new_tab(self, url: str):
         """ Open a new tab and switch to it """
@@ -339,31 +345,25 @@ class PageBrowser:
         for u in urls:
             self.new_tab(u)
 
+    # -- Cmd functions with argument transformations required --
+    def do_d(self, wait: int = 0):
+        # assume output True if used as command line
+        self.download_current_page(int(wait))
 
-def run_page_browser(browser: PageBrowser, additional_actions: dict[str, Callable] = None):
-    actions = {
-        "d": browser.download_current_page,
-        "a": browser.download_all,
-        "o": browser.open,
-        "od": browser.open_and_download,
-        "t": browser.switch_tab,
-        "s": browser.save_pages,
-        "l": browser.load_pages
-    }
+    do_d.__doc__ = download_current_page.__doc__
 
-    def switch_tab_transform(tab_index: str):
-        return [int(tab_index)]
+    def do_a(self, close_tabs: bool = True, wait: int = 0):
+        # assume output True if used as command line
+        if isinstance(close_tabs, str):
+            close_tabs = close_tabs.lower() not in {"f", "false"}
+        self.download_all(close_tabs, int(wait))
 
-    def download_all_transform(close_tab: str = "true", wait: str = '0'):
-        """Transform tab close arg to bool, wait to int."""
-        return [not (close_tab.lower() in {"f", "false"}), int(wait)]
+    do_a.__doc__ = download_all.__doc__
 
-    def open_and_download_transform(wait: str = '0'):
-        return [int(wait)]
+    def do_t(self, tab_index: int):
+        self.switch_tab(int(tab_index))
+    do_t.__doc__ = switch_tab.__doc__
 
-    arg_transform = {"a": download_all_transform,
-                     "t": switch_tab_transform, "od": open_and_download_transform}
-    if additional_actions is not None:
-        actions.update(additional_actions)
-
-    console.repl(actions, arg_transform=arg_transform)
+    def do_od(self, wait: int):
+        self.open_and_download(int(wait))
+    do_od.__doc__ = open_and_download.__doc__
