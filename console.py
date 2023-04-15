@@ -72,6 +72,7 @@ class Cmd(cmd.Cmd):
     - Python Exceptions and keyboard interrupts are caught and printed
     - help shows function signatures
     - help adapts its output to the current terminal size
+    - catch KeyboardInterrupts instead of completely terminating, but terminate on EOF
     """
     # override
     prompt = ">> "
@@ -107,6 +108,62 @@ class Cmd(cmd.Cmd):
         sleep(time_str)
 
     do_sleep.__doc__ = sleep.__doc__
+
+    def cmdloop(self, intro=None):
+        """ Modifies the superclass cmdloop to catch KeyboardInterrupt without stopping, but conversely will stop on EOF (like the Python interactive shell). """
+
+        self.preloop()
+        if self.use_rawinput and self.completekey:
+            try:
+                import readline
+                self.old_completer = readline.get_completer()
+                readline.set_completer(self.complete)
+                readline.parse_and_bind(self.completekey+": complete")
+            except ImportError:
+                pass
+        try:
+            if intro is not None:
+                self.intro = intro
+            if self.intro:
+                self.stdout.write(str(self.intro)+"\n")
+            stop = None
+            while not stop:
+                if self.cmdqueue:
+                    line = self.cmdqueue.pop(0)
+                else:
+                    if self.use_rawinput:
+                        try:
+                            line = input(self.prompt)
+                        except KeyboardInterrupt:
+                            print_as_exc("KeyboardInterrupt")
+                            continue
+                        except EOFError:
+                            # stop on EOF
+                            break
+                    else:
+                        self.stdout.write(self.prompt)
+                        self.stdout.flush()
+                        try:
+                            line = self.stdin.readline()
+                        except KeyboardInterrupt:
+                            print_as_exc("KeyboardInterrupt")
+                            continue
+                        if not len(line):
+                            # stop on EOF
+                            break
+                        else:
+                            line = line.rstrip('\r\n')
+                line = self.precmd(line)
+                stop = self.onecmd(line)
+                stop = self.postcmd(stop, line)
+            self.postloop()
+        finally:
+            if self.use_rawinput and self.completekey:
+                try:
+                    import readline
+                    readline.set_completer(self.old_completer)
+                except ImportError:
+                    pass
 
     def precmd(self, line: str):
         """ Split commands by semicolons. """
