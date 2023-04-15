@@ -92,7 +92,10 @@ class Cmd(cmd.Cmd):
             "quit": "exit",
             "wait": "sleep",
         })
-        self.scripts_dir = Path(scripts_dir)
+        if scripts_dir is None:
+            self.scripts_dir = None
+        else:
+            self.scripts_dir = Path(scripts_dir)
         self.script_suffix = script_suffix
 
     def do_exit(self):
