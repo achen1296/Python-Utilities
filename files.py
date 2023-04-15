@@ -498,6 +498,15 @@ def size(path: os.PathLike, unit=BYTE):
     return size_recursive(Path(path))/unit
 
 
+def format_size(size_bytes: int):
+    units = [" bytes", "KB", "MB", "GB", "TB"]
+    u = 0
+    while size_bytes > 1e3:
+        size_bytes /= 1e3
+        u += 1
+    return f"{size_bytes:.3f} {units[u]}"
+
+
 def count(path: os.PathLike):
     """Counts files recursively. Does not follow symlinks, they are counted as one file instead."""
     def count_recursive(path: Path):
