@@ -657,5 +657,5 @@ if WINDOWS:
 
     def resolve_with_env(path: os.PathLike):
         path: str = str(path)
-        winreg.ExpandEnvironmentStrings(path)
+        path = winreg.ExpandEnvironmentStrings(path)
         return Path(path).resolve()
