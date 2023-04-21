@@ -540,21 +540,23 @@ def is_empty(root: os.PathLike) -> bool:
     return is_empty_recursive(root)
 
 
-def delete_empty(root: os.PathLike):
-    def delete_empty_recursive(root: Path) -> bool:
+def delete_empty(root: os.PathLike, output=True):
+    def delete_empty_recursive(root: Path, depth: int) -> bool:
         """ Returns whether the root argument was or became empty and was deleted """
         if root.is_file():
             return False
         empty = True
         for f in root.iterdir():
-            if not delete_empty_recursive(f):
+            if not delete_empty_recursive(f, depth+1):
                 empty = False
         if empty:
+            if output:
+                print("\t"*depth + str(root))
             root.rmdir()
         return empty
 
     root = Path(root)
-    delete_empty_recursive(root)
+    delete_empty_recursive(root, 0)
 
 
 def list_files(root: os.PathLike, *, skip_file: Callable[[os.PathLike, int], bool] = None, skip_dir: Callable[[os.PathLike, int], bool] = None) -> list[Path]:
