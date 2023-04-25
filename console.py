@@ -126,36 +126,35 @@ class Cmd(cmd.Cmd):
                 self.intro = intro
             if self.intro:
                 self.stdout.write(str(self.intro)+"\n")
-            stop = None
-            while not stop:
+
+            def loop_body():
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
                 else:
                     if self.use_rawinput:
                         try:
                             line = input(self.prompt)
-                        except KeyboardInterrupt:
-                            print_as_exc("KeyboardInterrupt")
-                            continue
                         except EOFError:
                             # stop on EOF
-                            break
+                            return True
                     else:
                         self.stdout.write(self.prompt)
                         self.stdout.flush()
-                        try:
-                            line = self.stdin.readline()
-                        except KeyboardInterrupt:
-                            print_as_exc("KeyboardInterrupt")
-                            continue
+                        line = self.stdin.readline()
                         if not len(line):
                             # stop on EOF
-                            break
+                            return True
                         else:
                             line = line.rstrip('\r\n')
                 line = self.precmd(line)
                 stop = self.onecmd(line)
                 stop = self.postcmd(stop, line)
+                return stop
+
+            stop = False
+            while not stop:
+                stop = traceback_wrap(loop_body, pause_message=None)
+
             self.postloop()
         finally:
             if self.use_rawinput and self.completekey:
@@ -208,14 +207,10 @@ class Cmd(cmd.Cmd):
                 # pass the first split argument to default
                 args = [cmd] + args
         self.lastcmd = line
-
-        def call_action():
-            try:
-                return func(*args)
-            except TypeError:
-                return func(" ".join(args))
-
-        return traceback_wrap(call_action, pause_message=None)
+        try:
+            return func(*args)
+        except TypeError:
+            return func(" ".join(args))
 
     def _script_path(self, script_name):
         return self.scripts_dir.joinpath(script_name).with_suffix(self.script_suffix)
