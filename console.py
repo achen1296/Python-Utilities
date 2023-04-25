@@ -754,6 +754,9 @@ def spin():
     SPINNER.spin()
 
 
+ARC_SPINNER_SEQUENCE = "\u25dc\u25dd\u25de\u25df"
+
+
 def measure_lines(text: str, terminal_width: int = None):
     """ Measure how many lines tall the text would be in a terminal of the given width. If not given a terminal width, gets the current one. """
     if terminal_width is None:
