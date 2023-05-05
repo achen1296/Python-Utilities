@@ -17,15 +17,17 @@ def primes(max: int):
         for f in factors:
             if num % f == 0:
                 return True
+            if f * f > num:
+                break
         return False
 
     primes = []
-    for cand in prime_candidates():
-        if cand > max:
+    for p in prime_candidates():
+        if p > max:
             break
-        if not any((cand % p == 0 for p in primes)):
-            primes.append(cand)
-            yield cand
+        if not divisible_by_any(p, primes):
+            primes.append(p)
+            yield p
 
 
 def sieve(numbers: Iterable[int]) -> Iterable[int]:
