@@ -4,7 +4,7 @@ import lists
 
 
 def primes(max: int):
-    def gen_prime_candidates():
+    def prime_candidates():
         yield 2
         yield 3
         n = 1
@@ -20,12 +20,12 @@ def primes(max: int):
         return False
 
     primes = []
-    for p in gen_prime_candidates():
-        if p > max:
+    for cand in prime_candidates():
+        if cand > max:
             break
-        if not divisible_by_any(p, primes):
-            primes.append(p)
-            yield p
+        if not any((cand % p == 0 for p in primes)):
+            primes.append(cand)
+            yield cand
 
 
 def sieve(numbers: Iterable[int]) -> Iterable[int]:
@@ -61,6 +61,12 @@ def sieve(numbers: Iterable[int]) -> Iterable[int]:
 
 
 def factor(x: int) -> list[int]:
+    if x <= 0:
+        raise Exception("Positive values only")
+
+    if x == 1:
+        return []
+
     ps = primes(x//2)
 
     factors = []
