@@ -86,8 +86,24 @@ def factor(x: int) -> list[int]:
 
 def totient(x: int) -> int:
     result = 1
-    fact = lists.count(factor(x))
-    for p in fact:
-        e = fact[p]
+    factors = lists.count(factor(x))
+    for p in factors:
+        e = factors[p]
         result *= (p-1) * (p**(e-1))
     return result
+
+
+def divisors(x: int) -> Iterable[int]:
+    factor_power = lists.count(factor(x))
+    factors = list(factor_power)
+
+    def _divisors(factors: list[int]):
+        if factors == []:
+            yield 1
+            return
+        f = factors[0]
+        for i in range(0, factor_power[f]+1):
+            fi = (f**i)
+            yield from (fi * d for d in _divisors(factors[1:]))
+
+    return _divisors(factors)
