@@ -28,9 +28,9 @@ def write_file_lists(filename: os.PathLike, lists: Iterable[Iterable], *, list_i
             f.write(list_separator)
 
 
-def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", comment: str = "\s*#", **open_kwargs) -> Iterable[str]:
+def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", comment: str = "\s*#", **re_split_kwargs) -> Iterable[str]:
     """Read a file as a list. Use comment="" for no comments."""
-    for item in files.re_split(filename, separator, **open_kwargs):
+    for item in files.re_split(filename, separator, **re_split_kwargs):
         if comment != "" and re.match(comment, item):
             continue
         yield item
