@@ -617,6 +617,28 @@ def search(root: os.PathLike, query: str) -> list[Path]:
     return walk(root, file_action=file_action, error_action=error_action)
 
 
+def find_ascii(file: os.PathLike, length_threshold: int) -> Iterable[tuple[int, bytearray]]:
+    """ Returns runs of bytes representing printable ASCII characters (32-126) at least as long as the length threshold, along with their indices in the file. """
+    def is_ascii(b: bytes):
+        return all((32 <= i <= 126 for i in b))
+
+    with open(file, "rb") as f:
+        ascii_streak = bytearray()
+        bytes_read = 0
+        while True:
+            b = f.read(1)
+            if len(b) == 0:
+                # EOF
+                break
+            if is_ascii(b):
+                ascii_streak += b
+            else:
+                if len(ascii_streak) >= length_threshold:
+                    yield bytes_read, ascii_streak
+                ascii_streak = bytearray()
+            bytes_read += 1
+
+
 if WINDOWS:
 
     class LockFile:
