@@ -271,7 +271,7 @@ class Cmd(cmd.Cmd):
             misc_topics = help - cmds
             cmds_undoc = cmds - cmds_doc
             scripts = [f.stem for f in self.scripts_dir.iterdir()
-                       if f.suffix == self.script_suffix]
+                       if f.suffix == self.script_suffix] if self.scripts_dir else []
             print(self.doc_leader, file=self.stdout)
             terminal_width = get_terminal_size().columns
             # the cmdlen argument is strangely not used in the superclass, so I have replaced it with None
