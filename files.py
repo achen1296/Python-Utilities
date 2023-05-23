@@ -298,6 +298,8 @@ def mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_
                 deleted_file_action(f)
                 count += 1
         else:
+            if output:
+                print(f"{output_prefix}Creating folder <{dst}>")
             dst.mkdir()
         # recursively update files remaining
         for f in src.iterdir():
@@ -311,11 +313,63 @@ def mirror_by_dict(mirror_dict: dict[os.PathLike, Union[os.PathLike, Iterable[os
     count = 0
     for src in mirror_dict:
         destinations = mirror_dict[src]
-        if isinstance(destinations, Iterable):
+        if isinstance(destinations, Iterable) and not isinstance(destinations, str):
             for dst in destinations:
                 count += mirror(src, dst, output=output)
         else:
             count += mirror(src, destinations, output=output)
+    return count
+
+
+def link_mirror(src: os.PathLike, dst: os.PathLike, *, output: bool = False, deleted_file_action: Callable[[os.PathLike], None] = delete, output_prefix="", symbolic=True) -> int:
+    """Returns the number of files changed (empty directories do not increase the count). Directory structure is copied, but files are linked instead. Only creates absolute links."""
+    count = 0
+    src = Path(src).absolute()
+    dst = Path(dst).absolute()
+    if src.exists() and dst.exists() and src.is_dir() != dst.is_dir():
+        raise FileMismatchException(
+            f"One of {src} and {dst} is a file, the other a directory")
+    if src.is_file():
+        print(dst, dst.exists())
+        if not dst.exists():
+            if output:
+                print(f"{output_prefix}Creating link <{src}> <- <{dst}>")
+            link(src, dst, symbolic=symbolic)
+            count += 1
+    else:
+        if dst.exists():
+            # delete files in dst that do not exist in src
+            src_filenames = [f.name for f in src.iterdir()]
+            to_delete = [f for f in dst.iterdir(
+            ) if f.name not in src_filenames]
+            for f in to_delete:
+                if output:
+                    print(f"{output_prefix}<{f}> was deleted")
+                deleted_file_action(f)
+                count += 1
+        else:
+            if output:
+                print(f"{output_prefix}Creating folder <{dst}>")
+            dst.mkdir()
+        # recursively update files remaining
+        for f in src.iterdir():
+            count += link_mirror(f, dst.joinpath(f.name), output=output,
+                                 deleted_file_action=deleted_file_action, output_prefix=output_prefix+"    ")
+    return count
+
+
+def link_mirror_by_dict(mirror_dict: dict[os.PathLike, Union[os.PathLike, Iterable[os.PathLike]]], *, output=False, symbolic=True):
+    """Returns the number of files changed (empty directories do not increase the count)."""
+    count = 0
+    for src in mirror_dict:
+        destinations = mirror_dict[src]
+        if isinstance(destinations, Iterable) and not isinstance(destinations, str):
+            for dst in destinations:
+                count += link_mirror(src, dst, output=output,
+                                     symbolic=symbolic)
+        else:
+            count += link_mirror(src, destinations,
+                                 output=output, symbolic=symbolic)
     return count
 
 
