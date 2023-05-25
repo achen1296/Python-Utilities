@@ -153,7 +153,11 @@ class Cmd(cmd.Cmd):
 
             stop = False
             while not stop:
-                stop = traceback_wrap(loop_body, pause_message=None)
+                try:
+                    stop = traceback_wrap(
+                        loop_body, pause_message=None, reraise=True)
+                except:
+                    self.cmdqueue.clear()
 
             self.postloop()
         finally:
@@ -351,7 +355,7 @@ def pause(message: str = "Press Enter to continue...: "):
     input(message)
 
 
-def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...", pause_on_exc_only=True) -> Any:
+def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False) -> Any:
     """Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     try:
         return f()
@@ -364,6 +368,8 @@ def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...
         print_as_exc(err_text, end="")
         if pause_on_exc_only and pause_message is not None:
             pause(pause_message)
+        if reraise:
+            raise
     finally:
         if not pause_on_exc_only and pause_message is not None:
             pause(pause_message)
