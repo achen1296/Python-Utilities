@@ -110,6 +110,7 @@ def firefox_driver(**kwargs) -> webdriver.Firefox:
     service = FirefoxService(log_path="NUL:")
     driver = webdriver.Firefox(service=service, **kwargs)
     driver.implicitly_wait(2)
+    driver.set_page_load_timeout(15)
     return driver
 
 
@@ -143,6 +144,7 @@ def chrome_driver(profile: str) -> webdriver.Chrome:
     driver = webdriver.Chrome(
         executable_path=f"{os.environ['HOMEPATH']}\\Programs\\chromedriver.exe", options=options, service=service)
     driver.implicitly_wait(2)
+    driver.set_page_load_timeout(15)
     return driver
 
 
