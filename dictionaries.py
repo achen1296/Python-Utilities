@@ -92,10 +92,10 @@ def write_string_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, entry
     return entry_separator.join(write_iterable_dict(dictionary, **kwargs))
 
 
-def write_file_dict(filename: os.PathLike, dictionary: dict[Any, Union[Any, Iterable[Any]]], encoding="utf8", **open_kwargs) -> None:
+def write_file_dict(filename: os.PathLike, dictionary: dict[Any, Union[Any, Iterable[Any]]], encoding="utf8", **kwargs) -> None:
     """ Writes the result of write_string_dict to a file. """
     with open(filename, "w", encoding=encoding) as f:
-        f.write(write_string_dict(dictionary, **open_kwargs))
+        f.write(write_string_dict(dictionary, **kwargs))
 
 
 def _dict_list_add(d: dict, key, value):
