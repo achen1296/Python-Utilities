@@ -9,7 +9,8 @@ from selenium.common.exceptions import (ElementClickInterceptedException,
                                         ElementNotInteractableException,
                                         NoSuchElementException,
                                         NoSuchWindowException,
-                                        StaleElementReferenceException)
+                                        StaleElementReferenceException,
+                                        TimeoutException)
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -149,57 +150,99 @@ def chrome_driver(profile: str) -> webdriver.Chrome:
     return driver
 
 
-def wait_element(driver: WebDriver, css_selector: str, timeout: int = 10) -> WebElement:
-    return WebDriverWait(driver, timeout).until(
-        expected_conditions.presence_of_element_located((By.CSS_SELECTOR, css_selector)))
+def wait_element(driver: WebDriver, css_selector: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[Exception] = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)) -> WebElement:
+    """ Replaces the TimeoutException with the last Exception raised by trying to find element(s). """
+    last_exc = None
+
+    def try_find(driver: WebDriver):
+        nonlocal last_exc
+        try:
+            if all:
+                return driver.find_elements(By.CSS_SELECTOR, css_selector)
+            if index == 0:
+                return driver.find_element(By.CSS_SELECTOR, css_selector)
+            return driver.find_elements(By.CSS_SELECTOR, css_selector)[index]
+        except Exception as exc:
+            last_exc = exc
+    try:
+        return WebDriverWait(driver, timeout, ignored_exceptions=ignored_exceptions).until(try_find)
+    except TimeoutException:
+        raise last_exc
 
 
 def wait_url(driver: WebDriver, url_contains: str, timeout: int = 10):
-    return WebDriverWait(driver, timeout).until(
+    # only raises TimeoutException
+    WebDriverWait(driver, timeout).until(
         expected_conditions.url_contains(url=url_contains))
 
 
 def find_and_get_attribute(driver: WebDriver, css_selector: str, attribute: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[Exception] = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)) -> Union[str, Iterable[str]]:
-    """ If all=True then will return a list of the results for all elements found, or specify an index > 0 to select only that index out of the list of all matching elements. """
-    def try_get_attribute(driver: WebDriver):
-        if all:
-            es = driver.find_elements(By.CSS_SELECTOR, css_selector)
-            return [e.get_attribute(attribute) for e in es]
-        if index == 0:
-            e = driver.find_element(By.CSS_SELECTOR, css_selector)
-            return e.get_attribute(attribute)
-        es = driver.find_elements(By.CSS_SELECTOR, css_selector)
-        return es[index].get_attribute(attribute)
+    """ Replaces the TimeoutException with the last Exception raised by trying to find element(s) and get attribute(s). If all=True then will return a list of the results for all elements found, or specify an index > 0 to select only that index out of the list of all matching elements. """
+    last_exc = None
 
-    return WebDriverWait(driver, timeout, ignored_exceptions=ignored_exceptions).until(try_get_attribute)
+    def try_get_attribute(driver: WebDriver):
+        nonlocal last_exc
+        try:
+            if all:
+                es = driver.find_elements(By.CSS_SELECTOR, css_selector)
+                return [e.get_attribute(attribute) for e in es]
+            if index == 0:
+                e = driver.find_element(By.CSS_SELECTOR, css_selector)
+                return e.get_attribute(attribute)
+            es = driver.find_elements(By.CSS_SELECTOR, css_selector)
+            return es[index].get_attribute(attribute)
+        except Exception as exc:
+            last_exc = exc
+    try:
+        return WebDriverWait(driver, timeout, ignored_exceptions=ignored_exceptions).until(try_get_attribute)
+    except TimeoutException:
+        raise last_exc
 
 
 def find_and_click(driver: WebDriver, css_selector: str, *, timeout: int = 10,  index: int = 0, ignored_exceptions: Iterable[Exception] = (ElementClickInterceptedException, ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
-    def try_click(driver: WebDriver):
-        if index == 0:
-            e = driver.find_element(By.CSS_SELECTOR, css_selector)
-            e.click()
-            return True
-        es = driver.find_elements(By.CSS_SELECTOR, css_selector)
-        es[index].click()
-        return True
+    """ Replaces the TimeoutException with the last Exception raised by trying to find element(s) and click. """
+    last_exc = None
 
-    WebDriverWait(driver, timeout,
-                  ignored_exceptions=ignored_exceptions).until(try_click)
+    def try_click(driver: WebDriver):
+        nonlocal last_exc
+        try:
+            if index == 0:
+                e = driver.find_element(By.CSS_SELECTOR, css_selector)
+                e.click()
+                return True
+            es = driver.find_elements(By.CSS_SELECTOR, css_selector)
+            es[index].click()
+            return True
+        except Exception as exc:
+            last_exc = exc
+    try:
+        WebDriverWait(driver, timeout,
+                      ignored_exceptions=ignored_exceptions).until(try_click)
+    except TimeoutException:
+        raise last_exc
 
 
 def find_and_send_keys(driver: WebDriver, css_selector: str, *keys, timeout: int = 10, index: int = 0,  ignored_exceptions: Iterable[Exception] = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
-    def try_send_keys(driver: WebDriver):
-        if index == 0:
-            e = driver.find_element(By.CSS_SELECTOR, css_selector)
-            e.send_keys(*keys)
-            return True
-        es = driver.find_elements(By.CSS_SELECTOR, css_selector)
-        es[index].send_keys(*keys)
-        return True
+    """ Replaces the TimeoutException with the last Exception raised by trying to find element(s) and send keys. """
+    last_exc = None
 
-    WebDriverWait(driver, timeout, ignored_exceptions=ignored_exceptions).until(
-        try_send_keys)
+    def try_send_keys(driver: WebDriver):
+        nonlocal last_exc
+        try:
+            if index == 0:
+                e = driver.find_element(By.CSS_SELECTOR, css_selector)
+                e.send_keys(*keys)
+                return True
+            es = driver.find_elements(By.CSS_SELECTOR, css_selector)
+            es[index].send_keys(*keys)
+            return True
+        except Exception as exc:
+            last_exc = exc
+    try:
+        WebDriverWait(driver, timeout, ignored_exceptions=ignored_exceptions).until(
+            try_send_keys)
+    except TimeoutException:
+        raise last_exc
 
 
 def scroll_all_elements(driver: WebDriver, css_selector: str, *, interactable_selector: str = None, last_selector: str = None, wait=1) -> list[WebElement]:
