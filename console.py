@@ -237,8 +237,29 @@ class Cmd(cmd.Cmd):
                             cmd_func = getattr(self, 'do_' + cmd)
                             print(inspect.signature(cmd_func),
                                   file=self.stdout)
-                            doc = cmd_func.__doc__
+                            doc: str = cmd_func.__doc__
                             if doc:
+                                # strip leading whitespace based on the second non-whitespace line
+                                lines = doc.split("\n")
+                                found_first_non_white = False
+                                l2 = None
+                                for l in lines:
+                                    if l.strip():
+                                        # not all whitespace
+                                        if not found_first_non_white:
+                                            found_first_non_white = True
+                                        else:
+                                            # found the second non-whitespace line
+                                            l2 = l
+                                            break
+                                if l2:
+                                    match = re.match("\s*", l2)
+                                    whitespace_prefix = match.string[:match.end(
+                                    )]
+                                    lines = [l.removeprefix(
+                                        whitespace_prefix)for l in lines]
+                                    doc = "\n".join(lines)
+
                                 print(doc, file=self.stdout)
                                 continue
                         except AttributeError:
