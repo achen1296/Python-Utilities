@@ -239,6 +239,8 @@ class Cmd(cmd.Cmd):
                                   file=self.stdout)
                             doc: str = cmd_func.__doc__
                             if doc:
+                                print()
+
                                 # strip leading whitespace based on the second non-whitespace line
                                 lines = doc.split("\n")
                                 found_first_non_white = False
