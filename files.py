@@ -729,16 +729,21 @@ if WINDOWS:
             """ Redirect other attributes to the internal opened file. """
             return getattr(self.fd, name)
 
-    def open_locked(file: Path, *args, **kwargs):
+    def open_locked(file: Path, *args, **kwargs) -> LockFile:
         """ Only prevents multiple open instances if this function is used every time a given file is opened instead of only the builtin open. Still prevents external accesses (e.g. via the file explorer). """
         return LockFile(file, *args, **kwargs)
 
-    def absolute_with_env(path: os.PathLike):
+    def absolute_with_env(path: os.PathLike) -> Path:
         path: str = str(path)
         path = winreg.ExpandEnvironmentStrings(path)
         return Path(path).absolute()
 
-    def resolve_with_env(path: os.PathLike):
+    def resolve_with_env(path: os.PathLike) -> Path:
         path: str = str(path)
         path = winreg.ExpandEnvironmentStrings(path)
         return Path(path).resolve()
+
+    def with_env(path: os.PathLike) -> Path:
+        path: str = str(path)
+        path = winreg.ExpandEnvironmentStrings(path)
+        return Path(path)
