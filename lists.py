@@ -7,9 +7,9 @@ import files
 
 
 def read_file_lists(filename: os.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#", encoding="utf8", empty_on_not_exist: bool = False) -> Iterable[str]:
-    """Read a file as a list of lists. Use comment="" for no comments."""
+    """Read a file as a list of lists. Use comment=None for no comments."""
     for list_str in files.re_split(filename, list_separator, encoding=encoding, empty_on_not_exist=empty_on_not_exist):
-        if comment != "" and re.match(comment, list_str):
+        if comment and re.match(comment, list_str):
             continue
         yield re.split(list_item_separator, list_str)
 
@@ -29,9 +29,9 @@ def write_file_lists(filename: os.PathLike, lists: Iterable[Iterable], *, list_i
 
 
 def read_file_list(filename: os.PathLike, *, separator: str = "\s*\n\s*", comment: str = "\s*#", **re_split_kwargs) -> Iterable[str]:
-    """Read a file as a list. Use comment="" for no comments."""
+    """Read a file as a list. Use comment=None for no comments."""
     for item in files.re_split(filename, separator, **re_split_kwargs):
-        if comment != "" and re.match(comment, item):
+        if comment and re.match(comment, item):
             continue
         yield item
 
