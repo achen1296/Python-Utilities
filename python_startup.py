@@ -39,3 +39,4 @@ Poly = Polynomial
 if platform.system() == "Windows":
     import clipboard
     import environment
+    import windows_settings
