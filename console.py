@@ -130,6 +130,7 @@ class Cmd(cmd.Cmd):
             def loop_body():
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
+                    print(f">> {line}")
                 else:
                     if self.use_rawinput:
                         try:
