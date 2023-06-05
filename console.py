@@ -130,7 +130,13 @@ class Cmd(cmd.Cmd):
             def loop_body():
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
-                    print(f">> {line}")
+                    if isinstance(line, list):
+                        whitespace = '\s+'
+                        joined_line = ' '.join(
+                            (s if not re.search(whitespace, s) else f'"{s}"' for s in line))
+                        print(f">> {joined_line}")
+                    else:
+                        print(f">> {line}")
                 else:
                     if self.use_rawinput:
                         try:
