@@ -46,14 +46,15 @@ def change_theme(theme: str):
         kill_settings()
 
 
-def set_brightness(b: int):
+def set_brightness(b: float):
+    """ Argument should be float between 0.0 and 1.0 inclusive """
     print(f"Setting brightness to {b}")
     monitorian_exe = files.USER_PROFILE.joinpath("AppData", "Local",
                                                  "Microsoft", "WindowsApps", "Monitorian.exe")
     if not monitorian_exe.exists():
         monitorian_exe = files.PROGRAM_FILES_x86.joinpath(
             "Monitorian", "Monitorian.exe")
-    subprocess.run([monitorian_exe, "/set", "all", str(b)],
+    subprocess.run([monitorian_exe, "/set", "all", str(b*100)],
                    creationflags=subprocess.CREATE_NO_WINDOW)
 
 
@@ -62,10 +63,12 @@ NIRCMD = files.USER_PROFILE.joinpath(
 
 
 def set_volume(volume: float):
+    """ Argument should be float between 0.0 and 1.0 inclusive """
     subprocess.run([NIRCMD, "setsysvolume", str(volume * 65535)],
                    creationflags=subprocess.CREATE_NO_WINDOW)
 
 
 def set_system_sounds_volume(volume: float):
+    """ Argument should be float between 0.0 and 1.0 inclusive """
     subprocess.run([NIRCMD, "setappvolume", "systemsounds", str(volume)],
                    creationflags=subprocess.CREATE_NO_WINDOW)
