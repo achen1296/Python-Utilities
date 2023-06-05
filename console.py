@@ -218,11 +218,11 @@ class Cmd(cmd.Cmd):
                 # pass the first split argument to default
                 args = [cmd] + args
         self.lastcmd = line
-        try:
-            return func(*args)
-        except TypeError:
-            # for compatibility with superclass
-            return func(" ".join(args))
+        # try:
+        return func(*args)
+        # except TypeError:
+        # for compatibility with superclass
+        # return func(" ".join(args))
 
     def _script_path(self, script_name):
         return self.scripts_dir.joinpath(script_name).with_suffix(self.script_suffix)
