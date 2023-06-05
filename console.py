@@ -186,7 +186,7 @@ class Cmd(cmd.Cmd):
         """ Interpret the argument as though it had been typed in response
         to the prompt.
 
-        Overridden and modified from the superclass to split arguments into lists of strings by whitespace and catch and print Python Exceptions and keyboard interrupts. Also accepts pre-split arguments (such as from script enequeueing).
+        Overridden and modified from the superclass to split arguments into lists of strings by whitespace and catch and print Python Exceptions and keyboard interrupts. Also accepts pre-split arguments (such as from script enqueueing) analogous to subprocess.run.
         """
         if isinstance(line, str):
             line = line.strip()
@@ -215,6 +215,7 @@ class Cmd(cmd.Cmd):
         try:
             return func(*args)
         except TypeError:
+            # for compatibility with superclass
             return func(" ".join(args))
 
     def _script_path(self, script_name):
@@ -347,10 +348,10 @@ class Cmd(cmd.Cmd):
                 for cmd in strings.argument_split(line, self.command_sep, split_compounds=False):
                     cmd_args = strings.argument_split(cmd)
                     new_cmd_args = []
-                    for la in cmd_args:
-                        if (match := re.match("^\$(\d+)(-?)$", la)):
+                    for a in cmd_args:
+                        if (match := re.match("^\$(\d+)(-?)$", a)):
                             index = int(match.group(1))
-                            # empty or not
+                            # if - given after the number
                             if match.group(2):
                                 # capture all arguments after the given index
                                 new_cmd_args += args[index:]
@@ -360,7 +361,7 @@ class Cmd(cmd.Cmd):
                                     new_cmd_args.append(args[index])
                         else:
                             # no replacement
-                            new_cmd_args.append(la)
+                            new_cmd_args.append(a)
                     cmds.append(new_cmd_args)
 
         # add new commands onto the FRONT of the queue so that things will execute in the expected order in case nested
