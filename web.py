@@ -141,10 +141,10 @@ def chrome_driver(profile: str) -> webdriver.Chrome:
     options.add_argument(
         f"user-data-dir={os.environ['LOCALAPPDATA']}\\Google\\Chrome\\User Data")
     options.add_argument(f"profile-directory={profile}")
-    # discard log output
-    service = ChromeService(log_path="NUL:")
+    # disable (almost all) logs
+    options.add_argument("--log-level=3")
     driver = webdriver.Chrome(
-        executable_path=f"{os.environ['HOMEPATH']}\\Programs\\chromedriver.exe", options=options, service=service)
+        executable_path=f"{os.environ['HOMEPATH']}\\Programs\\chromedriver.exe", options=options)
     driver.implicitly_wait(2)
     driver.set_page_load_timeout(15)
     return driver
