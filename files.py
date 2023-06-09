@@ -186,10 +186,11 @@ def walk(root: os.PathLike = ".", *,
                 # check for symlinks again to make broken symlinks to fall through to the file action
                 if not_exist_action is not None and (not_exist_result := not_exist_action(root, depth)) is not None:
                     yield from not_exist_result
-            elif root.is_file():
+            elif root.is_file() or (root.is_symlink() and not root.exists()):
                 if file_action is not None and (file_result := file_action(root, depth)) is not None:
                     yield from file_result
             else:
+                # assert root.is_dir()
                 if dir_action is not None and (dir_result := dir_action(root, depth)) is not None:
                     yield from dir_result
                 if skip_dir is None or not skip_dir(root, depth):
