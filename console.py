@@ -321,10 +321,10 @@ class Cmd(cmd.Cmd):
             self.print_topics(self.scripts_header,
                               list(scripts), None, terminal_width)
 
-    def execute_script(self, script: os.PathLike, *args):
+    def execute_script(self, script: os.PathLike, *script_args):
         """ Used before the default method if the class was instantiated with a scripts_dir.
 
-        Searches for text files in the scripts_dir with a name matching the first argument and the right suffix. The remaining arguments are used to replace $0, $1, etc. in each command in the script *only* if they appear as the entire argument. If not enough arguments are given, the extras are completely dropped. Can also use $0-, $1-, etc. for all arguments including and after, so e.g. $0- captures all of the arguments. The arguments will not actually be packaged back into a single input string, so they will not be split up again, meaning it is safe to have arguments with spaces.
+        Searches for text files in the scripts_dir with a name matching the first argument and the right suffix. The remaining arguments are used to replace $0, $1, etc. in each command in the script *only* if they appear as the entire argument. If not enough arguments are given, the extras are completely dropped. Can also use $x-y etc. for all arguments in the inclusive range x to y (omit either to capture all arguments before/after a certain point), so e.g. $- or $0- captures all of the arguments. The arguments will not actually be packaged back into a single input string, so they will not be split up again, meaning it is safe to have arguments with spaces.
 
         For example, using the default arguments, if the current directory contains a file named "example.script" which contains:
 
@@ -336,11 +336,19 @@ class Cmd(cmd.Cmd):
 
         ``example 5 quit``
 
-        into the console will sleep for 5 seconds, then print out the help text for ``quit`` ($3 gets dropped). """
+        into the console will sleep for 5 seconds, then print out the help text for ``quit`` ($3 gets dropped). 
+
+        If a range argument capture is used, it will expand into as many arguments as were captured! If it is specified inside an argument along with exact text, that exact text will also be multiplied. This can happen multiple times as well. For example, if "example.script" contains:
+
+        ``echo $-$-``
+
+        (where the echo action reproduces its arguments) and you call ``example 1 2 3``, the output will be
+        ``11 12 13 21 22 23 31 32 33``
+        """
 
         cmds = []
 
-        len_args = len(args)
+        len_script_args = len(script_args)
 
         with open(script) as f:
             for line in f:
@@ -353,22 +361,29 @@ class Cmd(cmd.Cmd):
                     continue
                 for cmd in strings.argument_split(line, self.command_sep, split_compounds=False):
                     cmd_args = strings.argument_split(cmd)
-                    new_cmd_args = []
-                    for a in cmd_args:
-                        if (match := re.match("^\$(\d+)(-?)$", a)):
-                            index = int(match.group(1))
-                            # if - given after the number
-                            if match.group(2):
-                                # capture all arguments after the given index
-                                new_cmd_args += args[index:]
+                    i = 0
+                    while i < len(cmd_args):
+                        a = cmd_args[i]
+                        while match := re.search("(\$(\d+)?-(\d+)?)|\$(\d+)", a):
+                            if match.group(1):
+                                # range
+                                if match.group(2):
+                                    start = int(match.group(2))
+                                else:
+                                    start = 0
+                                if match.group(3):
+                                    end = int(match.group(3))
+                                else:
+                                    end = len_script_args
                             else:
-                                # only add the specific argument, if it was given
-                                if len_args > index:
-                                    new_cmd_args.append(args[index])
-                        else:
-                            # no replacement
-                            new_cmd_args.append(a)
-                    cmds.append(new_cmd_args)
+                                # assert match.group(4)
+                                start = int(match.group(4))
+                                end = start+1
+                            cmd_args[i:i+1] = [a[:match.start()] + script_args[j] + a[match.end():]
+                                               for j in range(start, end)]
+                            a = cmd_args[i]
+                        i += 1
+                    cmds.append(cmd_args)
 
         # add new commands onto the FRONT of the queue so that things will execute in the expected order in case nested
         self.cmdqueue = cmds + self.cmdqueue
@@ -984,7 +999,9 @@ def test():
             with open("example.script", "w") as f:
                 f.write("# example script doc comment\n")
                 f.write("echo $0 $1 $2\n")
-                f.write("echo $0- last\n")
+                f.write("echo $0- a\n")
+                f.write("echo $-$-\n")
+                f.write("echo $-$1-$2-\n")
 
     CmdTest().cmdloop()
 
