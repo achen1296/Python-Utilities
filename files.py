@@ -159,7 +159,7 @@ def absolutize_link(link: os.PathLike):
         link.symlink_to(new_target)
 
 
-def walk(root: os.PathLike, *,
+def walk(root: os.PathLike = ".", *,
          file_action: Callable[[Path, int], Optional[Iterable]] = None,
          skip_dir: Callable[[Path, int], bool] = None,
          dir_action: Callable[[Path, int], Optional[Iterable]] = None,
