@@ -53,20 +53,19 @@ def read_file_dict(filename: os.PathLike, *, encoding="utf8", entry_separator="\
     return read_iterable_dict(files.re_split(filename, entry_separator, encoding=encoding, empty_on_not_exist=empty_on_not_exist), **kwargs)
 
 
-def write_iterable_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|", sort_keys: Callable = str, sort_value_lists: Callable = False) -> list[str]:
+def write_iterable_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|", sort_keys: Callable = str, sort_value_lists: Callable = None) -> list[str]:
     """ Default separators > and |, same as reading dictionaries. 
 
     Keys and values can be of any type and are converted to strings using str(). For iterable values (but not strings), they are converted one at a time with the value list separator inserted. 
 
     Keys with None, empty string, or empty iterable values do not get the k/v separator. 
 
-    Keys and iterable values are sorted using the keys given by sort_keys and sort_value_lists respectively, which by default is str() for keys and False (no sorting) for value lists. Pass None for the default sort behavior, or False to skip sorting. """
+    Keys and iterable values are sorted using the keys given by sort_key and sort_value_lists respectively. """
     l = []
-    if sort_keys is False:
-        # must be exactly the value False and not any Falsy value, this is not the same as "not sort_keys"
-        keys = dictionary
-    else:
+    if sort_keys:
         keys = sorted(dictionary, key=sort_keys)
+    else:
+        keys = dictionary
     for key in keys:
         val = dictionary[key]
         try:
@@ -78,7 +77,7 @@ def write_iterable_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, key
             pass
         string = f"{key}{key_value_separator}"
         if isinstance(val, Iterable) and not isinstance(val, str):
-            if sort_value_lists is not False:
+            if sort_value_lists:
                 val = sorted(val, key=sort_value_lists)
             string += value_list_separator.join((str(v) for v in val))
         else:
