@@ -673,14 +673,14 @@ def text_search(root: os.PathLike, query: str) -> list[Path]:
 
 
 def search(root: os.PathLike, name_query: str) -> list[Path]:
-    def file_action(p: Path, i: int):
+    def name(p: Path, i: int):
         if name_query.lower() in p.name.lower():
             yield p
 
     def error_action(p: Path, i: int, e: Exception):
         print("error on " + str(p))
 
-    return walk(root, file_action=file_action, error_action=error_action)
+    return walk(root, file_action=name, dir_action=name, error_action=error_action)
 
 
 def find_ascii(file: os.PathLike, length_threshold: int) -> Iterable[tuple[int, bytearray]]:
