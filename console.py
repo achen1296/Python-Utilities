@@ -351,6 +351,17 @@ class Cmd(cmd.Cmd):
         len_script_args = len(script_args)
 
         with open(script) as f:
+            max_arg_index = -1
+            for line in f:
+                # only need to check if start/single indices are in range
+                max_arg_index = max([max_arg_index] + [int(g)
+                                    for g in re.findall("\$(\d+)", line)])
+
+        if max_arg_index >= len_script_args:
+            raise IndexError(
+                f"Script requires at least {max_arg_index+1} arguments, but only given {len_script_args}")
+
+        with open(script) as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -364,23 +375,24 @@ class Cmd(cmd.Cmd):
                     i = 0
                     while i < len(cmd_args):
                         a = cmd_args[i]
-                        while match := re.search("(\$(\d+)?-(\d+)?)|\$(\d+)", a):
-                            if match.group(1):
+                        while group := re.search("(\$(\d+)?-(\d+)?)|\$(\d+)", a):
+                            if group.group(1):
                                 # range
-                                if match.group(2):
-                                    start = int(match.group(2))
+                                if group.group(2):
+                                    start = int(group.group(2))
                                 else:
                                     start = 0
-                                if match.group(3):
-                                    end = int(match.group(3))
+                                if group.group(3):
+                                    end = int(group.group(3))
                                 else:
                                     end = len_script_args
                             else:
                                 # assert match.group(4)
-                                start = int(match.group(4))
+                                start = int(group.group(4))
                                 end = start+1
-                            cmd_args[i:i+1] = [a[:match.start()] + script_args[j] + a[match.end():]
+                            cmd_args[i:i+1] = [a[:group.start()] + script_args[j] + a[group.end():]
                                                for j in range(start, end)]
+
                             a = cmd_args[i]
                         i += 1
                     cmds.append(cmd_args)
