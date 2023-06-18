@@ -4,6 +4,7 @@ import os
 import platform
 import re
 import shutil
+import subprocess
 import time
 import traceback
 import zipfile
@@ -85,14 +86,16 @@ class LinkException(Exception):
     pass
 
 
-def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True):
+def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True, relativize=False, output=False):
     """ Creates a link at the path dst that targets the path at src.
 
     Automatically determines what kind of link to create based on whether or not src is a file or folder (raises and exception if src does not exist).
 
     If making a symbolic link and the source is a symbolic link, it is copied instead of linking to the existing link.
 
-    If src is a relative path, it is absolutized for a non-symbolic link. For a symbolic link it is interpreted relative to the parent of dst (mimicking the behavior of the link itself) to check for existence and is applied to the resulting link as-is. """
+    If src is a relative path, it is absolutized for a non-symbolic link. For a symbolic link it is interpreted relative to the parent of dst (mimicking the behavior of the link itself) to check for existence and is applied to the resulting link as-is. 
+
+    On the other hand, if relativize = True is specified, an absolute path will be relativized for symbolic links. """
 
     # catch file existence problems early to distinguish them from permission problems
     src = Path(src)
@@ -100,25 +103,34 @@ def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True):
 
     if symbolic:
         if not src.is_absolute():
-            rel = dst.parent.joinpath(src)
-            if not rel.exists():
+            rel_src = dst.parent.joinpath(src)
+            if not rel_src.exists():
                 raise LinkException(
-                    f"File <{rel}> does not exist to link to (absolute path <{rel.resolve()}>)")
+                    f"File <{rel_src}> does not exist to link to (absolute path <{rel_src.resolve()}>)")
         else:
             if not src.exists():
                 raise LinkException(f"File <{src}> does not exist to link to")
-            rel = src
+            rel_src = src
+            if relativize:
+                src = os.path.relpath(
+                    str(src).removeprefix("\\\\?\\"), dst.parent)
         # if src is already a symlink, just copy it instead of linking to the existing link
-        if rel.is_symlink():
+        if rel_src.is_symlink():
             if symbolic:
-                shutil.copy2(rel, dst, follow_symlinks=False)
+                shutil.copy2(rel_src, dst, follow_symlinks=False)
+                if output:
+                    print(f"Copied symbolic link <{rel_src}> to <{dst}>")
             else:
                 raise LinkException(
-                    f"{rel} is a symlink and a non-symbolic link was requested.")
-        if rel.is_file():
+                    f"{rel_src} is a symlink and a non-symbolic link was requested.")
+        if rel_src.is_file():
             dst.symlink_to(src, target_is_directory=False)
+            if output:
+                print(f"Created symbolic link to file <{src}> at <{dst}>")
         else:
             dst.symlink_to(src, target_is_directory=True)
+            if output:
+                print(f"Created symbolic link to directory <{src}> at <{dst}>")
     else:
         if not src.exists():
             raise LinkException(f"File <{src}> does not exist to link to")
@@ -126,11 +138,14 @@ def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True):
             raise LinkException(f"File <{dst}> already exists")
         if src.is_file():
             dst.hardlink_to(src)
+            if output:
+                print(f"Created hard link to file <{src}> at <{dst}>")
         else:
             command = f"mklink /j \"{dst}\" \"{src}\""
-            result = os.system(command)
-            if result != 0:
-                raise OSError(f"{command} resulted in an error")
+            # capture output to hide it from console window, respecting output option
+            subprocess.run(command, shell=True, capture_output=True)
+            if output:
+                print(f"Created junction to directory <{src}> at <{dst}>")
 
 
 def relativize_link(link: os.PathLike):
