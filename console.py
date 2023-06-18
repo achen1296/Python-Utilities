@@ -353,6 +353,12 @@ class Cmd(cmd.Cmd):
         with open(script) as f:
             max_arg_index = -1
             for line in f:
+                if not line:
+                    # empty line
+                    continue
+                if re.match(self.comment, line):
+                    # comment
+                    continue
                 # only need to check if start/single indices are in range
                 max_arg_index = max([max_arg_index] + [int(g)
                                     for g in re.findall("\$(\d+)", line)])
