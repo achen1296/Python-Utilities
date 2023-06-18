@@ -556,10 +556,19 @@ GB = GIGABYTE = 1E9
 TB = TERABYTE = 1E12
 
 
-def size(path: os.PathLike, unit: float = BYTE):
-    """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively. The result is divided by the argument to unit. For convenience, constants for bytes, KB, MB, GB, and TB have been specified. Does not follow symlinks, their size is added instead."""
+def size(path: os.PathLike, unit: float = BYTE, follow_symlinks: bool = False):
+    """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively. The result is divided by the argument to unit. For convenience, constants for bytes, KB, MB, GB, and TB have been specified. """
     def size_recursive(path: Path):
-        if path.is_symlink() or path.is_file():
+        if path.is_symlink():
+            if follow_symlinks:
+                target = path.readlink()
+                if target.is_absolute():
+                    return size_recursive(target)
+                else:
+                    return size_recursive(path.parent.joinpath(target))
+            else:
+                return os.stat(path).st_size
+        elif path.is_file():
             return os.stat(path).st_size
         else:
             return sum(
