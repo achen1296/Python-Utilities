@@ -16,104 +16,142 @@ def nonempty_intersection(s1: set, s2: set) -> bool:
     return False
 
 
-class Partition:
-    """For constructing representations of partitions/equivalence relations. If you have a Partition p, p[key] returns the cell containing the key. Objects can also be removed this way using the del keyword."""
+class DisjoinSetException(Exception):
+    pass
 
-    def __init__(self, initial_sets=None):
-        self._internal_dict: dict[Hashable, set] = {}
-        if initial_sets is not None:
-            self.merge(initial_sets)
 
-    def merge(self, other_partition: Iterable[Iterable[Hashable]]):
-        """ The resulting changes from this method may not match the argument if it is not really a Partition. Of course, the state of this Partition also influences the result. """
-        for s in other_partition:
-            self.join(*s)
+class DisjointSets:
 
-    def join(self, obj1: Hashable, /, *objs: Hashable):
-        """ Joins the cells containing each object. Objects not already in any cell are simply added. """
-        self.__join_two(obj1, obj1)
-        for o in objs:
-            self.__join_two(obj1, o)
+    def __init__(self):
+        # maps a subset element to its parent
+        self._parent: dict[Hashable, Hashable] = {}
+        # maps a subset representative to the subset size
+        self._subset_size: dict[Hashable, int] = {}
 
-    def __join_two(self, obj1: Hashable, obj2: Hashable):
-        if obj1 in self._internal_dict:
-            if obj2 in self._internal_dict:
-                self.__join_sets(obj1, obj2)
-            else:
-                self.__add_to_set(obj1, obj2)
-        else:
-            if obj2 in self._internal_dict:
-                self.__add_to_set(obj2, obj1)
-            else:
-                self.__new_set(obj1, obj2)
+    def new_subset(self, e1: Hashable, *es: Hashable):
+        """ Create a new subset. """
+        if e1 in self._parent:
+            raise DisjoinSetException(f"{e1} already in a subset")
+        for e in es:
+            if e in self._parent:
+                raise DisjoinSetException(f"{e} already in a subset")
+        self._parent[e1] = e1
+        for e in es:
+            self._parent[e] = e1
+        self._subset_size[e] = 1 + len(es)
 
-    def joined(self, obj1: Hashable, /, *objs: Hashable):
-        """ Checks if the objects are all in the same cell. Specifying only one argument just checks for membership. """
-        if not obj1 in self:
-            return False
-        for o in objs:
-            if not o in self._internal_dict[obj1]:
-                return False
-        return True
+    def representative(self, e: Hashable) -> Hashable:
+        """ Find the representative element for e. Performs path compression. """
+        if e not in self._parent:
+            # placing this check here suffices for all other methods because they all query representatives
+            raise DisjoinSetException(f"{e} not in a subset")
 
-    def __eq__(self, other_partition: Iterable[Iterable[Hashable]]) -> bool:
-        for s in other_partition:
-            first = None
-            for item in s:
-                if first is None:
-                    first = item
-                elif not self.joined(first, item):
-                    return False
-        return True
+        p = self._parent[e]
+        if e == p:
+            return e
 
-    def __len__(self):
-        return len(self._internal_dict)
+        r = self.representative(p)
+        self._parent[e] = r
+        return r
 
-    def __getitem__(self, obj: Hashable) -> set:
-        return self._internal_dict[obj]
+    def same_subset(self, e1: Hashable, e2: Hashable, *es: Hashable):
+        r = self.representative(e1)
+        return r == self.representative(e2) and all(r == self.representative(e) for e in es)
 
-    def __delitem__(self, obj: Hashable):
-        self._internal_dict[obj].remove(obj)
-        del self._internal_dict[obj]
+    def subset_size(self, e: Hashable):
+        return self._subset_size[self.representative(e)]
 
-    def __contains__(self, obj: Hashable) -> bool:
-        return obj in self._internal_dict
+    def union(self, e1: Hashable, e2: Hashable, *es: Hashable):
+        """ Combine the subsets containing the elements. Uses weighted union. """
+        self._union_two(e1, e2)
+        for e in es:
+            self._union_two(e1, e)
 
-    def __iter__(self):
-        found = set()
-        for key in self._internal_dict:
-            if key in found:
-                continue
-            found |= self._internal_dict[key]
-            yield self._internal_dict[key]
-
-    def __new_set(self, obj1: Hashable, obj2: Hashable) -> None:
-        new_set = {obj1, obj2}
-        self._internal_dict[obj1] = new_set
-        self._internal_dict[obj2] = new_set
-
-    def __add_to_set(self, target: Hashable, new: Hashable) -> None:
-        target_set = self._internal_dict[target]
-        target_set.add(new)
-        self._internal_dict[new] = target_set
-
-    def __join_sets(self, obj1: Hashable, obj2: Hashable) -> None:
-        if self.joined(obj1, obj2):
+    def _union_two(self, e1: Hashable, e2: Hashable):
+        """ Combine the subsets containing e1 and e2 (does nothing if already in the same one). Uses weighted union (if the subsets are the same size, e1's representative is the new overall representative). """
+        r1 = self.representative(e1)
+        r2 = self.representative(e2)
+        if r1 == r2:
             return
 
-        set1 = self._internal_dict[obj1]
-        set2 = self._internal_dict[obj2]
-
-        if len(set1) < len(set2):
-            small_set = set1
-            large_set = set2
+        s1 = self._subset_size[r1]
+        s2 = self._subset_size[r2]
+        if s1 < s2:
+            self._parent[r1] = r2
+            self._subset_size[r2] = s1+s2
+            del self._subset_size[r1]
         else:
-            small_set = set2
-            large_set = set1
+            self._parent[r2] = r1
+            self._subset_size[r1] = s1+s2
+            del self._subset_size[r2]
 
-        large_set |= small_set
-        for o in small_set:
-            self._internal_dict[o] = large_set
+    def __len__(self):
+        return len(self._parent)
 
-    def __repr__(self):
-        return "Partition([" + ",".join([str(s) for s in self]) + "])"
+    def __contains__(self, e: Hashable):
+        return e in self._parent
+
+    def __getitem__(self, e: Hashable):
+        """ Expensive operation! Get the subset containing e. """
+        r = self.representative(e)
+        subset = set()
+        for e2 in self._parent:
+            if self.representative(e2) == r:
+                subset.add(e2)
+        return subset
+
+    def __delitem__(self, e: Hashable):
+        """ Expensive operation! Remove e. """
+        # need to scan over all elements anyway to find those with e as parent
+        subset = self[e]
+        subset.remove(e)
+        r = self.representative(e)
+        del self._parent[e]
+        del self._subset_size[r]
+
+        r = None
+        for e in subset:
+            if not r:
+                r = e
+            self._parent[e] = r
+        self._subset_size[r] = len(subset)
+
+    def __iter__(self):
+        return self._parent
+
+    def subsets(self) -> Iterable[set]:
+        """ Expensive operation! Return iterable of all subsets. """
+        subsets: dict[Hashable, set] = {}
+        for e in self._parent:
+            r = self.representative(e)
+            if r not in subsets:
+                subsets[r] = set()
+            subsets[r].add(e)
+        return subsets.values()
+
+    def __eq__(self, other: "DisjointSets"):
+        """ Expensive operation! Compares subset contents only, not tree structure. """
+
+        if not isinstance(other, DisjointSets):
+            return False
+
+        for e in self:
+            if not e in other:
+                return False
+
+        for e in other:
+            if not e in self:
+                return False
+
+        corresponding_rep = {}
+        for e in self:
+            self_r = self.representative(e)
+            other_r = other.representative(e)
+
+            if self_r not in corresponding_rep:
+                corresponding_rep[self_r] = other_r
+            else:
+                if other_r != corresponding_rep:
+                    return False
+
+        return True
