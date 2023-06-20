@@ -344,28 +344,13 @@ class Cmd(cmd.Cmd):
 
         (where the echo action reproduces its arguments) and you call ``example 1 2 3``, the output will be
         ``11 12 13 21 22 23 31 32 33``
+
+        On the other hand, note that if the arguments in the specified range are not given at all, then the arguments will simply disappear. 
         """
 
         cmds = []
 
         len_script_args = len(script_args)
-
-        with open(script) as f:
-            max_arg_index = -1
-            for line in f:
-                if not line:
-                    # empty line
-                    continue
-                if re.match(self.comment, line):
-                    # comment
-                    continue
-                # only need to check if start/single indices are in range
-                max_arg_index = max([max_arg_index] + [int(g)
-                                    for g in re.findall("\$(\d+)", line)])
-
-        if max_arg_index >= len_script_args:
-            raise IndexError(
-                f"Script requires at least {max_arg_index+1} arguments, but only given {len_script_args}")
 
         with open(script) as f:
             for line in f:
@@ -380,8 +365,8 @@ class Cmd(cmd.Cmd):
                     cmd_args = strings.argument_split(cmd)
                     i = 0
                     while i < len(cmd_args):
-                        a = cmd_args[i]
-                        while group := re.search("(\$(\d+)?-(\d+)?)|\$(\d+)", a):
+                        ca = cmd_args[i]
+                        while group := re.search("(\$(\d+)?-(\d+)?)|\$(\d+)", ca):
                             if group.group(1):
                                 # range
                                 if group.group(2):
@@ -396,10 +381,12 @@ class Cmd(cmd.Cmd):
                                 # assert match.group(4)
                                 start = int(group.group(4))
                                 end = start+1
-                            cmd_args[i:i+1] = [a[:group.start()] + script_args[j] + a[group.end():]
-                                               for j in range(start, end)]
-
-                            a = cmd_args[i]
+                            cmd_args[i:i+1] = [ca[:group.start()] + sa + ca[group.end():] for sa in
+                                               script_args[start:end]]
+                            if i >= len(cmd_args):
+                                # last arg was deleted
+                                break
+                            ca = cmd_args[i]
                         i += 1
                     cmds.append(cmd_args)
 
