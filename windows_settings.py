@@ -1,3 +1,4 @@
+import math
 import os
 import re
 import subprocess
@@ -46,15 +47,26 @@ def change_theme(theme: str):
         kill_settings()
 
 
+MONITORIAN = files.USER_PROFILE.joinpath(
+    "AppData", "Local", "Microsoft", "WindowsApps", "Monitorian.exe")
+
+if not MONITORIAN.exists():
+    MONITORIAN = files.PROGRAM_FILES_x86.joinpath(
+        "Monitorian", "Monitorian.exe")
+
+
 def set_brightness(b: float):
     """ Argument should be float between 0.0 and 1.0 inclusive """
     print(f"Setting brightness to {b}")
-    monitorian_exe = files.USER_PROFILE.joinpath("AppData", "Local",
-                                                 "Microsoft", "WindowsApps", "Monitorian.exe")
-    if not monitorian_exe.exists():
-        monitorian_exe = files.PROGRAM_FILES_x86.joinpath(
-            "Monitorian", "Monitorian.exe")
-    subprocess.run([monitorian_exe, "/set", "all", str(b*100)],
+    # Monitorian takes ints only
+    subprocess.run([MONITORIAN, "/set", "all", str(math.floor(b*100))],
+                   creationflags=subprocess.CREATE_NO_WINDOW)
+
+
+def set_contrast(c: float):
+    """ Argument should be float between 0.0 and 1.0 inclusive """
+    print(f"Setting contrast to {c}")
+    subprocess.run([MONITORIAN, "/set", "contrast", "all", str(math.floor(c*100))],
                    creationflags=subprocess.CREATE_NO_WINDOW)
 
 
