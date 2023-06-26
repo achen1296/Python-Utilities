@@ -150,7 +150,7 @@ def chrome_driver(profile: str) -> webdriver.Chrome:
     return driver
 
 
-def wait_element(driver: WebDriver, css_selector: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[Exception] = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)) -> WebElement:
+def wait_element(driver: WebDriver, css_selector: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[Exception] = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)) -> Union[WebElement, Iterable[WebElement]]:
     """ Replaces the TimeoutException with the last Exception raised by trying to find element(s). """
     last_exc = None
 
