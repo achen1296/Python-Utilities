@@ -302,14 +302,14 @@ class PageReader:
         return download_dict
 
     def to_open(self, driver: WebDriver) -> list[str]:
-        """Returns a list of URLs from the current page to open next. The default implemenation returns all a element href attributes."""
+        """Returns a list of URLs from the current page to open next. The default implementation returns all a element href attributes."""
         links: list[WebElement] = driver.find_elements(By.CSS_SELECTOR, "a")
         urls = [l.get_attribute("href") for l in links]
         return [u for u in urls if u is not None]
 
 
 class PageBrowser(console.Cmd):
-    """Uses a set of PageReaders to browse."""
+    """Uses a set of PageReaders for browsing under human control."""
 
     def __init__(self, driver: WebDriver, readers: Iterable[PageReader], *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -456,3 +456,9 @@ class PageBrowser(console.Cmd):
     def do_od(self, wait: int):
         self.open_and_download(int(wait))
     do_od.__doc__ = open_and_download.__doc__
+
+
+if __name__ == "__main__":
+    import console
+    console.traceback_wrap(PageBrowser(
+        firefox_driver(), [PageReader()]).cmdloop())
