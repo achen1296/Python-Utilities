@@ -9,8 +9,6 @@ import time
 import traceback
 import zipfile
 from pathlib import Path
-from shutil import copy2 as copy
-from shutil import move
 from typing import Callable, Iterable, Optional, Union
 from zipfile import ZipFile
 
@@ -34,6 +32,18 @@ def create_file(path: os.PathLike, binary=False, **open_kwargs):
     else:
         mode = "w"
     return open(path, mode, **open_kwargs)
+
+
+def copy(src: os.PathLike, dst: os.PathLike, *, output=False, **kwargs):
+    shutil.copy2(src, dst, **kwargs)
+    if output:
+        print(f"Copied <{src}> -> <{dst}>")
+
+
+def move(src: os.PathLike, dst: os.PathLike, *, output=False, **kwargs):
+    shutil.move(src, dst, **kwargs)
+    if output:
+        print(f"Moved <{src}> -> <{dst}>")
 
 
 def __file_action_by_dict(planned_actions: dict[os.PathLike, os.PathLike], action_callable: Callable[[os.PathLike, os.PathLike], None], action_past_tense: str, *, overwrite: bool = False, warn_if_exists: bool = True, output: bool = False, **action_kwargs) -> int:
