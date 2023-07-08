@@ -712,7 +712,7 @@ def text_search(query: str, root: os.PathLike = ".", output_errors=False) -> lis
     return walk(root, file_action=file_action, error_action=error_action)
 
 
-def search(name_query: str, root: os.PathLike = ".", output_errors = False) -> list[Path]:
+def search(name_query: str, root: os.PathLike = ".", output_errors=False) -> list[Path]:
     def name(p: Path, i: int):
         if name_query.lower() in p.name.lower():
             yield p
