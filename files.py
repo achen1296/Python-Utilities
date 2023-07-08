@@ -452,21 +452,6 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
     return count
 
 
-def _recursive_zip(files: Iterable[Path], zip: ZipFile, relative_root: Path, exclude: set[Path]):
-    for f in files:
-        skip = False
-        for e in exclude:
-            if re.fullmatch(e, str(f).replace("\\", "/")):
-                skip = True
-                break
-        if skip:
-            continue
-        if f.is_file():
-            zip.write(f, arcname=f.relative_to(relative_root))
-        else:
-            _recursive_zip(f.iterdir(), zip, relative_root, exclude)
-
-
 class ZipException(Exception):
     pass
 
@@ -475,6 +460,20 @@ def zip(zip_path: os.PathLike, files: Iterable[os.PathLike], relative_root: os.P
     """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience.
 
     exclude is a list of regular expressions applied to full file paths with backslahes replaced with forward slashes. Matching files are not zipped. If a directory matches, none of its contents are zipped. Respects whether the original arguments were relative or absolute for this purpose. """
+    def recursive_zip(files: Iterable[Path], zip: ZipFile, relative_root: Path, exclude: set[Path]):
+        for f in files:
+            skip = False
+            for e in exclude:
+                if re.fullmatch(e, str(f).replace("\\", "/")):
+                    skip = True
+                    break
+            if skip:
+                continue
+            if f.is_file():
+                zip.write(f, arcname=f.relative_to(relative_root))
+            else:
+                recursive_zip(f.iterdir(), zip, relative_root, exclude)
+
     zip_path = Path(zip_path).with_suffix(".zip")
     if relative_root is None:
         relative_root = zip_path.parent
@@ -494,7 +493,7 @@ def zip(zip_path: os.PathLike, files: Iterable[os.PathLike], relative_root: os.P
         mode = "a"
     # use LZMA like 7-zip
     with ZipFile(zip_path, mode, zipfile.ZIP_DEFLATED) as zip:
-        _recursive_zip(files, zip, relative_root, exclude)
+        recursive_zip(files, zip, relative_root, exclude)
 
 
 def unzip(zip_path: os.PathLike, files: Iterable[os.PathLike] = None,  output_dir: os.PathLike = None, *, overwrite: bool = False):
@@ -512,7 +511,7 @@ def unzip(zip_path: os.PathLike, files: Iterable[os.PathLike] = None,  output_di
         zip.extractall(output_dir, files)
 
 
-def long_names(root: os.PathLike) -> Iterable[Path]:
+def long_names(root: os.PathLike = ".") -> Iterable[Path]:
     """ Returns a set of files whose absolute paths are >= 260 characters, which means they are too long for some Windows applications. Not > 260 because, as the page linked below describes, Windows includes the NUL character at the end in the count, while Python strings do not.
 
     docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation """
@@ -566,7 +565,7 @@ GB = GIGABYTE = 1E9
 TB = TERABYTE = 1E12
 
 
-def size(path: os.PathLike, unit: float = BYTE, follow_symlinks: bool = False):
+def size(root: os.PathLike = ".", unit: float = BYTE, follow_symlinks: bool = False):
     """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively. The result is divided by the argument to unit. For convenience, constants for bytes, KB, MB, GB, and TB have been specified. """
     def size_recursive(path: Path):
         if path.is_symlink():
@@ -584,7 +583,7 @@ def size(path: os.PathLike, unit: float = BYTE, follow_symlinks: bool = False):
             return sum(
                 (size_recursive(f) for f in path.iterdir())
             )
-    return size_recursive(Path(path))/unit
+    return size_recursive(Path(root))/unit
 
 
 def format_size(size_bytes: int):
@@ -596,7 +595,7 @@ def format_size(size_bytes: int):
     return f"{size_bytes:.3f} {units[u]}"
 
 
-def count(path: os.PathLike):
+def count(root: os.PathLike = "."):
     """Counts files recursively. Does not follow symlinks, they are counted as one file instead."""
     def count_recursive(path: Path):
         if path.is_symlink() or path.is_file():
@@ -605,7 +604,7 @@ def count(path: os.PathLike):
             return sum(
                 (count_recursive(f) for f in path.iterdir())
             )
-    return count_recursive(Path(path))
+    return count_recursive(Path(root))
 
 
 def hash(file: os.PathLike, *, hash_function: str = "MD5", size: int = -1, hex: bool = True) -> int:
@@ -615,7 +614,7 @@ def hash(file: os.PathLike, *, hash_function: str = "MD5", size: int = -1, hex: 
         return h.hexdigest() if hex else h.digest()
 
 
-def is_empty(root: os.PathLike) -> bool:
+def is_empty(root: os.PathLike = ".") -> bool:
     """ Considers a directory empty if all of its subdirectories are empty. Always returns False for a file. """
     def is_empty_recursive(root: Path):
         if root.is_file():
@@ -629,7 +628,7 @@ def is_empty(root: os.PathLike) -> bool:
     return is_empty_recursive(root)
 
 
-def delete_empty(root: os.PathLike, output=True):
+def delete_empty(root: os.PathLike = ".", output=True):
     def delete_empty_recursive(root: Path, depth: int) -> bool:
         """ Returns whether the root argument was or became empty and was deleted """
         if root.is_file():
@@ -648,7 +647,7 @@ def delete_empty(root: os.PathLike, output=True):
     delete_empty_recursive(root, 0)
 
 
-def list_files(root: os.PathLike, *, skip_file: Callable[[os.PathLike, int], bool] = None, skip_dir: Callable[[os.PathLike, int], bool] = None) -> list[Path]:
+def list_files(root: os.PathLike = ".", *, skip_file: Callable[[os.PathLike, int], bool] = None, skip_dir: Callable[[os.PathLike, int], bool] = None) -> list[Path]:
 
     def file_action(p: Path, i: int):
         if skip_file is None or not skip_file(p, i):
@@ -676,7 +675,7 @@ def watch(file: os.PathLike, callback: Callable[[os.PathLike, time.struct_time],
         time.sleep(poll_time)
 
 
-def regex_rename(root: os.PathLike, find: Union[str, re.Pattern[str]], replace: Union[str, Callable[[Union[str, re.Match]], str]], *, output: bool = False):
+def regex_rename(find: Union[str, re.Pattern[str]], replace: Union[str, Callable[[Union[str, re.Match]], str]], root: os.PathLike = ".", *, output: bool = False):
     """ Only moves files. Returns the number of files moved. """
     find = re.compile(find)
     moves = {}
@@ -691,7 +690,7 @@ def regex_rename(root: os.PathLike, find: Union[str, re.Pattern[str]], replace: 
     return move_by_dict(moves, output=output)
 
 
-def text_search(root: os.PathLike, query: str) -> list[Path]:
+def text_search(query: str, root: os.PathLike = ".") -> list[Path]:
     """ Search for text in files. Intended to be used on the command line, and will not find text that spans in between lines. """
     def file_action(p: Path, i: int):
         with open(p, encoding="utf8") as f:
@@ -706,7 +705,7 @@ def text_search(root: os.PathLike, query: str) -> list[Path]:
     return walk(root, file_action=file_action, error_action=error_action)
 
 
-def search(root: os.PathLike, name_query: str) -> list[Path]:
+def search(name_query: str, root: os.PathLike = ".") -> list[Path]:
     def name(p: Path, i: int):
         if name_query.lower() in p.name.lower():
             yield p
