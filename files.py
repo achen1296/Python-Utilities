@@ -696,7 +696,7 @@ def regex_rename(find: Union[str, re.Pattern[str]], replace: Union[str, Callable
     return move_by_dict(moves, output=output)
 
 
-def text_search(query: str, root: os.PathLike = ".") -> list[Path]:
+def text_search(query: str, root: os.PathLike = ".", output_errors=False) -> list[Path]:
     """ Search for text in files. Intended to be used on the command line, and will not find text that spans in between lines. """
     def file_action(p: Path, i: int):
         with open(p, encoding="utf8") as f:
@@ -706,18 +706,20 @@ def text_search(query: str, root: os.PathLike = ".") -> list[Path]:
                     return
 
     def error_action(p: Path, i: int, e: Exception):
-        print("error on " + str(p))
+        if output_errors:
+            print("error on " + str(p))
 
     return walk(root, file_action=file_action, error_action=error_action)
 
 
-def search(name_query: str, root: os.PathLike = ".") -> list[Path]:
+def search(name_query: str, root: os.PathLike = ".", output_errors = False) -> list[Path]:
     def name(p: Path, i: int):
         if name_query.lower() in p.name.lower():
             yield p
 
     def error_action(p: Path, i: int, e: Exception):
-        print("error on " + str(p))
+        if output_errors:
+            print("error on " + str(p))
 
     return walk(root, file_action=name, dir_action=name, error_action=error_action)
 
