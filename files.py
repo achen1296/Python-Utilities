@@ -629,8 +629,12 @@ def is_empty(root: os.PathLike = ".") -> bool:
 
 
 def delete_empty(root: os.PathLike = ".", output=True):
+    """ Returns the number of empty directories deleted """
+    count = 0
+
     def delete_empty_recursive(root: Path, depth: int) -> bool:
         """ Returns whether the root argument was or became empty and was deleted """
+        nonlocal count
         if root.is_file():
             return False
         empty = True
@@ -641,10 +645,12 @@ def delete_empty(root: os.PathLike = ".", output=True):
             if output:
                 print("\t"*depth + str(root))
             root.rmdir()
+            count += 1
         return empty
 
     root = Path(root)
     delete_empty_recursive(root, 0)
+    return count
 
 
 def list_files(root: os.PathLike = ".", *, skip_file: Callable[[os.PathLike, int], bool] = None, skip_dir: Callable[[os.PathLike, int], bool] = None) -> list[Path]:
