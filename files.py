@@ -662,6 +662,23 @@ def list_files(root: os.PathLike = ".", *, skip_file: Callable[[os.PathLike, int
     return walk(root, file_action=file_action, skip_dir=skip_dir)
 
 
+def flatten(root: os.PathLike = ".", *, output=True):
+    """ Moves all files in subfolders so they are directly inside the root folder, and then deletes the leftover empty subfolders. """
+
+    root = Path(root)
+
+    moves = {}
+
+    def file_action(p: Path, d: int):
+        if d == 0:
+            return
+        moves[p] = root.joinpath(p.name)
+
+    walk(root=root, file_action=file_action, side_effects=True)
+    move_by_dict(moves, output=output)
+    delete_empty(root, output=output)
+
+
 def watch(file: os.PathLike, callback: Callable[[os.PathLike, time.struct_time], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
     """Monitor a file for changes by checking periodicially seeing if its modification time has changed (every 5 seconds by default) (not necessarily increasing, such as if an old copy of the file was moved into the original location). Provides the callback function with the file and its new modification time. Optionally, can also print out that the file was updated and when."""
     file = Path(file)
