@@ -635,7 +635,7 @@ def delete_empty(root: os.PathLike = ".", output=True):
     def delete_empty_recursive(root: Path, depth: int) -> bool:
         """ Returns whether the root argument was or became empty and was deleted """
         nonlocal count
-        if root.is_file():
+        if root.is_file() or root.is_symlink():
             return False
         empty = True
         for f in root.iterdir():
