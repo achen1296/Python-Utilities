@@ -175,13 +175,14 @@ class Cmd(cmd.Cmd):
                 except ImportError:
                     pass
 
-    def precmd(self, line: str):
-        """ Split commands by semicolons. """
+    def precmd(self, line: Union[str, list]):
+        """ Split commands by self.command_sep. """
         if isinstance(line, list):
             # pass through pre-parsed command
             return line
+        # keep empty splits since this can be used intentionally to repeat a command
         cmds = strings.argument_split(
-            line, self.command_sep, split_compounds=False)
+            line, self.command_sep, split_compounds=False, remove_empty_args=False)
         if len(cmds) <= 1:
             return line
         # add new commands onto the FRONT of the queue so that things will execute in the expected order in case nested
@@ -336,7 +337,7 @@ class Cmd(cmd.Cmd):
 
         ``example 5 quit``
 
-        into the console will sleep for 5 seconds, then print out the help text for ``quit`` ($3 gets dropped). 
+        into the console will sleep for 5 seconds, then print out the help text for ``quit`` ($3 gets dropped).
 
         If a range argument capture is used, it will expand into as many arguments as were captured! If it is specified inside an argument along with exact text, that exact text will also be multiplied. This can happen multiple times as well. For example, if "example.script" contains:
 
@@ -345,7 +346,7 @@ class Cmd(cmd.Cmd):
         (where the echo action reproduces its arguments) and you call ``example 1 2 3``, the output will be
         ``11 12 13 21 22 23 31 32 33``
 
-        On the other hand, note that if the arguments in the specified range are not given at all, then the arguments will simply disappear. 
+        On the other hand, note that if the arguments in the specified range are not given at all, then the arguments will simply disappear.
         """
 
         cmds = []
