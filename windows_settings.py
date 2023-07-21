@@ -47,40 +47,33 @@ def change_theme(theme: str):
         kill_settings()
 
 
-MONITORIAN = files.USER_PROFILE.joinpath(
-    "AppData", "Local", "Microsoft", "WindowsApps", "Monitorian.exe")
-
-if not MONITORIAN.exists():
-    MONITORIAN = files.PROGRAM_FILES_x86.joinpath(
-        "Monitorian", "Monitorian.exe")
-
-
 def set_brightness(b: float):
     """ Argument should be float between 0.0 and 1.0 inclusive """
     print(f"Setting brightness to {b}")
     # Monitorian takes ints only
-    subprocess.run([MONITORIAN, "/set", "all", str(math.floor(b*100))],
+    subprocess.run(["monitorian", "/set", "all", str(math.floor(b*100))],
                    creationflags=subprocess.CREATE_NO_WINDOW)
 
 
 def set_contrast(c: float):
     """ Argument should be float between 0.0 and 1.0 inclusive """
     print(f"Setting contrast to {c}")
-    subprocess.run([MONITORIAN, "/set", "contrast", "all", str(math.floor(c*100))],
+    subprocess.run(["monitorian",  "/set", "contrast", "all", str(math.floor(c*100))],
                    creationflags=subprocess.CREATE_NO_WINDOW)
-
-
-NIRCMD = files.USER_PROFILE.joinpath(
-    "programs", "nircmd-x64", "nircmd.exe")
 
 
 def set_volume(volume: float):
     """ Argument should be float between 0.0 and 1.0 inclusive """
-    subprocess.run([NIRCMD, "setsysvolume", str(volume * 65535)],
+    subprocess.run(["nircmd", "setsysvolume", str(volume * 65535)],
                    creationflags=subprocess.CREATE_NO_WINDOW)
 
 
 def set_system_sounds_volume(volume: float):
     """ Argument should be float between 0.0 and 1.0 inclusive """
-    subprocess.run([NIRCMD, "setappvolume", "systemsounds", str(volume)],
+    subprocess.run(["nircmd", "setappvolume", "systemsounds", str(volume)],
                    creationflags=subprocess.CREATE_NO_WINDOW)
+
+
+def set_volume_balance(left: float, right: float):
+    subprocess.run(["soundvolumeview ", "/setvolumechannels",
+                   "Realtek(R) Audio\Device\Speakers/Headphones\Render", str(math.floor(left*100)), str(math.floor(right*100))])
