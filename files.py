@@ -103,7 +103,7 @@ def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True, relativiz
 
     If making a symbolic link and the source is a symbolic link, it is copied instead of linking to the existing link.
 
-    If src is a relative path, it is absolutized for a non-symbolic link. For a symbolic link it is interpreted relative to the parent of dst (mimicking the behavior of the link itself) to check for existence and is applied to the resulting link as-is. 
+    If src is a relative path, it is absolutized for a non-symbolic link. For a symbolic link it is interpreted relative to the parent of dst (mimicking the behavior of the link itself) to check for existence and is applied to the resulting link as-is.
 
     On the other hand, if relativize = True is specified, an absolute path will be relativized for symbolic links. """
 
@@ -126,13 +126,14 @@ def link(src: os.PathLike, dst: os.PathLike, *, symbolic: bool = True, relativiz
                     str(src).removeprefix("\\\\?\\"), dst.parent)
         # if src is already a symlink, just copy it instead of linking to the existing link
         if rel_src.is_symlink():
-            if symbolic:
-                shutil.copy2(rel_src, dst, follow_symlinks=False)
-                if output:
-                    print(f"Copied symbolic link <{rel_src}> to <{dst}>")
-            else:
-                raise LinkException(
-                    f"{rel_src} is a symlink and a non-symbolic link was requested.")
+            target = rel_src.readlink()
+            if not target.is_absolute():
+                target = rel_src.parent.joinpath(target).resolve()
+            if output:
+                print(
+                    f"Found symbolic link <{rel_src}> to <{target}>, linking to that instead")
+            rel_src = target
+            src = target
         if rel_src.is_file():
             dst.symlink_to(src, target_is_directory=False)
             if output:
