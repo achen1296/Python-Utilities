@@ -840,7 +840,7 @@ class Progress:
                  show_percent: bool = True,
                  percent_format: str = None,
 
-                 min_update_time: float = 0,
+                 min_update_time: float = 0.1,
                  ):
         """ Leaving the format arguments as None will automatically:
         - For fraction numerator/denominator:
@@ -893,7 +893,6 @@ class Progress:
         """ Set and print the updated progress value. Comments are appended after the progress text (with a space in between). If the comment is not specified, any prior comments are not cleared (specify "") to clear comments. """
         self.last_progress = value
 
-        cursor_save()
         now = time.monotonic()
         if self.last_update_time is not None and now < self.last_update_time + self.min_update_time:
             return
