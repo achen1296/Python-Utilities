@@ -776,14 +776,22 @@ class Spinner:
 
     Should only be used for expensive tasks, otherwise the Spinner itself will take up a lot of time relative to the actual task! """
 
-    def __init__(self, min_update_time: float = 0.2, spinner_sequence="-\\|/"):
+    def __init__(self, *, min_update_time: float = 0.2, min_update_count=100, spinner_sequence="-\\|/"):
         self.last_update_time = None
         self.min_update_time = min_update_time
+
+        self.updates = 0
+        self.min_update_count = min_update_count
+
         self.spinner_sequence = spinner_sequence
         self.sequence_index = 0
         self.sequence_length = len(self.spinner_sequence)
 
     def spin(self):
+        self.updates += 1
+        if self.updates < self.min_update_count:
+            return
+        self.updates = 0
         now = time.monotonic()
         if self.last_update_time is not None and now < self.last_update_time + self.min_update_time:
             return
