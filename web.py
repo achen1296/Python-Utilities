@@ -317,6 +317,7 @@ class PageBrowser(console.Cmd):
         self.readers = set(readers)
         self.user_agent = self.driver.execute_script(
             "return navigator.userAgent")
+        self.get = self.driver.get
 
         # --Cmd functions with no argument transformations required--
         self.do_o = self.open
