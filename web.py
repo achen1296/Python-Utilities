@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 from typing import Iterable, Union
 from urllib.parse import urlparse
 
@@ -37,18 +38,14 @@ class DownloadException(Exception):
     pass
 
 
-def _parse_download_destination(url: str, dst: os.PathLike):
+def download_url(url: str, dst: os.PathLike = None, *, output=True, **get_kwargs):
+    """ If file = None, the name is inferred from the last piece of the URL path. get_kwargs passed to requests.get."""
     if dst is None:
-        return url_filename(url)
+        dst = url_filename(url)
     else:
-        return files.remove_forbidden_chars(str(dst))
+        dst = files.remove_forbidden_chars(str(dst))
+    dst = Path(dst).absolute()
 
-
-def download_url(url: str, dst: os.PathLike = None,  *, output=True, **get_kwargs):
-    """ If file = None, the name is inferred from the last piece of the URL. get_kwargs passed to requests.get.
-
-    If the file name ends up being too long """
-    dst = _parse_download_destination(url, dst)
     with requests.get(url, stream=True, **get_kwargs) as req:
         if req.status_code != 200:
             raise DownloadException(url, req.status_code,
