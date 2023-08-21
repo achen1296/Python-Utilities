@@ -274,26 +274,78 @@ def find_pair(s: str, start: int, **find_pairs_kwargs):
         f"Didn't find a pair beginning at index {start} of {s}")
 
 
-def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, require_balanced_pairs=True) -> list[Pair]:
+def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, require_balanced_pairs=True, escape="\\") -> list[Pair]:
+    """ Only supports pairs that start and end with single characters, but which can handle escape characters (also limited to a single character) as a result. """
+    if pairs is None:
+        # negative look behind for \
+        pairs = {"\"": "\"", "'": "'", "(": ")",
+                 "[": "]", "{": "}"}
+    if ignore_internal_pairs is None:
+        ignore_internal_pairs = {"\"", "\'"}
+    else:
+        ignore_internal_pairs = set(ignore_internal_pairs)
+
+    pair_list_stack: list[list[Pair]] = [[]]
+    # stack of pair starts
+    start_stack = []
+    expected_end = None
+    ignoring_internal = False
+    i = -1
+    while True:
+        i += 1
+        if i >= len(s):
+            break
+
+        c = s[i]
+        if c == escape:
+            i += 1
+            continue
+
+        if start_stack and c == pairs[s[start_stack[-1]]]:
+            start_index = start_stack.pop()
+            if not ignoring_internal and len(pair_list_stack) > 1:
+                internal_pairs = pair_list_stack.pop()
+            else:
+                internal_pairs = []
+            new_pair = Pair(s, (start_index, start_index + 1),
+                            (i, i+1), internal_pairs)
+            pair_list_stack[-1].append(new_pair)
+            ignoring_internal = False
+        elif not ignoring_internal and c in pairs:
+            start_stack.append(i)
+            if c in ignore_internal_pairs:
+                ignoring_internal = True
+            else:
+                pair_list_stack.append([])
+
+    # did not also exhaust all pair starts
+    if start_stack and require_balanced_pairs:
+        raise NoPairException(
+            f"Not all pair starts were matched {start_stack} {s}")
+
+    # in the event that all pairs were balanced, the stack would only have one element for the outermost pairs and could simply return pair_list_stack[0]
+    # but if this is not the case, then need to flatten for complete results
+    flattened = []
+    for pair_list in pair_list_stack:
+        flattened.extend(pair_list)
+    return flattened
+
+
+def find_regex_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, require_balanced_pairs=True) -> list[Pair]:
     """ Finds pairs in the string of the specified expressions and returns the indices of the start and end of each pair (the first index of the matches).
 
     Any unbalanced pairs result in a NoPairException unless require_balanced_pairs is set to False. The expressions for pair starts and ends should not allow overlap with themselves (although pair starts and ends can be the same character, like quotes), otherwise the results are undefined.
 
-    For example, `find_pairs("[ex(am)\\"{\\"p\\\\]le]")`:
-
-    First, the [ is found. Then ( is found, before matching immediately with ). Then the quote is found. Since it is inside quotes, the { is ignored. The next matching quote is found. The next escaped \] is ignored, and finally the first [ is paired. Thus the complete return value is `[(0,15),(7,9),(3,6)]` -- in reverse order of the pair end index.
-
-    If the `pairs` and `ignore_internal_pairs` parameters are left as None, unescaped {, [, (, ", and ' characters are matched with their opposites. However, `pairs` can be specified as a dictionary, with the regular expression for a pair start mapping to the regular expression for the corresponding paired character. The ignoring of escaped characters (those preceded by an \\ character) is part of the default regular expressions for `pairs`. `ignore_internal_pairs` is a set of pair starter regular expressions and is only used if `pairs` matches a piece of the string first. """
+    `ignore_internal_pairs` is a set of pair starter regular expressions and is only used if `pairs` matches a piece of the string first. """
 
     if pairs is None:
         # negative look behind for \
-        NO_ESCAPE = "(?<!\\\\)"
-        pairs = {NO_ESCAPE+"\"": NO_ESCAPE+"\"", NO_ESCAPE+"'": NO_ESCAPE+"'", NO_ESCAPE+"\(": NO_ESCAPE+"\)",
-                 NO_ESCAPE+"\[": NO_ESCAPE+"\]", NO_ESCAPE+"{": NO_ESCAPE+"}"}
+        pairs = {"\"": "\"", "'": "'", "\(": "\)",
+                 "\[": "\]", "{": "}"}
     if ignore_internal_pairs is None:
         ignore_internal_pairs = {"\"", "\'"}
-
-    ignore_internal_pairs = set(ignore_internal_pairs)
+    else:
+        ignore_internal_pairs = set(ignore_internal_pairs)
 
     pair_starts_gen = next_match(pairs, s)
     pair_ends_gen = next_match(pairs.values(), s)
@@ -462,6 +514,24 @@ if __name__ == "__main__":
             Pair(s, (1, 2), (6, 7))
         ]),
         Pair(s, (13, 14), (22, 23), [
+            Pair(s, (14, 15), (15, 16)),
+            Pair(s, (18, 19), (21, 22), [
+                Pair(s, (19, 20), (20, 21))
+            ])
+        ])
+    ], result
+    s = "(\"a{{f\"absd) {()  [{}]\\}\\\\} ("
+    try:
+        result = find_pairs(s)
+        assert False, "Expected an error"
+    except:
+        pass
+    result = find_pairs(s, require_balanced_pairs=False)
+    assert result == [
+        Pair(s, (0, 1), (11, 12), [
+            Pair(s, (1, 2), (6, 7))
+        ]),
+        Pair(s, (13, 14), (26, 27), [
             Pair(s, (14, 15), (15, 16)),
             Pair(s, (18, 19), (21, 22), [
                 Pair(s, (19, 20), (20, 21))
