@@ -211,16 +211,32 @@ class Pair:
         list.sort(self.internal_pairs)
 
     @property
+    def start_index(self) -> int:
+        return self.start_span[0]
+
+    @property
     def span(self) -> tuple[int, int]:
         return (self.start_span[0], self.end_span[1])
 
     @property
-    def start_delimiter(self) -> str:
-        return self.original_str[self.start_span[0], self.start_span[1]]
+    def end_index(self) -> int:
+        return self.end_span[1]
 
     @property
-    def end_delimiter(self) -> str:
-        return self.original_str[self.end_span[0], self.end_span[1]]
+    def substring(self) -> str:
+        return self.original_str[self.start_span[0]:self.end_span[1]]
+
+    @property
+    def start_string(self) -> str:
+        return self.original_str[self.start_span[0]:self.start_span[1]]
+
+    @property
+    def internal_string(self) -> str:
+        return self.original_str[self.start_span[0]:self.end_span[1]]
+
+    @property
+    def end_string(self) -> str:
+        return self.original_str[self.end_span[0]:self.end_span[1]]
 
     def __repr__(self) -> str:
         return "Pair("+repr(self.original_str) + "," + repr(self.start_span) + "," + repr(self.end_span) + (","+repr(self.internal_pairs) if self.internal_pairs != [] else "") + ")"
