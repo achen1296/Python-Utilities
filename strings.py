@@ -29,7 +29,7 @@ def escape(s: str, special_chars: Iterable[str], *, escape_char: str = "\\") -> 
     return s
 
 
-def argument_split(s: str, sep: str = "\s+", *,  pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_args=True, unescape_char="\\", re_flags: int = 0, split_compounds: bool = True) -> list[str]:
+def argument_split(s: str, sep: str = "\s+", *, pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_args=True, unescape_char="\\", re_flags: int = 0, split_compounds: bool = True) -> list[str]:
     """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Furthermore, if this behavior is not disabled, adjacent compounds are also split apart (for example, `"'a''b'"` turns into two arguments).
 
     Arguments for `pairs` and `ignore_internal_pairs` are passed to `find_pairs`. """
@@ -104,14 +104,14 @@ def next_match(regular_expressions: Iterable[str], s: str, *, no_overlap=False, 
     for r in regular_expressions:
         iters[r] = re.finditer(r, s, flags)
 
-    empty_iters = set()
+    empty_iters = []
     # get first element from each iter
     matches = {}
     for r in iters:
         try:
             matches[r] = next(iters[r])
         except StopIteration:
-            empty_iters.add(r)
+            empty_iters.append(r)
     for r in empty_iters:
         del iters[r]
 
@@ -197,11 +197,12 @@ class Pair:
     def __init__(self, original_str: str, start_span: tuple[int, int], end_span: tuple[int, int], internal_pairs: Iterable[Pair] = None):
         # no zero length start/end strings, therefore <, but they can be directly adjacent, therefore <=
         if not (start_span[0] < start_span[1] <= end_span[0] < end_span[1]) or start_span[0] < 0 or end_span[1] > len(original_str):
-            raise Exception(f"Invalid start/end spans {start_span} {end_span}")
+            raise Exception(
+                f"Invalid start span {start_span} or end span {end_span} for string:\n{original_str}")
         self.original_str = original_str
         self.start_span = start_span
         self.end_span = end_span
-        if internal_pairs == None:
+        if internal_pairs is None:
             self.internal_pairs = []
         else:
             self.internal_pairs = internal_pairs
@@ -284,12 +285,12 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: I
 
     If the `pairs` and `ignore_internal_pairs` parameters are left as None, unescaped {, [, (, ", and ' characters are matched with their opposites. However, `pairs` can be specified as a dictionary, with the regular expression for a pair start mapping to the regular expression for the corresponding paired character. The ignoring of escaped characters (those preceded by an \\ character) is part of the default regular expressions for `pairs`. `ignore_internal_pairs` is a set of pair starter regular expressions and is only used if `pairs` matches a piece of the string first. """
 
-    if pairs == None:
+    if pairs is None:
         # negative look behind for \
         NO_ESCAPE = "(?<!\\\\)"
         pairs = {NO_ESCAPE+"\"": NO_ESCAPE+"\"", NO_ESCAPE+"'": NO_ESCAPE+"'", NO_ESCAPE+"\(": NO_ESCAPE+"\)",
                  NO_ESCAPE+"\[": NO_ESCAPE+"\]", NO_ESCAPE+"{": NO_ESCAPE+"}"}
-    if ignore_internal_pairs == None:
+    if ignore_internal_pairs is None:
         ignore_internal_pairs = {"\"", "\'"}
 
     ignore_internal_pairs = set(ignore_internal_pairs)
@@ -323,7 +324,7 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: I
             popped_start = start_stack.pop()
         except IndexError:
             # pair match failed; attempt to interpret next end as a start instead (e.g. quotes by default)
-            if next_start == None:
+            if next_start is None:
                 if require_balanced_pairs:
                     raise NoPairException(
                         "Ran out of starts, could not reinterpret as end")
