@@ -29,13 +29,12 @@ def escape(s: str, special_chars: Iterable[str], *, escape_char: str = "\\") -> 
     return s
 
 
-def argument_split(s: str, sep: str = "\s+", *, pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_args=True, unescape_char="\\", re_flags: int = 0, split_compounds: bool = True) -> list[str]:
+def argument_split(s: str, sep: str = "\s+", *, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_args=True, unescape_char="\\", re_flags: int = 0, split_compounds: bool = True, **find_pairs_kwargs) -> list[str]:
     """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Furthermore, if this behavior is not disabled, adjacent compounds are also split apart (for example, `"'a''b'"` turns into two arguments).
 
     Arguments for `pairs` and `ignore_internal_pairs` are passed to `find_pairs`. """
 
-    found_pairs = find_pairs(
-        s, pairs=pairs, ignore_internal_pairs=ignore_internal_pairs)
+    found_pairs = find_pairs(s, **find_pairs_kwargs)
 
     def in_any_pair(span: tuple[int, int]):
         # only outermost pairs matter
