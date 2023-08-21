@@ -287,7 +287,6 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: I
     pair_list_stack: list[list[Pair]] = [[]]
     # stack of pair starts
     start_stack = []
-    expected_end = None
     ignoring_internal = False
     i = -1
     while True:
@@ -296,7 +295,7 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: I
             break
 
         c = s[i]
-        if c == escape:
+        if escape and c == escape:
             i += 1
             continue
 
