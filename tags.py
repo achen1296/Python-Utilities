@@ -49,13 +49,13 @@ def suffix(filename: str) -> str:
     return match.group(2) or ""
 
 
-def __remove_whitespace(tags: Iterable[str]) -> bset[str]:
+def _remove_whitespace(tags: Iterable[str]) -> bset[str]:
     """ Removes leading and trailing whitespace and removes tags that are entirely whitespace. """
     return {t.strip() for t in tags if not re.match("^\s*$", t)}
 
 
 def set(filename: str, tags: Iterable[str]) -> str:
-    tags = sorted(__remove_whitespace(tags))
+    tags = sorted(_remove_whitespace(tags))
     name, suffix = name_and_suffix(filename)
     if len(tags) == 0:
         return name + suffix
@@ -211,40 +211,36 @@ class TagExpressionNot(TagExpression):
         return isinstance(other, TagExpressionNot) and self.sub_expression == other.sub_expression
 
 
-def matching_files(root: os.PathLike, pattern: str = None, include_tags: Iterable[str] = None, exclude_tags: Iterable[str] = None, recursive: bool = True) -> Iterable[Path]:
-    r""" The pattern is used as a regular expression matching ONLY the name and suffix of the file, with the tags removed. It may match any part of this. (For example, a file with the full name "foo[bar baz].txt" will match pattern="foo\\.txt" and include_tags=["bar","baz"].)
-
-    All include_tags must be present, and none of the exclude_tags. (To get files with some tags OR some other ones, just do another search.) """
-    if include_tags is not None:
-        include_tags = bset(include_tags)
-    if exclude_tags is not None:
-        exclude_tags = bset(exclude_tags)
+def matching_files(root: os.PathLike, name_suffix_re_pattern: str = None, tag_expression: str = None, recursive: bool = True) -> Iterable[Path]:
+    r""" The name_suffix_re_pattern is a regular expression that is applied ONLY to the name and suffix of the file, with the tags removed. It may match any part of this. For example, a file with the full name "foo[bar baz].txt" will match pattern="oo\\.tx" """
+    if tag_expression is not None:
+        tag_expression: TagExpression = TagExpression.compile(tag_expression)
 
     def file_action(f: Path, d: int):
         name, suffix = name_and_suffix(f.name)
         full_name = name+suffix
-        matches_pattern = pattern is None or re.search(
-            pattern, full_name)
+        matches_name_suffix = name_suffix_re_pattern is None or re.search(
+            name_suffix_re_pattern, full_name)
+
         file_tags = get(f.name)
-        matches_include_tags = include_tags is None or file_tags > include_tags
-        matches_exclude_tags = exclude_tags is not None and (
-            file_tags & exclude_tags)
-        if matches_pattern and matches_include_tags and not matches_exclude_tags:
+        matches_tag_expression = tag_expression is None or tag_expression.match(
+            file_tags)
+        if matches_name_suffix and matches_tag_expression:
             yield f
 
     def skip_dir(f: Path, d: int):
         # still go over the top-level folder's contents if not recursive
-        return not recursive and d > 0
+        return (not recursive) and d > 0
 
     return files.walk(root, file_action=file_action, skip_dir=skip_dir)
 
 
-def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, pattern: str = None, match_include_tags: Iterable[str] = None, match_exclude_tags: Iterable[str] = None, recursive: bool = True, remove_tags=[]) -> None:
+def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, remove_tags=[], **matching_files_args) -> None:
     """ Adds/removes the tags to each file in the root folder if its name matches the regular expression pattern and/or set of match tags (the default None parameters match anything). """
     tags = bset(tags)
     planned_moves = {}
 
-    for f in matching_files(root, pattern, match_include_tags, match_exclude_tags, recursive):
+    for f in matching_files(root, **matching_files_args):
         new_name = remove(add(f.name, tags), remove_tags)
         if f.name != new_name:
             planned_moves[f] = f.with_name(new_name)
@@ -271,7 +267,7 @@ def map_to_folders(root: os.PathLike, tags: Iterable[str], skip_dir: Callable[[P
     tags_to_folders: dict[str, bset] = {}
 
     def dir_action(f: Path, d: int):
-        tags_in_name = __remove_whitespace(f.name.split())
+        tags_in_name = _remove_whitespace(f.name.split())
         for t in tags & tags_in_name:
             if not t in tags_to_folders:
                 tags_to_folders[t] = bset()
