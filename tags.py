@@ -13,7 +13,8 @@ NAME_SUFFIX_RE = re.compile("^(.*?)(\.\w+)?$")
 def remove_forbidden_chars(name: str, name_only=False):
     """ Variant of files.remove_forbidden_chars that also removes square brackets, intended to be used on files that are known not to have any tags. """
     name = files.remove_forbidden_chars(name, name_only)
-    for c in ["[", "]"]:
+    chars = "[]()|!"
+    for c in chars:
         name = name.replace(c, "")
     return name
 
@@ -84,6 +85,130 @@ def remove(filename: str, remove_tags: Iterable[str]) -> str:
 
 def rename(filename: str, new_name: str) -> str:
     return new_name + filename[len(name(filename)):]
+
+
+class TagExpressionException(Exception):
+    pass
+
+
+class TagExpression:
+    def match(self, tags: Iterable[str]):
+        return False
+
+    @staticmethod
+    def compile(tag_expression_str: str):
+        s = "("+tag_expression_str+")"
+
+        def _compile_and_or(i: int, expect_paren=False) -> tuple[TagExpression, int]:
+            # represents an overall and, each sublist is an or
+            and_or_sub_expressions = [[]]
+            while True:
+                # consume whitespace
+                i += len(re.match("\s*", s[i:]).group(0))
+                if expect_paren:
+                    if i >= len(s):
+                        raise TagExpressionException(
+                            "Not enough closing parentheses for tag expression " + tag_expression_str)
+                    elif s[i] == ")":
+                        break
+                if i >= len(s):
+                    break
+                if s[i] == "&":
+                    and_or_sub_expressions.append([])
+                    i += 1
+                    continue
+                sub, i = _compile(i)
+                and_or_sub_expressions[-1].append(sub)
+            and_or_sub_expressions = [subs[0]
+                                      if len(subs) == 1 else
+                                      TagExpressionOr(*subs)
+                                      for subs in and_or_sub_expressions]
+            if len(and_or_sub_expressions) == 1:
+                return and_or_sub_expressions[0], i+1
+            return TagExpressionAnd(*and_or_sub_expressions), i+1
+
+        def _compile(i: int) -> tuple[TagExpression, int]:
+            c = s[i]
+            if c == "!":
+                sub, i = _compile(i+1)
+                return TagExpressionNot(sub), i
+            if s[i] == "(":
+                return _compile_and_or(i+1, expect_paren=True)
+            match = re.match("\w+", s[i:])
+            if not match:
+                raise TagExpressionException("Unsupported character " + s[i])
+            tag = match.group(0)
+            return TagExpressionSingle(tag), i + len(tag)
+
+        exp, _ = _compile_and_or(0)
+        return exp
+
+
+class TagExpressionSingle(TagExpression):
+    def __init__(self, tag: str):
+        self.tag = tag
+
+    def match(self, tags: Iterable[str]):
+        return self.tag in tags
+
+    def __repr__(self):
+        return "TagExpressionSingle(\""+self.tag+"\")"
+
+    def __eq__(self, other):
+        return isinstance(other, TagExpressionSingle) and self.tag == other.tag
+
+
+class TagExpressionAnd(TagExpression):
+    def __init__(self, *sub_expressions: TagExpression):
+        self.sub_expressions = sub_expressions
+
+    def match(self, tags: Iterable[str]):
+        return all(sub.match(tags) for sub in self.sub_expressions)
+
+    def __repr__(self):
+        return "TagExpressionAnd("+", ".join((repr(sub) for sub in self.sub_expressions))+")"
+
+    def __eq__(self, other):
+        # not order independent
+        try:
+            return isinstance(other, TagExpressionAnd) and all(sub_self == sub_other for sub_self, sub_other in zip(self.sub_expressions, other.sub_expressions, strict=True))
+        except ValueError:
+            # from zip
+            return False
+
+
+class TagExpressionOr(TagExpression):
+    def __init__(self, *sub_expressions: TagExpression):
+        self.sub_expressions = sub_expressions
+
+    def match(self, tags: Iterable[str]):
+        return any(sub.match(tags) for sub in self.sub_expressions)
+
+    def __repr__(self):
+        return "TagExpressionOr("+", ".join((repr(sub) for sub in self.sub_expressions))+")"
+
+    def __eq__(self, other):
+        # not order independent
+        try:
+            return isinstance(other, TagExpressionOr) and all(sub_self == sub_other for sub_self, sub_other in zip(self.sub_expressions, other.sub_expressions, strict=True))
+        except ValueError:
+            # from zip
+            return False
+
+
+class TagExpressionNot(TagExpression):
+    def __init__(self, sub_expression: TagExpression):
+        self.sub_expression = sub_expression
+
+    def match(self, tags: Iterable[str]):
+        return not self.sub_expression.match(tags)
+
+    def __repr__(self):
+        return "TagExpressionNot("+repr(self.sub_expression)+")"
+
+    def __eq__(self, other):
+        # not order independent
+        return isinstance(other, TagExpressionNot) and self.sub_expression == other.sub_expression
 
 
 def matching_files(root: os.PathLike, pattern: str = None, include_tags: Iterable[str] = None, exclude_tags: Iterable[str] = None, recursive: bool = True) -> Iterable[Path]:
@@ -204,3 +329,42 @@ if __name__ == "__main__":
     assert result == "file.txt", result
     result = remove("file[tag3].txt", ["tag1", "tag2"])
     assert result == "file[tag3].txt", result
+
+    result = TagExpression.compile("asdf")
+    assert result == TagExpressionSingle("asdf"), result
+    result = TagExpression.compile("a b c d e")
+    assert result == TagExpressionOr(TagExpressionSingle(
+        "a"), TagExpressionSingle("b"), TagExpressionSingle("c"), TagExpressionSingle("d"), TagExpressionSingle("e")), result
+    result = TagExpression.compile("a b c&d e")
+    assert result == TagExpressionAnd(
+        TagExpressionOr(TagExpressionSingle(
+            "a"), TagExpressionSingle("b"), TagExpressionSingle("c")),
+        TagExpressionOr(TagExpressionSingle("d"), TagExpressionSingle("e"))
+    ), result
+    result = TagExpression.compile("a !b (!c&d) e")
+    assert result == TagExpressionOr(
+        TagExpressionSingle("a"),
+        TagExpressionNot(TagExpressionSingle("b")),
+        TagExpressionAnd(
+            TagExpressionNot(TagExpressionSingle("c")),
+            TagExpressionSingle("d")
+        ),
+        TagExpressionSingle("e")
+    ), result
+    result = TagExpression.compile("a (!b !(!c&d) e)")
+    assert result == TagExpressionOr(
+        TagExpressionSingle("a"),
+        TagExpressionOr(
+            TagExpressionNot(TagExpressionSingle("b")),
+            TagExpressionNot(
+                TagExpressionAnd(
+                    TagExpressionNot(TagExpressionSingle("c")),
+                    TagExpressionSingle("d")
+                )
+            ),
+            TagExpressionSingle("e")
+        )
+    ), result
+    assert result.match(["a"])
+    assert result.match(["e"])
+    assert not result.match(["b", "d"])
