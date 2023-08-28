@@ -12,7 +12,6 @@ from selenium.common.exceptions import (ElementClickInterceptedException,
                                         NoSuchWindowException,
                                         StaleElementReferenceException,
                                         TimeoutException)
-from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
@@ -133,15 +132,15 @@ def tor_driver(**kwargs) -> webdriver.Firefox:
     return driver
 
 
-def chrome_driver(profile: str) -> webdriver.Chrome:
+def chrome_driver(profile: os.PathLike, driver: os.PathLike) -> webdriver.Chrome:
     options = webdriver.ChromeOptions()
     options.add_argument(
-        f"user-data-dir={os.environ['LOCALAPPDATA']}\\Google\\Chrome\\User Data")
+        f"user-data-dir={profile}")
     options.add_argument(f"profile-directory={profile}")
     # disable (almost all) logs
     options.add_argument("--log-level=3")
     driver = webdriver.Chrome(
-        executable_path=f"{os.environ['HOMEPATH']}\\Programs\\chromedriver.exe", options=options)
+        executable_path=driver, options=options)
     driver.implicitly_wait(2)
     driver.set_page_load_timeout(15)
     return driver
