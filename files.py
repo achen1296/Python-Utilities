@@ -1,3 +1,4 @@
+import glob
 import hashlib
 import io
 import os
@@ -768,6 +769,30 @@ def find_ascii(file: os.PathLike, length_threshold: int) -> Iterable[tuple[int, 
                     yield bytes_read, ascii_streak
                 ascii_streak = bytearray()
             bytes_read += 1
+
+
+def gitignored_files(gitignore_file: os.PathLike = ".gitignore", root: os.PathLike = ".") -> set[Path]:
+    gitignore_file = Path(gitignore_file)
+    root = Path(root)
+
+    ignored_files: set[Path] = set()
+
+    with open(gitignore_file) as gitignore:
+        for line in gitignore:
+            line = line.removesuffix("\n")
+            if len(line) > 0 and line[0] == "!":
+                # .gitignore re-includes these files
+                line = line[1:]
+                for g in glob.glob(line, root_dir=root, recursive=True):
+                    g = g.replace("/", os.sep)
+                    for path in [g]+[str(p) for p in Path(g).parents]:
+                        ignored_files -= {path}
+            else:
+                # these files are ignored
+                ignored_files |= {g.replace("/", os.sep)
+                                  for g in glob.glob(line, root_dir=root, recursive=True)}
+
+    return ignored_files
 
 
 if WINDOWS:
