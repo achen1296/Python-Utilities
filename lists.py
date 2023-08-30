@@ -118,14 +118,11 @@ def permutations(l: Iterable):
 
 
 def random_from(lst: Iterable) -> Any:
-    while True:
-        try:
-            return lst[random.randrange(0, len(lst))]
-        except TypeError:
-            lst = list(lst)
-        except ValueError:
-            # empty iterable
-            return None
+    if len(lst) == 0:
+        return None
+    if not isinstance(lst, list):
+        lst = list(lst)
+    return lst[random.randrange(0, len(lst))]
 
 
 def count(lst: Iterable[Hashable], bucket: Callable[[Any], Hashable] = lambda x: x) -> dict[Hashable, int]:
