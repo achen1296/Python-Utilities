@@ -16,7 +16,7 @@ def nonempty_intersection(s1: set, s2: set) -> bool:
     return False
 
 
-class DisjoinSetException(Exception):
+class DisjointSetException(Exception):
     pass
 
 
@@ -31,10 +31,10 @@ class DisjointSets:
     def new_subset(self, e1: Hashable, *es: Hashable):
         """ Create a new subset. """
         if e1 in self._parent:
-            raise DisjoinSetException(f"{e1} already in a subset")
+            raise DisjointSetException(f"{e1} already in a subset")
         for e in es:
             if e in self._parent:
-                raise DisjoinSetException(f"{e} already in a subset")
+                raise DisjointSetException(f"{e} already in a subset")
         self._parent[e1] = e1
         for e in es:
             self._parent[e] = e1
@@ -44,7 +44,7 @@ class DisjointSets:
         """ Find the representative element for e. Performs path compression. """
         if e not in self._parent:
             # placing this check here suffices for all other methods because they all query representatives
-            raise DisjoinSetException(f"{e} not in a subset")
+            raise DisjointSetException(f"{e} not in a subset")
 
         p = self._parent[e]
         if e == p:
