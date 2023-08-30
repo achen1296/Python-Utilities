@@ -172,6 +172,8 @@ class KDTree():
                         mid -= 1
                     if mid == 0:
                         # split failure, everything to left had same split value
+                        # todo
+                        root.update_bounding_box()
                         return root
                     left = KDNodeLeaf(root.data[:mid])
                     right = KDNodeLeaf(root.data[mid:])
@@ -180,7 +182,6 @@ class KDTree():
         self.root = _insert(self.root)
 
     def delete(self, coords: tuple[float, ...], value):
-
         if len(coords) != self.dimensions:
             raise Exception(
                 f"Coordinates {coords} had incorrect number of dimensions, expected {self.dimensions}")
@@ -211,7 +212,7 @@ class KDTree():
         self.root = _delete(self.root)
 
     def nearest(self, coords: tuple[float, ...], count: int) -> list[KDDatum]:
-        """ Find the k nearest neighbors to the coords. """
+        """ Find the k nearest neighbors to the coords. Undefined result if the tree contains fewer than count KDData. """
 
         if len(coords) != self.dimensions:
             raise Exception(
@@ -231,7 +232,6 @@ class KDTree():
                     coords, root.left.bounding_box_min, root.left.bounding_box_max)
                 right_d2 = dist_sq_point_box(
                     coords, root.right.bounding_box_min, root.right.bounding_box_max)
-                farthest = dist_sq_points(coords, nearest[-1].coords)
 
                 if left_d2 <= right_d2:
                     close_d2 = left_d2
@@ -244,6 +244,7 @@ class KDTree():
                     far_d2 = left_d2
                     far_child = root.left
 
+                farthest = dist_sq_points(coords, nearest[-1].coords)
                 if close_d2 <= farthest:
                     # need to consider =
                     _nearest(close_child)
@@ -252,7 +253,7 @@ class KDTree():
                 if far_d2 <= farthest:
                     _nearest(far_child)
             else:
-                # assert isinstance(root, NodeLeaf)
+                # assert isinstance(root, KDNodeLeaf)
                 nearest = nearest + root.data
                 nearest.sort(key=lambda d: (
                     dist_sq_points(d.coords, coords), d.values))
@@ -261,16 +262,53 @@ class KDTree():
         _nearest(self.root)
         return nearest
 
+    def within_distance(self, coords: tuple[float, ...], distance: float) -> list[KDDatum]:
+        """ Find the k nearest neighbors to the coords. Undefined result if the tree contains fewer than count KDData. """
+
+        if len(coords) != self.dimensions:
+            raise Exception(
+                f"Coordinates {coords} had incorrect number of dimensions, expected {self.dimensions}")
+
+        if not self.root:
+            # empty tree
+            return []
+
+        distance_sq = distance**2
+
+        within_distance: list[KDDatum] = []
+
+        def _within_distance(root: AnyKDNode):
+            nonlocal within_distance
+            if isinstance(root, KDNodeInternal):
+                left_d2 = dist_sq_point_box(
+                    coords, root.left.bounding_box_min, root.left.bounding_box_max)
+                right_d2 = dist_sq_point_box(
+                    coords, root.right.bounding_box_min, root.right.bounding_box_max)
+
+                if left_d2 <= distance_sq:
+                    # need to consider =
+                    _within_distance(root.left)
+
+                if right_d2 <= distance_sq:
+                    _within_distance(root.right)
+            else:
+                # assert isinstance(root, KDNodeLeaf)
+                within_distance += [d for d in root.data if dist_sq_points(
+                    coords, d.coords) <= distance_sq]
+
+        _within_distance(self.root)
+        return within_distance
+
 
 if __name__ == "__main__":
 
     def validate_kd_structure(kd: KDTree) -> list[KDDatum]:
-        def _validate(node: AnyKDNode) -> list[KDDatum]:
+        def _validate(node: AnyKDNode, depth: int = 0) -> tuple[list[KDDatum], int]:
             if not node:
-                return []
+                return [], -1
             if isinstance(node, KDNodeInternal):
-                left_data = _validate(node.left)
-                right_data = _validate(node.right)
+                left_data, left_max_depth = _validate(node.left, depth+1)
+                right_data, right_max_depth = _validate(node.right, depth+1)
 
                 # check splitting condition
                 for d in left_data:
@@ -284,15 +322,16 @@ if __name__ == "__main__":
                 all_data = left_data + right_data
                 assert len(set(d.coords for d in all_data)) == len(all_data)
 
-                return all_data
+                return all_data, max(left_max_depth, right_max_depth)
             else:
                 # make sure all coordinates are unique
                 # no <= kd.max_leaf check in case of split failures
                 assert len(set(d.coords for d in node.data)
                            ) == len(node.data), (kd.max_leaf, node.data)
-                return node.data
-
-        return _validate(kd.root)
+                return node.data, depth
+        data, max_depth = _validate(kd.root)
+        print(f"Max depth {max_depth}")
+        return data
 
     def random_coords(dimensions: int):
         coords = []
@@ -333,40 +372,55 @@ if __name__ == "__main__":
 
         return kd, expected_values
 
-    for size in range(0, 1000, 20):
-        print(size)
-        kd, expected_values = random_kd(
-            random.randint(1, 5), random.randint(1, 5), size)
+    for _ in range(0, 10):
+        for size in range(0, 1000, 20):
+            print(f"Size {size}")
+            kd, expected_values = random_kd(
+                random.randint(1, 5), random.randint(1, 5), size)
 
-        actual = validate_kd_structure(kd)
+            actual = validate_kd_structure(kd)
 
-        for d in actual:
-            actual_counts = lists.count(d.values)
-            expected_counts = lists.count(
-                expected_values[d.coords])
-            assert actual_counts == expected_counts, (
-                actual_counts, expected_counts)
+            for d in actual:
+                actual_counts = lists.count(d.values)
+                expected_counts = lists.count(
+                    expected_values[d.coords])
+                assert actual_counts == expected_counts, (
+                    actual_counts, expected_counts)
 
-        for _ in range(0, 5):
-            c = random_coords(kd.dimensions)
-            count = min(size, random.randrange(1, 10))
+            for _ in range(0, 5):
+                c = random_coords(kd.dimensions)
+                count = random.randrange(1, 10)
 
-            nearest_actual = kd.nearest(c, count)
+                nearest = kd.nearest(c, count)
 
-            if count == 0:
-                assert nearest_actual == []
-                continue
+                if size == 0:
+                    assert nearest == []
+                    continue
 
-            # in case of ties for last, the returned data are arbitrary, so for correctness just need to ensure none missed with a better distance
-            farthest_distance = max(dist_sq_points(c, d.coords)
-                                    for d in nearest_actual)
+                # in case of ties for last, the returned data are arbitrary, so for correctness just need to ensure none missed with a better distance
+                farthest_distance = max(dist_sq_points(c, d.coords)
+                                        for d in nearest)
 
-            nearest_actual_coords = set(d.coords for d in nearest_actual)
-            assert len(nearest_actual_coords) == count
-            for coords in expected_values:
-                if dist_sq_points(c, coords) < farthest_distance:
-                    assert coords in nearest_actual_coords, (
-                        coords, nearest_actual_coords)
+                nearest_coords = set(d.coords for d in nearest)
+                # coordinate collisions may make smaller tree than count for small trees
+                assert len(nearest_coords) <= count, (c, count,
+                                                      nearest, kd)
+                for coords in expected_values:
+                    if dist_sq_points(c, coords) < farthest_distance:
+                        assert coords in nearest_coords, (c,
+                                                          coords, nearest_coords)
 
-        # with open("kd.txt", "w") as f:
-        #    print(kd, file=f)
+            for _ in range(0, 5):
+                c = random_coords(kd.dimensions)
+                distance = random.randrange(1, 10)
+
+                within = kd.within_distance(c, distance)
+
+                if size == 0:
+                    assert within == []
+                    continue
+
+                within_coords = {d.coords for d in within}
+                for coords in expected_values:
+                    assert (dist_sq_points(c, coords) <= (
+                        distance ** 2)) == (coords in within_coords), (c, coords, dist_sq_points(c, coords), distance**2, within_coords, kd)
