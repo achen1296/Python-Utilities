@@ -499,7 +499,7 @@ def zip(zip_path: os.PathLike, files: Iterable[os.PathLike], relative_root: os.P
 
 
 def unzip(zip_path: os.PathLike, files: Iterable[os.PathLike] = None,  output_dir: os.PathLike = None, *, overwrite: bool = False):
-    """ Unzip a set of files using 7-zip. If the path doesn't end with .zip, the extension is added automatically for convenience. If a set of files is not specified, all of them are extracted."""
+    """ Unzip a set of files. If the path doesn't end with .zip, the extension is added automatically for convenience. If a set of files is not specified, all of them are extracted."""
     zip_path = Path(zip_path).with_suffix(".zip")
     if output_dir == None:
         # controls unzip destination
