@@ -291,8 +291,8 @@ class Cmd(cmd.Cmd):
                                     else:
                                         # found a non-comment first
                                         break
-                        if found_script_doc_comment:
-                            continue
+                            if found_script_doc_comment:
+                                continue
 
                         print(str(self.nohelp % (cmd,)), file=self.stdout)
                         continue
