@@ -370,7 +370,7 @@ class PageBrowser(console.Cmd):
         return len(plan)
 
     def open_and_download(self, wait=0, output=True) -> int:
-        """Open each link found on the current page, analyzes, and closes the tab before moving on to the next one,, then downloads everything. Returns the number of downloads. get_kwargs passed to requests.get."""
+        """Open each link found on the current page, analyzes, and closes the tab before moving on to the next one, then downloads everything. Returns the number of downloads. get_kwargs passed to requests.get."""
         download_count = 0
         current = self.driver.current_window_handle
         plan = {}
