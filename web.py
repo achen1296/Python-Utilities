@@ -450,7 +450,7 @@ class PageBrowser(console.Cmd):
         self.switch_tab(int(tab_index))
     do_t.__doc__ = switch_tab.__doc__
 
-    def do_od(self, wait: int):
+    def do_od(self, wait: int = 0):
         self.open_and_download(int(wait))
     do_od.__doc__ = open_and_download.__doc__
 
