@@ -5,41 +5,42 @@ from typing import Any, Callable, Iterable, Union
 import files
 
 
-def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\s*>\s*", value_list_separator: str = "\s*\|\s*",  comment: str = "\s*#", all_lists: bool = False) -> dict[str, Union[str, list[str]]]:
+def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\s*>\s*", value_list_separator: str = "\s*\|\s*", comment: str = "\s*#", all_lists: bool = False, key_transform: Callable[[Any], Any] = None, value_transform: Callable[[Any], Any] = None) -> dict:
     """ Reads a dictionary from a list of string entries.
 
-    By default each is interpreted as key>value or key>val1|val2|... 
+    By default each is interpreted as key>value or key>val1|val2|...
 
     If the k/v separator is not present, the value is automatically filled in with "" (or [] for all_lists=True), and if present multiple times in an entry, those after the first are interpreted as value text.
 
-    ">" is the default key/value separator and "|" is the default value list separator so that file paths can be keys/values, since these characters are not allowed in filenames. 
+    ">" is the default key/value separator and "|" is the default value list separator so that file paths can be keys/values, since these characters are not allowed in filenames.
 
-    The default comment starter is "#". Use "" for no comments or no value list separator. It must be at the start of a line, otherwise it is interpreted as key/value text.
+    The default comment starter is "#". Use None for no comments or no value list separator. It must be at the start of a line, otherwise it is interpreted as key/value text.
 
     All string parameters are used as regular expressions.
 
-    Entries that are one element long are not turned into lists by default. 
+    Entries that are one element long are not turned into lists by default.
 
     Undefined behavior for duplicate keys. """
     d = {}
     for entry in iterable_dict:
         # skip whitespace and comments
-        if entry.strip() == "" or (comment != "" and re.match(comment, entry) != None):
+        if entry.strip() == "" or (comment is not None and re.match(comment, entry) != None):
             continue
-        if re.search(key_value_separator, entry) == None:
-            # no k-v separator, empty value
-            if all_lists:
-                d[entry] = []
-            else:
-                d[entry] = ""
+        if re.search(key_value_separator, entry) is None:
+            k = entry
+            v = ""
         else:
             # only use first k-v separator (after that regarded as part of value)
             k, v = re.split(key_value_separator, entry, 1)
-            if value_list_separator != "" and re.search(value_list_separator, v) != None:
+            if value_list_separator is not None and re.search(value_list_separator, v) != None:
                 v = re.split(value_list_separator, v)
             elif all_lists:
                 v = [v]
-            d[k] = v
+        if key_transform:
+            k = key_transform(k)
+        if value_transform:
+            v = value_transform(v)
+        d[k] = v
     return d
 
 
@@ -54,11 +55,11 @@ def read_file_dict(filename: os.PathLike, *, encoding="utf8", entry_separator="\
 
 
 def write_iterable_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|", sort_keys: Callable = str, sort_value_lists: Callable = None) -> list[str]:
-    """ Default separators > and |, same as reading dictionaries. 
+    """ Default separators > and |, same as reading dictionaries.
 
-    Keys and values can be of any type and are converted to strings using str(). For iterable values (but not strings), they are converted one at a time with the value list separator inserted. 
+    Keys and values can be of any type and are converted to strings using str(). For iterable values (but not strings), they are converted one at a time with the value list separator inserted.
 
-    Keys with None, empty string, or empty iterable values do not get the k/v separator. 
+    Keys with None, empty string, or empty iterable values do not get the k/v separator.
 
     Keys and iterable values are sorted using the keys given by sort_key and sort_value_lists respectively. """
     l = []
