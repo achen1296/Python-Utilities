@@ -132,15 +132,18 @@ def tor_driver(**kwargs) -> webdriver.Firefox:
     return driver
 
 
-def chrome_driver(profile: os.PathLike, driver: os.PathLike) -> webdriver.Chrome:
+def chrome_driver(profile: os.PathLike, executable_path: os.PathLike = None) -> webdriver.Chrome:
     options = webdriver.ChromeOptions()
     options.add_argument(
         f"user-data-dir={profile}")
     options.add_argument(f"profile-directory={profile}")
     # disable (almost all) logs
     options.add_argument("--log-level=3")
-    driver = webdriver.Chrome(
-        executable_path=driver, options=options)
+    if executable_path:
+        driver = webdriver.Chrome(
+            executable_path=executable_path, options=options)
+    else:
+        driver = webdriver.Chrome(options=options)
     driver.implicitly_wait(2)
     driver.set_page_load_timeout(15)
     return driver
