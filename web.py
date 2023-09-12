@@ -132,10 +132,10 @@ def tor_driver(**kwargs) -> webdriver.Firefox:
     return driver
 
 
-def chrome_driver(profile: os.PathLike, executable_path: os.PathLike = None) -> webdriver.Chrome:
+def chrome_driver(profile: os.PathLike, *, executable_path: os.PathLike = None, user_data_dir: os.PathLike = os.environ['LOCALAPPDATA']+"\\Google\\Chrome\\User Data") -> webdriver.Chrome:
     options = webdriver.ChromeOptions()
     options.add_argument(
-        f"user-data-dir={profile}")
+        f"user-data-dir={user_data_dir}")
     options.add_argument(f"profile-directory={profile}")
     # disable (almost all) logs
     options.add_argument("--log-level=3")
