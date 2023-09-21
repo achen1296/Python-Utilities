@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
 import os
 import re
+from abc import ABC, abstractmethod
 from builtins import set as bset
 from pathlib import Path
 from typing import Callable, Iterable
@@ -129,6 +129,7 @@ class TagExpression(ABC):
             return TagExpressionAnd(*and_or_sub_expressions), i+1
 
         def _compile(i: int) -> tuple[TagExpression, int]:
+            i += len(re.match("\s*", s[i:]).group(0))
             c = s[i]
             if c == "!":
                 sub, i = _compile(i+1)
