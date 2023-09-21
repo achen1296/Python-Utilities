@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 import os
 import re
 from builtins import set as bset
@@ -91,7 +92,8 @@ class TagExpressionException(Exception):
     pass
 
 
-class TagExpression:
+class TagExpression(ABC):
+    @abstractmethod
     def match(self, tags: Iterable[str]):
         return False
 
