@@ -97,20 +97,19 @@ class TagExpression:
 
     @staticmethod
     def compile(tag_expression_str: str):
-        s = "("+tag_expression_str+")"
+        s = "["+tag_expression_str+"]"
 
-        def _compile_and_or(i: int, expect_paren=False) -> tuple[TagExpression, int]:
+        def _compile_and_or(i: int) -> tuple[TagExpression, int]:
             # represents an overall and, each sublist is an or
             and_or_sub_expressions = [[]]
             while True:
                 # consume whitespace
                 i += len(re.match("\s*", s[i:]).group(0))
-                if expect_paren:
-                    if i >= len(s):
-                        raise TagExpressionException(
-                            "Not enough closing parentheses for tag expression " + tag_expression_str)
-                    elif s[i] == ")":
-                        break
+                if i >= len(s):
+                    raise TagExpressionException(
+                        "Not enough closing parentheses for tag expression " + tag_expression_str)
+                elif s[i] == "]":
+                    break
                 if i >= len(s):
                     break
                 if s[i] == "&":
@@ -132,15 +131,15 @@ class TagExpression:
             if c == "!":
                 sub, i = _compile(i+1)
                 return TagExpressionNot(sub), i
-            if s[i] == "(":
-                return _compile_and_or(i+1, expect_paren=True)
+            if s[i] == "[":
+                return _compile_and_or(i+1)
             match = re.match("\w+", s[i:])
             if not match:
                 raise TagExpressionException("Unsupported character " + s[i])
             tag = match.group(0)
             return TagExpressionSingle(tag), i + len(tag)
 
-        exp, _ = _compile_and_or(0)
+        exp, _ = _compile(0)
         return exp
 
 
