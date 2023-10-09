@@ -195,7 +195,9 @@ def walk(root: os.PathLike = ".", *,
          not_exist_action: Callable[[Path, int], Optional[Iterable]] = None,
          error_action: Callable[[Path, int, Exception],
                                 Optional[Iterable]] = None,
-         side_effects: bool = False):
+         side_effects: bool = False,
+         ignore_hidden: bool = False,
+         ):
     """ For directories, dir_action is called first. Then skip_dir is called, and if returns a truthy value nothing else happens to the directory. Otherwise, the contents are recursively walked over before dir_post_action is called.
 
     If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks.
@@ -206,6 +208,8 @@ def walk(root: os.PathLike = ".", *,
 
     def walk_recursive(root: Path, depth: int):
         try:
+            if ignore_hidden and hidden(root):
+                return
             if symlink_action is not None and root.is_symlink():
                 if (symlink_result := symlink_action(root, depth)) is not None:
                     yield from symlink_result
@@ -242,7 +246,18 @@ def walk(root: os.PathLike = ".", *,
         return gen
 
 
-def delete(file: os.PathLike, not_exist_ok: bool = False, *, output: bool = False, ignore_errors: bool = False):
+WALK_ACTIONS = [a+"_action" for a in ["file", "dir",
+                                      "dir_post", "symlink", "not_exist", "error"]]
+
+
+def prune_walk_kwargs(kwargs):
+    """ Remove _action kwargs and also side_effects, since these are usually set specially by functions using walk. """
+    for w in WALK_ACTIONS:
+        if w in kwargs:
+            del kwargs[w]
+
+
+def delete(file: os.PathLike, not_exist_ok: bool = False, *, output: bool = False, ignore_errors: bool = False, **kwargs):
     """ Deletes files directly. Recursively deletes directory contents and then the directory itself. Works on symlinks, deleting the link without following it (leaves the link's destination intact). """
 
     def remove_respect_ignore_errors(file: Path):
@@ -283,8 +298,9 @@ def delete(file: os.PathLike, not_exist_ok: bool = False, *, output: bool = Fals
         if output:
             print(f"{'    ' * depth}{file}: deleted file ")
 
+    prune_walk_kwargs(kwargs)
     walk(file, file_action=file_action, dir_action=dir_action, dir_post_action=dir_post_action,
-         symlink_action=symlink_action, not_exist_action=not_exist_action, side_effects=True)
+         symlink_action=symlink_action, not_exist_action=not_exist_action, side_effects=True, **kwargs)
 
 
 class FileMismatchException(Exception):
@@ -513,7 +529,7 @@ def unzip(zip_path: os.PathLike, files: Iterable[os.PathLike] = None,  output_di
         zip.extractall(output_dir, files)
 
 
-def long_names(root: os.PathLike = ".") -> Iterable[Path]:
+def long_names(root: os.PathLike = ".", **kwargs) -> Iterable[Path]:
     """ Returns a set of files whose absolute paths are >= 260 characters, which means they are too long for some Windows applications. Not > 260 because, as the page linked below describes, Windows includes the NUL character at the end in the count, while Python strings do not.
 
     docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation """
@@ -521,7 +537,8 @@ def long_names(root: os.PathLike = ".") -> Iterable[Path]:
         if len(str(f)) >= 260:
             yield f
 
-    return walk(Path(root).resolve(), file_action=file_action)
+    prune_walk_kwargs(kwargs)
+    return walk(Path(root).resolve(), file_action=file_action, **kwargs)
 
 
 def re_split(file: os.PathLike, separator: str = "\s*\n\s*", *, exclude_empty: bool = True, encoding="utf8", empty_on_not_exist: bool = False, ** open_kwargs):
@@ -661,16 +678,17 @@ def delete_empty(root: os.PathLike = ".", output=True, ignore_errors=False):
     return count
 
 
-def list_files(root: os.PathLike = ".", *, skip_file: Callable[[os.PathLike, int], bool] = None, skip_dir: Callable[[os.PathLike, int], bool] = None) -> list[Path]:
+def list_files(root: os.PathLike = ".", *, skip_file: Callable[[os.PathLike, int], bool] = None, skip_dir: Callable[[os.PathLike, int], bool] = None, **kwargs) -> list[Path]:
 
     def file_action(p: Path, i: int):
         if skip_file is None or not skip_file(p, i):
             yield p
 
-    return walk(root, file_action=file_action, skip_dir=skip_dir)
+    prune_walk_kwargs(kwargs)
+    return walk(root, file_action=file_action, skip_dir=skip_dir, **kwargs)
 
 
-def flatten(root: os.PathLike = ".", *, output=True):
+def flatten(root: os.PathLike = ".", *, output=True, **kwargs):
     """ Moves all files in subfolders so they are directly inside the root folder, and then deletes the leftover empty subfolders. """
 
     root = Path(root)
@@ -682,6 +700,7 @@ def flatten(root: os.PathLike = ".", *, output=True):
             return
         moves[p] = root.joinpath(p.name)
 
+    prune_walk_kwargs(kwargs)
     walk(root=root, file_action=file_action, side_effects=True)
     move_by_dict(moves, output=output)
     delete_empty(root, output=output)
@@ -706,7 +725,7 @@ def watch(file: os.PathLike, callback: Callable[[os.PathLike, time.struct_time],
         time.sleep(poll_time)
 
 
-def regex_rename(find: Union[str, re.Pattern[str]], replace: Union[str, Callable[[Union[str, re.Match]], str]], root: os.PathLike = ".", *, output: bool = False):
+def regex_rename(find: Union[str, re.Pattern[str]], replace: Union[str, Callable[[Union[str, re.Match]], str]], root: os.PathLike = ".", *, output: bool = False, **kwargs):
     """ Only moves files. Returns the number of files moved. """
     find = re.compile(find)
     moves = {}
@@ -716,12 +735,13 @@ def regex_rename(find: Union[str, re.Pattern[str]], replace: Union[str, Callable
         if p.name != new_name:
             moves[p] = p.with_name(new_name)
 
-    walk(root, file_action=file_action, side_effects=True)
+    prune_walk_kwargs(kwargs)
+    walk(root, file_action=file_action, side_effects=True, **kwargs)
 
     return move_by_dict(moves, output=output)
 
 
-def text_search(query: str, root: os.PathLike = ".", output_errors=False) -> list[Path]:
+def text_search(query: str, root: os.PathLike = ".", output_errors=False, **kwargs) -> list[Path]:
     """ Search for text in files. Intended to be used on the command line, and will not find text that spans in between lines. """
     def file_action(p: Path, i: int):
         with open(p, encoding="utf8") as f:
@@ -734,10 +754,11 @@ def text_search(query: str, root: os.PathLike = ".", output_errors=False) -> lis
         if output_errors:
             print("error on " + str(p))
 
-    return walk(root, file_action=file_action, error_action=error_action)
+    prune_walk_kwargs(kwargs)
+    return walk(root, file_action=file_action, error_action=error_action, **kwargs)
 
 
-def search(name_query: str, root: os.PathLike = ".", output_errors=False) -> list[Path]:
+def search(name_query: str, root: os.PathLike = ".", output_errors=False, **kwargs) -> list[Path]:
     def name(p: Path, i: int):
         if name_query.lower() in p.name.lower():
             yield p
@@ -746,7 +767,8 @@ def search(name_query: str, root: os.PathLike = ".", output_errors=False) -> lis
         if output_errors:
             print("error on " + str(p))
 
-    return walk(root, file_action=name, dir_action=name, error_action=error_action)
+    prune_walk_kwargs(kwargs)
+    return walk(root, file_action=name, dir_action=name, error_action=error_action, **kwargs)
 
 
 def find_ascii(file: os.PathLike, length_threshold: int) -> Iterable[tuple[int, bytearray]]:
@@ -796,7 +818,6 @@ def gitignored_files(gitignore_file: os.PathLike = ".gitignore", root: os.PathLi
 
 
 if WINDOWS:
-
     class LockFile:
         """ Based on Thomas Lux's answer on https://stackoverflow.com/questions/489861/locking-a-file-in-python """
 
@@ -849,3 +870,12 @@ if WINDOWS:
         path: str = str(path)
         path = winreg.ExpandEnvironmentStrings(path)
         return Path(path)
+
+if WINDOWS:
+    import stat
+
+    def hidden(file: os.PathLike):
+        return os.stat(file).st_file_attributes & stat.FILE_ATTRIBUTE_HIDDEN != 0
+else:
+    def hidden(file: os.PathLike):
+        Path(file).name.startswith(".")
