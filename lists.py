@@ -71,52 +71,6 @@ def remove_duplicates_in_place(l: list) -> list:
             i += 1
     return l
 
-
-def cartesian_product(l1: Iterable, *lists: Iterable, first_fastest: bool = False) -> Iterable[list]:
-    if len(lists) == 0:
-        for i in l1:
-            yield [i]
-    else:
-        if first_fastest:
-            for combo in cartesian_product(*lists, first_fastest=first_fastest):
-                for i in l1:
-                    yield [i] + combo
-        else:
-            for i in l1:
-                for combo in cartesian_product(*lists, first_fastest=first_fastest):
-                    yield [i] + combo
-
-
-def combinations(l: Iterable, n: int):
-    """Generate all combinations of n unique elements from the list l exactly one time each. Out-of-bounds values for n are snapped in-bounds, i.e. if n < 0, then only a empty list is yieled, and if n > len(l) then l is yielded."""
-
-    def combinations_recursive(l: list, n: int):
-        if n <= 0:
-            yield []
-            return
-        if n >= len(l):
-            yield l
-            return
-        for i in range(0, len(l) - n + 1):
-            for c in combinations_recursive(l[i+1:], n-1):
-                yield l[i:i+1] + c
-
-    return combinations_recursive(list(l), n)
-
-
-def permutations(l: Iterable):
-    """ Generate all permutations of the input """
-    def permutations_recursive(l: list):
-        len_l = len(l)
-        if len_l == 0:
-            yield []
-            return
-        for i in range(0, len_l):
-            for p in permutations_recursive(l[:i]+l[i+1:]):
-                yield [l[i]] + p
-    return permutations_recursive(list(l))
-
-
 def random_from(lst: Iterable) -> Any:
     if len(lst) == 0:
         return None
