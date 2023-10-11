@@ -10,6 +10,8 @@ import files
 NAME_TAGS_SUFFIX_RE = re.compile("^(.*)(\[.*?\])(\.\w+)?$")
 NAME_SUFFIX_RE = re.compile("^(.*?)(\.\w+)?$")
 
+SUPPORTED_CHARACTERS = "[\w-]"
+
 
 def remove_forbidden_chars(name: str, name_only=False):
     """ Variant of files.remove_forbidden_chars that also removes square brackets, intended to be used on files that are known not to have any tags. """
@@ -136,7 +138,7 @@ class TagExpression(ABC):
                 return TagExpressionNot(sub), i
             if s[i] == "[":
                 return _compile_and_or(i+1)
-            match = re.match("\w+", s[i:])
+            match = re.match(f"{SUPPORTED_CHARACTERS}+", s[i:])
             if not match:
                 raise TagExpressionException("Unsupported character " + s[i])
             tag = match.group(0)
