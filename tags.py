@@ -10,7 +10,7 @@ import files
 NAME_TAGS_SUFFIX_RE = re.compile("^(.*)(\[.*?\])(\.\w+)?$")
 NAME_SUFFIX_RE = re.compile("^(.*?)(\.\w+)?$")
 
-SUPPORTED_CHARACTERS = "[\w-]"
+SUPPORTED_CHARACTERS = "[\w\-()]"
 
 
 def remove_forbidden_chars(name: str, name_only=False):
