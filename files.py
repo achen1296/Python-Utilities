@@ -432,12 +432,14 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
             time2 = int(path2.stat().st_mtime)
             if time1 > time2:
                 if output:
-                    print(f"{output_prefix}Updating file <{path1}> -> <{path2}>")
+                    print(f"{output_prefix}Updating file <{
+                          path1}> -> <{path2}>")
                 shutil.copy2(path1, path2, follow_symlinks=False)
                 count += 1
             elif time2 > time1:
                 if output:
-                    print(f"{output_prefix}Updating file <{path2}> -> <{path1}>")
+                    print(f"{output_prefix}Updating file <{
+                          path2}> -> <{path1}>")
                 shutil.copy2(path2, path1, follow_symlinks=False)
                 count += 1
             # time may be the same, in which case nothing happens
@@ -608,8 +610,8 @@ def size(root: os.PathLike = ".", unit: float = BYTE, follow_symlinks: bool = Fa
 def format_size(size_bytes: int):
     units = [" bytes", "KB", "MB", "GB", "TB"]
     u = 0
-    while size_bytes > 1e3:
-        size_bytes /= 1e3
+    while size_bytes > 1000:
+        size_bytes /= 1000
         u += 1
     return f"{size_bytes:.3f} {units[u]}"
 
@@ -718,7 +720,7 @@ def watch(file: os.PathLike, callback: Callable[[os.PathLike, time.struct_time],
         if current_mod_time != last_mod_time:
             if output:
                 print(
-                    f"File <{file}> was updated at <{time.strftime(time_format,time.gmtime(current_mod_time))}>")
+                    f"File <{file}> was updated at <{time.strftime(time_format, time.gmtime(current_mod_time))}>")
             callback(file, current_mod_time)
             last_mod_time = current_mod_time
 
