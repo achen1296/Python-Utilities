@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import time
+from pathlib import Path
 
 import files
 
@@ -76,4 +77,29 @@ def set_system_sounds_volume(volume: float):
 
 def set_volume_balance(left: float, right: float):
     subprocess.run(["soundvolumeview ", "/setvolumechannels",
-                   "Realtek(R) Audio\Device\Speakers/Headphones\Render", str(math.floor(left*100)), str(math.floor(right*100))])
+                   r"Realtek(R) Audio\Device\Speakers/Headphones\Render", str(math.floor(left*100)), str(math.floor(right*100))])
+
+
+def set_wallpaper(image: os.PathLike):
+    # https://c-nergy.be/blog/?p=15291
+    image = Path(image).absolute()
+    # this powershell program looks like it does some unnecessary things, but I don't know enough about the syntax to improve it
+    subprocess.run(["powershell", f"""$code = @'
+using System.Runtime.InteropServices;
+namespace Win32 {{
+     public class Wallpaper {{
+        [DllImport("user32.dll", CharSet=CharSet.Auto)]
+         static extern int SystemParametersInfo (int uAction, int uParam, string lpvParam, int fuWinIni);
+
+         public static void SetWallpaper(string thePath) {{
+            SystemParametersInfo(20, 0, thePath, 3);
+         }}
+    }}
+}}
+'@
+add-type $code
+[Win32.Wallpaper]::SetWallpaper("{str(image)}")"""])
+
+    # this does not work consistently
+    # subprocess.run(["reg", "add", r"HKEY_CURRENT_USER\Control Panel\Desktop","/v", "Wallpaper", "/t", "REG_SZ", "/d", image, "/f"])
+    # subprocess.run("RUNDLL32.EXE user32.dll, UpdatePerUserSystemParameters", shell=True)
