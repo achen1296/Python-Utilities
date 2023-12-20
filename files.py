@@ -830,7 +830,7 @@ if WINDOWS:
         def __unlock_file(self):
             msvcrt.locking(self.fd.fileno(), msvcrt.LK_UNLCK, self.locked_size)
 
-        def __init__(self, path: Path, *args, **kwargs):
+        def __init__(self, path: os.PathLike, *args, **kwargs):
             self.path = path
             self.fd: io.IOBase = open(path, *args, **kwargs)
             self.__lock_file()
