@@ -2,8 +2,11 @@ import math
 import os
 import re
 import subprocess
+import sys
 import time
+from ctypes import *
 from pathlib import Path
+from typing import Callable
 
 import files
 
@@ -80,26 +83,36 @@ def set_volume_balance(left: float, right: float):
                    r"Realtek(R) Audio\Device\Speakers/Headphones\Render", str(math.floor(left*100)), str(math.floor(right*100))])
 
 
-def set_wallpaper(image: os.PathLike):
-    # https://c-nergy.be/blog/?p=15291
-    image = Path(image).absolute()
-    # this powershell program looks like it does some unnecessary things, but I don't know enough about the syntax to improve it
-    subprocess.run(["powershell", f"""$code = @'
-using System.Runtime.InteropServices;
-namespace Win32 {{
-     public class Wallpaper {{
-        [DllImport("user32.dll", CharSet=CharSet.Auto)]
-         static extern int SystemParametersInfo (int uAction, int uParam, string lpvParam, int fuWinIni);
+# def set_wallpaper(image: os.PathLike):
+#     this works but sets for all monitors
+#     # https://c-nergy.be/blog/?p=15291
+#     image = Path(image).absolute()
+#     # this powershell program looks like it does some unnecessary things, but I don't know enough about the syntax to improve it
+#     subprocess.run(["powershell", f"""$code = @'
+# using System.Runtime.InteropServices;
+# namespace Win32 {{
+#      public class Wallpaper {{
+#         [DllImport("user32.dll", CharSet=CharSet.Auto)]
+#          static extern int SystemParametersInfo (int uAction, int uParam, string lpvParam, int fuWinIni);
+#
+#          public static void SetWallpaper(string thePath) {{
+#             SystemParametersInfo(20, 0, thePath, 3);
+#          }}
+#     }}
+# }}
+# '@
+# add-type $code
+# [Win32.Wallpaper]::SetWallpaper("{str(image)}")"""])
 
-         public static void SetWallpaper(string thePath) {{
-            SystemParametersInfo(20, 0, thePath, 3);
-         }}
-    }}
-}}
-'@
-add-type $code
-[Win32.Wallpaper]::SetWallpaper("{str(image)}")"""])
+#     this does not work consistently
+#     subprocess.run(["reg", "add", r"HKEY_CURRENT_USER\Control Panel\Desktop","/v", "Wallpaper", "/t", "REG_SZ", "/d", image, "/f"])
+#     subprocess.run("RUNDLL32.EXE user32.dll, UpdatePerUserSystemParameters", shell=True)
 
-    # this does not work consistently
-    # subprocess.run(["reg", "add", r"HKEY_CURRENT_USER\Control Panel\Desktop","/v", "Wallpaper", "/t", "REG_SZ", "/d", image, "/f"])
-    # subprocess.run("RUNDLL32.EXE user32.dll, UpdatePerUserSystemParameters", shell=True)
+
+# based on https://stackoverflow.com/questions/66375014/is-it-possible-to-use-idesktopwallpaper-in-python
+WALLPAPER_DLL = cdll.LoadLibrary(
+    str(Path(__file__).parent.joinpath("dll/wallpaper.dll").absolute()))
+
+
+def set_wallpaper(monitor: int, image: os.PathLike):
+    WALLPAPER_DLL.SetWallpaper(monitor, str(Path(image).absolute()))
