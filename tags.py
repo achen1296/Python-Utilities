@@ -260,7 +260,7 @@ def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, remove_tags=[]
     files.move_by_dict(planned_moves)
 
 
-def collect(root: os.PathLike, **kwargs) -> bset[str]:
+def collect(root: os.PathLike, **kwargs) -> dict[str, int]:
     """ Returns all of the tags on files in this folder, along with counts. """
     collected_tags = {}
 
