@@ -478,7 +478,7 @@ def ascii_table(hex: bool = True):
             print()
 
 
-def contains_words(s: str, words: list[str], *, in_order=True, allow_other_words_between=False, word_separator_re="[_\\- ]+") -> bool:
+def contains_words(s: str, words: list[str], *, in_order=True, allow_other_words_between=False, word_separator_re="[_\\-\\s]+") -> bool:
     """ Does not do simple string inclusion -- for example, `"owe" in "power"` would be `True`, but `contains_words("power", ["owe"])` would not be `True` because "owe" is not the entire word.
 
     If `in_order` is `False`, then just checks if the string contains all of the words. (`allow_other_words_between` has no effect.)
