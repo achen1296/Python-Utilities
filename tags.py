@@ -101,6 +101,7 @@ class TagExpression(ABC):
 
     @staticmethod
     def compile(tag_expression_str: str):
+        # because [] is used for the tags at the end of file names, they are implicitly forbidden characters in tags, so they can be used for grouping in tag expressions
         s = "["+tag_expression_str+"]"
 
         def _compile_and_or(i: int) -> tuple[TagExpression, int]:

@@ -29,7 +29,7 @@ def escape(s: str, special_chars: Iterable[str], *, escape_char: str = "\\") -> 
     return s
 
 
-def argument_split(s: str, sep: str = "\s+", *, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_args=True, unescape_char="\\", re_flags: int = 0, split_compounds: bool = True, **find_pairs_kwargs) -> list[str]:
+def argument_split(s: str, sep: str = "\\s+", *, remove_outer: dict[str, str] = {'"': '"', "'": "'"}, remove_empty_args=True, unescape_char="\\", re_flags: int = 0, split_compounds: bool = True, **find_pairs_kwargs) -> list[str]:
     """ Like str's regular split method, but accounts for arguments that contain the split separator if they occur in compounds (for example, spaces in quoted strings should not result in a split for the default arguments). Furthermore, if this behavior is not disabled, adjacent compounds are also split apart (for example, `"'a''b'"` turns into two arguments).
 
     Arguments for `pairs` and `ignore_internal_pairs` are passed to `find_pairs`. """
@@ -354,8 +354,8 @@ def find_regex_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pa
 
     if pairs is None:
         # negative look behind for \
-        pairs = {"\"": "\"", "'": "'", "\(": "\)",
-                 "\[": "\]", "{": "}"}
+        pairs = {"\"": "\"", "'": "'", "\\(": "\\)",
+                 "\\[": "\\]", "{": "}"}
     if ignore_internal_pairs is None:
         ignore_internal_pairs = {"\"", "\'"}
     else:
@@ -478,7 +478,56 @@ def ascii_table(hex: bool = True):
             print()
 
 
+def contains_words(s: str, words: list[str], *, in_order=True, allow_other_words_between=False, word_separator_re="[_\\- ]+") -> bool:
+    """ Does not do simple string inclusion -- for example, `"owe" in "power"` would be `True`, but `contains_words("power", ["owe"])` would not be `True` because "owe" is not the entire word.
+
+    If `in_order` is `False`, then just checks if the string contains all of the words. (`allow_other_words_between` has no effect.)
+
+    If `in_order` is `True` and `allow_other_words_between` is `True`, then just checks if the string contains all of the words in the order given.
+
+    If `in_order` is `True` and `allow_other_words_between` is `False`, then checks if the string contains all of the words in the order given AND that no other words interrupt the sequence. (This is the default.) """
+    s_words = re.split(word_separator_re, s)
+
+    # special case for no words
+    if len(words) == 0:
+        return True
+
+    if not in_order:
+        for w in words:
+            if w not in s_words:
+                return False
+        return True
+    else:
+        if allow_other_words_between:
+            # don't need to consider special case with no words handled above
+            next_required_word = 0
+            for w in s_words:
+                if w == words[next_required_word]:
+                    next_required_word += 1
+                    if next_required_word >= len(words):
+                        return True
+            return False
+        else:
+            lw = len(words)
+            for start in range(0, len(s_words) - lw + 1):
+                if s_words[start:start + lw] == words:
+                    return True
+            return False
+
+
 if __name__ == "__main__":
+    assert contains_words("a d e c b", ["a", "b", "c"], in_order=False)
+    assert contains_words("a b c e f d g", [
+                          "a", "b", "c"], in_order=True, allow_other_words_between=False)
+    assert contains_words("e f a b c d g", [
+                          "a", "b", "c"], in_order=True, allow_other_words_between=False)
+    assert contains_words("e f g d a b c", [
+                          "a", "b", "c"], in_order=True, allow_other_words_between=False)
+    assert not contains_words(
+        "a b d c", ["a", "b", "c"], in_order=True, allow_other_words_between=False)
+    assert contains_words("a f e g b d c", [
+                          "a", "b", "c"], in_order=True, allow_other_words_between=True)
+
     result = unescape("\\a\\b\\\\c")
     assert result == "ab\\c", result
 
