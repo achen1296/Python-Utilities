@@ -482,15 +482,15 @@ def words(s: str, word_separator_re="[_\\-\\s]+") -> list[str]:
     return re.split(word_separator_re, s)
 
 
-def contains_any_word(s: str, words: list[str], *, word_separator_re="[_\\-\\s]+") -> bool:
-    s_words = re.split(word_separator_re, s)
-    for w in words:
+def contains_any_word(s: str, word_list: list[str], *, word_separator_re="[_\\-\\s]+") -> bool:
+    s_words = words(s, word_separator_re)
+    for w in word_list:
         if w in s_words:
             return True
     return False
 
 
-def contains_all_words(s: str, words: list[str], *, in_order=True, allow_other_words_between=False, word_separator_re="[_\\-\\s]+") -> bool:
+def contains_all_words(s: str, word_list: list[str], *, in_order=True, allow_other_words_between=False, word_separator_re="[_\\-\\s]+") -> bool:
     """ Does not do simple string inclusion -- for example, `"owe" in "power"` would be `True`, but `contains_words("power", ["owe"])` would not be `True` because "owe" is not the entire word.
 
     If `in_order` is `False`, then just checks if the string contains all of the words. (`allow_other_words_between` has no effect.)
@@ -498,14 +498,14 @@ def contains_all_words(s: str, words: list[str], *, in_order=True, allow_other_w
     If `in_order` is `True` and `allow_other_words_between` is `True`, then just checks if the string contains all of the words in the order given.
 
     If `in_order` is `True` and `allow_other_words_between` is `False`, then checks if the string contains all of the words in the order given AND that no other words interrupt the sequence. (This is the default.) """
-    s_words = re.split(word_separator_re, s)
+    s_words = words(s, word_separator_re)
 
     # special case for no words
-    if len(words) == 0:
+    if len(word_list) == 0:
         return True
 
     if not in_order:
-        for w in words:
+        for w in word_list:
             if w not in s_words:
                 return False
         return True
@@ -514,15 +514,15 @@ def contains_all_words(s: str, words: list[str], *, in_order=True, allow_other_w
             # don't need to consider special case with no words handled above
             next_required_word = 0
             for w in s_words:
-                if w == words[next_required_word]:
+                if w == word_list[next_required_word]:
                     next_required_word += 1
-                    if next_required_word >= len(words):
+                    if next_required_word >= len(word_list):
                         return True
             return False
         else:
-            lw = len(words)
+            lw = len(word_list)
             for start in range(0, len(s_words) - lw + 1):
-                if s_words[start:start + lw] == words:
+                if s_words[start:start + lw] == word_list:
                     return True
             return False
 
