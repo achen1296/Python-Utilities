@@ -248,8 +248,8 @@ def matching_files(root: os.PathLike, name_suffix_re_pattern: str = None, tag_ex
     return files.walk(root, file_action=file_action, skip_dir=skip_dir, **kwargs)
 
 
-def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, remove_tags=[], **matching_files_args) -> None:
-    """ Adds/removes the tags to each file in the root folder if its name matches the regular expression pattern and/or set of match tags (the default None parameters match anything). """
+def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, remove_tags=[], output=False, **matching_files_args) -> int:
+    """ Adds/removes the tags to each file in the root folder if its name matches the regular expression pattern and/or set of match tags (the default None parameters match anything). Returns number of files moved. """
     tags = bset(tags)
     planned_moves = {}
 
@@ -258,7 +258,7 @@ def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, remove_tags=[]
         if f.name != new_name:
             planned_moves[f] = f.with_name(new_name)
 
-    files.move_by_dict(planned_moves)
+    return files.move_by_dict(planned_moves, output=output)
 
 
 def collect(root: os.PathLike, **kwargs) -> dict[str, int]:
