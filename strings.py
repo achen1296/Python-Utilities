@@ -478,7 +478,15 @@ def ascii_table(hex: bool = True):
             print()
 
 
-def contains_words(s: str, words: list[str], *, in_order=True, allow_other_words_between=False, word_separator_re="[_\\-\\s]+") -> bool:
+def contains_any_word(s: str, words: list[str], *, word_separator_re="[_\\-\\s]+") -> bool:
+    s_words = re.split(word_separator_re, s)
+    for w in words:
+        if w in s_words:
+            return True
+    return False
+
+
+def contains_all_words(s: str, words: list[str], *, in_order=True, allow_other_words_between=False, word_separator_re="[_\\-\\s]+") -> bool:
     """ Does not do simple string inclusion -- for example, `"owe" in "power"` would be `True`, but `contains_words("power", ["owe"])` would not be `True` because "owe" is not the entire word.
 
     If `in_order` is `False`, then just checks if the string contains all of the words. (`allow_other_words_between` has no effect.)
@@ -516,17 +524,17 @@ def contains_words(s: str, words: list[str], *, in_order=True, allow_other_words
 
 
 if __name__ == "__main__":
-    assert contains_words("a d e c b", ["a", "b", "c"], in_order=False)
-    assert contains_words("a b c e f d g", [
-                          "a", "b", "c"], in_order=True, allow_other_words_between=False)
-    assert contains_words("e f a b c d g", [
-                          "a", "b", "c"], in_order=True, allow_other_words_between=False)
-    assert contains_words("e f g d a b c", [
-                          "a", "b", "c"], in_order=True, allow_other_words_between=False)
-    assert not contains_words(
+    assert contains_all_words("a d e c b", ["a", "b", "c"], in_order=False)
+    assert contains_all_words("a b c e f d g", [
+        "a", "b", "c"], in_order=True, allow_other_words_between=False)
+    assert contains_all_words("e f a b c d g", [
+        "a", "b", "c"], in_order=True, allow_other_words_between=False)
+    assert contains_all_words("e f g d a b c", [
+        "a", "b", "c"], in_order=True, allow_other_words_between=False)
+    assert not contains_all_words(
         "a b d c", ["a", "b", "c"], in_order=True, allow_other_words_between=False)
-    assert contains_words("a f e g b d c", [
-                          "a", "b", "c"], in_order=True, allow_other_words_between=True)
+    assert contains_all_words("a f e g b d c", [
+        "a", "b", "c"], in_order=True, allow_other_words_between=True)
 
     result = unescape("\\a\\b\\\\c")
     assert result == "ab\\c", result
