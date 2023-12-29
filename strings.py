@@ -478,6 +478,10 @@ def ascii_table(hex: bool = True):
             print()
 
 
+def words(s: str, word_separator_re="[_\\-\\s]+") -> list[str]:
+    return re.split(word_separator_re, s)
+
+
 def contains_any_word(s: str, words: list[str], *, word_separator_re="[_\\-\\s]+") -> bool:
     s_words = re.split(word_separator_re, s)
     for w in words:
