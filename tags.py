@@ -7,17 +7,18 @@ from typing import Callable, Iterable
 
 import files
 
-NAME_TAGS_SUFFIX_RE = re.compile("^(.*)(\[.*?\])(\.\w+)?$")
-NAME_SUFFIX_RE = re.compile("^(.*?)(\.\w+)?$")
+NAME_TAGS_SUFFIX_RE = re.compile("^(.*)(\\[.*?\\])(\\.\\w+)?$")
+NAME_SUFFIX_RE = re.compile("^(.*?)(\\.\\w+)?$")
 
-SUPPORTED_CHARACTERS = "[\w\-()]"
+SUPPORTED_CHARACTERS_RE = "[\\w\\-()]+"
+
+FORBIDDEN_CHARS = "[]!&"
 
 
 def remove_forbidden_chars(name: str, name_only=False):
-    """ Variant of files.remove_forbidden_chars that also removes square brackets, intended to be used on files that are known not to have any tags. """
+    """ Variant of files.remove_forbidden_chars that also removes square brackets, intended to be used on file names that are known not to (or intended not to) have any tags. """
     name = files.remove_forbidden_chars(name, name_only)
-    chars = "[]()|!"
-    for c in chars:
+    for c in FORBIDDEN_CHARS:
         name = name.replace(c, "")
     return name
 
@@ -139,7 +140,7 @@ class TagExpression(ABC):
                 return TagExpressionNot(sub), i
             if s[i] == "[":
                 return _compile_and_or(i+1)
-            match = re.match(f"{SUPPORTED_CHARACTERS}+", s[i:])
+            match = re.match(SUPPORTED_CHARACTERS_RE, s[i:])
             if not match:
                 raise TagExpressionException("Unsupported character " + s[i])
             tag = match.group(0)
