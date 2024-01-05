@@ -1,4 +1,3 @@
-from more_itertools import consume
 import glob
 import hashlib
 import io
@@ -13,6 +12,8 @@ import zipfile
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Union
 from zipfile import ZipFile
+
+from more_itertools import consume
 
 WINDOWS = platform.system() == "Windows"
 if WINDOWS:
@@ -248,7 +249,7 @@ def walk(root: os.PathLike = ".", *,
 
 
 WALK_ACTIONS = [a+"_action" for a in ["file", "dir",
-                                      "dir_post", "symlink", "not_exist", "error"]]
+                                      "dir_post", "symlink", "not_exist", "error"]] + ["side_effects"]
 
 
 def prune_walk_kwargs(kwargs):
