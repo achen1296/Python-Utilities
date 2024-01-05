@@ -1,3 +1,4 @@
+from more_itertools import consume
 import glob
 import hashlib
 import io
@@ -186,8 +187,12 @@ def absolutize_link(link: os.PathLike):
         link.symlink_to(new_target)
 
 
+def yield_file(f: Path, _):
+    yield f
+
+
 def walk(root: os.PathLike = ".", *,
-         file_action: Callable[[Path, int], Optional[Iterable]] = None,
+         file_action: Callable[[Path, int], Optional[Iterable]] = yield_file,
          skip_dir: Callable[[Path, int], bool] = None,
          dir_action: Callable[[Path, int], Optional[Iterable]] = None,
          dir_post_action: Callable[[Path, int], Optional[Iterable]] = None,
@@ -237,11 +242,7 @@ def walk(root: os.PathLike = ".", *,
 
     gen = walk_recursive(Path(root), 0)
     if side_effects:
-        try:
-            while True:
-                next(gen)
-        except StopIteration:
-            pass
+        consume(gen)
     else:
         return gen
 
