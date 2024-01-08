@@ -107,11 +107,11 @@ class TagExpression(ABC):
                 and_or_sub_expressions[-1].append(sub)
             and_or_sub_expressions = [subs[0]
                                       if len(subs) == 1 else
-                                      TagExpressionOr(*subs)
+                                      TagExpressionOr.create(*subs)
                                       for subs in and_or_sub_expressions]
             if len(and_or_sub_expressions) == 1:
                 return and_or_sub_expressions[0], i+1
-            return TagExpressionAnd(*and_or_sub_expressions), i+1
+            return TagExpressionAnd.create(*and_or_sub_expressions), i+1
 
         def _compile(i: int) -> tuple[TagExpression, int]:
             i += len(re.match(r"\s*", s[i:]).group(0))
@@ -145,7 +145,31 @@ class TagExpressionSingle(TagExpression):
         return isinstance(other, TagExpressionSingle) and self.tag == other.tag
 
 
-class TagExpressionAnd(TagExpression):
+class TagExpressionNot(TagExpression):
+    def __init__(self, sub_expression: TagExpression):
+        self.sub_expression = sub_expression
+
+    def match(self, tags: Iterable[str]):
+        return not self.sub_expression.match(tags)
+
+    def __repr__(self):
+        return "TagExpressionNot("+repr(self.sub_expression)+")"
+
+    def __eq__(self, other):
+        return isinstance(other, TagExpressionNot) and self.sub_expression == other.sub_expression
+
+
+class TagExpressionMulti(TagExpression):
+    @classmethod
+    def create(cls, *sub_expressions: TagExpression):
+        # For and/or, it would be useless to wrap a single tag expression.
+        # On the other hand, wrapping an empty list actually does something different -- for and, it will be always false, and for or, always true.
+        if len(sub_expressions) == 1:
+            return sub_expressions[0]
+        return cls(*sub_expressions)
+
+
+class TagExpressionAnd(TagExpressionMulti):
     def __init__(self, *sub_expressions: TagExpression):
         self.sub_expressions = sub_expressions
 
@@ -164,7 +188,7 @@ class TagExpressionAnd(TagExpression):
             return False
 
 
-class TagExpressionOr(TagExpression):
+class TagExpressionOr(TagExpressionMulti):
     def __init__(self, *sub_expressions: TagExpression):
         self.sub_expressions = sub_expressions
 
@@ -181,21 +205,6 @@ class TagExpressionOr(TagExpression):
         except ValueError:
             # from zip
             return False
-
-
-class TagExpressionNot(TagExpression):
-    def __init__(self, sub_expression: TagExpression):
-        self.sub_expression = sub_expression
-
-    def match(self, tags: Iterable[str]):
-        return not self.sub_expression.match(tags)
-
-    def __repr__(self):
-        return "TagExpressionNot("+repr(self.sub_expression)+")"
-
-    def __eq__(self, other):
-        # not order independent
-        return isinstance(other, TagExpressionNot) and self.sub_expression == other.sub_expression
 
 
 def _prune_walk_kwargs_set_ignore_hidden_true(kwargs):
@@ -334,7 +343,7 @@ if __name__ == "__main__":
             "a"), TagExpressionSingle("b"), TagExpressionSingle("c")),
         TagExpressionOr(TagExpressionSingle("d"), TagExpressionSingle("e"))
     ), result
-    result = TagExpression.compile("a !b (!c&d) e")
+    result = TagExpression.compile("a !b [!c&d] e")
     assert result == TagExpressionOr(
         TagExpressionSingle("a"),
         TagExpressionNot(TagExpressionSingle("b")),
@@ -344,7 +353,7 @@ if __name__ == "__main__":
         ),
         TagExpressionSingle("e")
     ), result
-    result = TagExpression.compile("a (!b !(!c&d) e)")
+    result = TagExpression.compile("a [!b ![!c&d] e]")
     assert result == TagExpressionOr(
         TagExpressionSingle("a"),
         TagExpressionOr(
