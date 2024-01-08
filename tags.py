@@ -7,9 +7,6 @@ from typing import Callable, Iterable
 
 import files
 
-NAME_TAGS_SUFFIX_RE = re.compile("^(.*)(\\[.*?\\])(\\.\\w+)?$")
-NAME_SUFFIX_RE = re.compile("^(.*?)(\\.\\w+)?$")
-
 SUPPORTED_CHARACTERS_RE = "[\\w\\-()]+"
 
 FORBIDDEN_CHARS = "[]!&"
@@ -23,60 +20,44 @@ def remove_forbidden_chars(name: str, name_only=False):
     return name
 
 
-def name_and_suffix(filename: str) -> tuple[str, str]:
-    match = NAME_TAGS_SUFFIX_RE.match(filename)
+TAG_RE = re.compile(r"(.*)(\[[^\[\]]+\])")
+
+
+def name_parts(filename: str) -> tuple[str, str, str]:
+    p = Path(filename)
+    name_and_tags = p.stem
+    suffix = p.suffix
+    match = TAG_RE.match(name_and_tags)
     if match:
-        name = match.group(1)
-        suffix = match.group(3)
+        name, ts = match.groups()
     else:
-        match = NAME_SUFFIX_RE.match(filename)
-        name = match.group(1)
-        suffix = match.group(2)
+        name = name_and_tags
+        ts = ""
     # ext can be None
-    return (name, suffix if suffix else "")
-
-
-def name(filename: str) -> str:
-    match = NAME_TAGS_SUFFIX_RE.match(filename)
-    if match:
-        return match.group(1)
-    match = NAME_SUFFIX_RE.match(filename)
-    return match.group(1)
-
-
-def suffix(filename: str) -> str:
-    """ Differs from Path.suffix by starting the suffix with the LAST . character, not the first. """
-    match = NAME_TAGS_SUFFIX_RE.match(filename)
-    if match:
-        return match.group(3)
-    match = NAME_SUFFIX_RE.match(filename)
-    return match.group(2) or ""
+    return (name, ts, suffix)
 
 
 def _remove_whitespace(tags: Iterable[str]) -> bset[str]:
     """ Removes leading and trailing whitespace and removes tags that are entirely whitespace. """
-    return {t.strip() for t in tags if not re.match("^\s*$", t)}
+    return {t.strip() for t in tags if not re.match(r"^\s*$", t)}
 
 
 def set(filename: str, tags: Iterable[str]) -> str:
     tags = sorted(_remove_whitespace(tags))
-    name, suffix = name_and_suffix(filename)
+    name, _, suffix = name_parts(filename)
     if len(tags) == 0:
         return name + suffix
     return name + "[" + " ".join(tags) + "]" + suffix
 
 
 def get(filename: str) -> bset[str]:
-    match = NAME_TAGS_SUFFIX_RE.match(filename)
-    if not match:
-        return bset()
-    tags_str = match.group(2)
-    if tags_str == None:
+    _, ts, _ = name_parts(filename)
+    if ts == "":
         return bset()
     else:
         # remove []
-        tags_str = tags_str[1:-1]
-        return bset(re.split("\s+", tags_str))
+        ts = ts[1:-1]
+        return bset(re.split(r"\s+", ts))
 
 
 def add(filename: str, new_tags: Iterable[str]) -> str:
@@ -110,7 +91,7 @@ class TagExpression(ABC):
             and_or_sub_expressions = [[]]
             while True:
                 # consume whitespace
-                i += len(re.match("\s*", s[i:]).group(0))
+                i += len(re.match(r"\s*", s[i:]).group(0))
                 if i >= len(s):
                     raise TagExpressionException(
                         "Not enough closing parentheses for tag expression " + tag_expression_str)
@@ -133,7 +114,7 @@ class TagExpression(ABC):
             return TagExpressionAnd(*and_or_sub_expressions), i+1
 
         def _compile(i: int) -> tuple[TagExpression, int]:
-            i += len(re.match("\s*", s[i:]).group(0))
+            i += len(re.match(r"\s*", s[i:]).group(0))
             c = s[i]
             if c == "!":
                 sub, i = _compile(i+1)
@@ -230,7 +211,7 @@ def matching_files(root: os.PathLike, name_suffix_re_pattern: str = None, tag_ex
         tag_expression: TagExpression = TagExpression.compile(tag_expression)
 
     def file_action(f: Path, d: int):
-        name, suffix = name_and_suffix(f.name)
+        name, _, suffix = name_parts(f.name)
         full_name = name+suffix
         matches_name_suffix = name_suffix_re_pattern is None or re.search(
             name_suffix_re_pattern, full_name)
@@ -316,14 +297,14 @@ def tag_by_folder(root: os.PathLike):
 
 
 if __name__ == "__main__":
-    result = name_and_suffix("file.txt")
-    assert result == ("file", ".txt"), result
-    result = name_and_suffix("file[tag1].txt")
-    assert result == ("file", ".txt"), result
-    result = name_and_suffix("file[tag1 tag2].txt")
-    assert result == ("file", ".txt"), result
-    result = name_and_suffix("asdf")
-    assert result == ("asdf", ""), result
+    result = name_parts("file.txt")
+    assert result == ("file", "", ".txt"), result
+    result = name_parts("file[tag1].txt")
+    assert result == ("file", "[tag1]", ".txt"), result
+    result = name_parts("file[tag1 tag2].txt")
+    assert result == ("file", "[tag1 tag2]", ".txt"), result
+    result = name_parts("asdf")
+    assert result == ("asdf", "", ""), result
     result = get("file.txt")
     assert result == bset(), result
     result = get("file[tag1].txt")
