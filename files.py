@@ -203,7 +203,7 @@ def walk(root: os.PathLike = ".", *,
                                 Optional[Iterable]] = None,
          side_effects: bool = False,
          ignore_hidden: bool = False,
-         ):
+         ) -> Iterable[Path]:
     """ For directories, dir_action is called first. Then skip_dir is called, and if returns a truthy value nothing else happens to the directory. Otherwise, the contents are recursively walked over before dir_post_action is called.
 
     If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks.
@@ -244,6 +244,7 @@ def walk(root: os.PathLike = ".", *,
     gen = walk_recursive(Path(root), 0)
     if side_effects:
         consume(gen)
+        return []
     else:
         return gen
 
