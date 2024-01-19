@@ -546,7 +546,7 @@ def long_names(root: os.PathLike = ".", **kwargs) -> Iterable[Path]:
     return walk(Path(root).resolve(), file_action=file_action, **kwargs)
 
 
-def re_split(file: os.PathLike, separator: str = "\s*\n\s*", *, exclude_empty: bool = True, encoding="utf8", empty_on_not_exist: bool = False, ** open_kwargs):
+def re_split(file: os.PathLike, separator: str = "\\s*\n\\s*", *, exclude_empty: bool = True, encoding="utf8", empty_on_not_exist: bool = False, ** open_kwargs):
     """Like re.split() but does not load the whole file as a string all at once."""
     if not Path(file).exists() and empty_on_not_exist:
         return
