@@ -1,8 +1,3 @@
 # compiled and metadata files
 **.vs*
 dll/*/x64
-dll/*/*.vcxproj*
-# pre-provided files from Visual Studio that I haven't modified
-dll/*/framework.h
-dll/*/pch.cpp
-dll/*/pch.h
