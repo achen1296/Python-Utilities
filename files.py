@@ -435,14 +435,12 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
             time2 = int(path2.stat().st_mtime)
             if time1 > time2:
                 if output:
-                    print(f"{output_prefix}Updating file <{
-                          path1}> -> <{path2}>")
+                    print(f"{output_prefix}Updating file <{path1}> -> <{path2}>")
                 shutil.copy2(path1, path2, follow_symlinks=False)
                 count += 1
             elif time2 > time1:
                 if output:
-                    print(f"{output_prefix}Updating file <{
-                          path2}> -> <{path1}>")
+                    print(f"{output_prefix}Updating file <{path2}> -> <{path1}>")
                 shutil.copy2(path2, path1, follow_symlinks=False)
                 count += 1
             # time may be the same, in which case nothing happens
