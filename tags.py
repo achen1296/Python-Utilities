@@ -36,6 +36,10 @@ def name_parts(filename: str) -> tuple[str, str, str]:
     # ext can be None
     return (name, ts, suffix)
 
+def name(filename:str)->str:
+    name, _, suffix = name_parts(filename)
+    return name + suffix
+
 
 def _remove_whitespace(tags: Iterable[str]) -> bset[str]:
     """ Removes leading and trailing whitespace and removes tags that are entirely whitespace. """
