@@ -709,7 +709,7 @@ def flatten(root: os.PathLike = ".", *, output=True, **kwargs):
     delete_empty(root, output=output)
 
 
-def watch(file: os.PathLike, callback: Callable[[os.PathLike, time.struct_time], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
+def watch(file: os.PathLike, callback: Callable[[Path, time.struct_time], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
     """Monitor a file for changes by checking periodicially seeing if its modification time has changed (every 5 seconds by default) (not necessarily increasing, such as if an old copy of the file was moved into the original location). Provides the callback function with the file and its new modification time. Optionally, can also print out that the file was updated and when."""
     file = Path(file)
 
