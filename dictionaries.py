@@ -5,7 +5,7 @@ from typing import Any, Callable, Iterable, Union
 import files
 
 
-def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\s*>\s*", value_list_separator: str = "\s*\|\s*", comment: str = "\s*#", all_lists: bool = False, key_transform: Callable[[Any], Any] = None, value_transform: Callable[[Any], Any] = None) -> dict:
+def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\\s*>\\s*", value_list_separator: str = "\\s*\\|\\s*", comment: str = "\\s*#", all_lists: bool = False, key_transform: Callable[[Any], Any] = None, value_transform: Callable[[Any], Any] = None) -> dict:
     """ Reads a dictionary from a list of string entries.
 
     By default each is interpreted as key>value or key>val1|val2|...
@@ -44,12 +44,12 @@ def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str
     return d
 
 
-def read_string_dict(string_dict: str, *, entry_separator="\s*\n\s*", **kwargs) -> dict[str, Union[str, list[str]]]:
+def read_string_dict(string_dict: str, *, entry_separator="\\s*\n\\s*", **kwargs) -> dict[str, Union[str, list[str]]]:
     """ Reads a dictionary from a string, splitting on entry_separator and then using read_iterable_dict (passing kwargs). All string parameters except the string to read are used as regular expressions. """
     return read_iterable_dict(re.split(entry_separator, string_dict), **kwargs)
 
 
-def read_file_dict(filename: os.PathLike, *, encoding="utf8", entry_separator="\s*\n\s*", empty_on_not_exist: bool = False, **kwargs) -> dict[str, Union[str, list[str]]]:
+def read_file_dict(filename: os.PathLike, *, encoding="utf8", entry_separator="\\s*\n\\s*", empty_on_not_exist: bool = False, **kwargs) -> dict[str, Union[str, list[str]]]:
     """ Reads a dictionary from a file (using the specified encoding), converting it to a string and using read_iterable_dict (passing kwargs). All string parameters except filename and encoding are used as regular expressions. """
     return read_iterable_dict(files.re_split(filename, entry_separator, encoding=encoding, empty_on_not_exist=empty_on_not_exist), **kwargs)
 
