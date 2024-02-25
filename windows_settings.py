@@ -2,11 +2,9 @@ import math
 import os
 import re
 import subprocess
-import sys
 import time
-from ctypes import *
+from ctypes import cdll
 from pathlib import Path
-from typing import Callable
 
 import files
 
@@ -87,7 +85,7 @@ def set_volume_balance(left: float, right: float):
 #     this works but sets for all monitors
 #     # https://c-nergy.be/blog/?p=15291
 #     image = Path(image).absolute()
-#     # this powershell program looks like it does some unnecessary things, but I don't know enough about the syntax to improve it
+#     # this Powershell program looks like it does some unnecessary things, but I don't know enough about the syntax to improve it
 #     subprocess.run(["powershell", f"""$code = @'
 # using System.Runtime.InteropServices;
 # namespace Win32 {{
