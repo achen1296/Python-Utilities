@@ -435,12 +435,14 @@ def two_way(path1: os.PathLike, path2: os.PathLike, *, output: bool = False, out
             time2 = int(path2.stat().st_mtime)
             if time1 > time2:
                 if output:
-                    print(f"{output_prefix}Updating file <{path1}> -> <{path2}>")
+                    print(f"{output_prefix}Updating file <{
+                          path1}> -> <{path2}>")
                 shutil.copy2(path1, path2, follow_symlinks=False)
                 count += 1
             elif time2 > time1:
                 if output:
-                    print(f"{output_prefix}Updating file <{path2}> -> <{path1}>")
+                    print(f"{output_prefix}Updating file <{
+                          path2}> -> <{path1}>")
                 shutil.copy2(path2, path1, follow_symlinks=False)
                 count += 1
             # time may be the same, in which case nothing happens
@@ -710,13 +712,15 @@ def flatten(root: os.PathLike = ".", *, output=True, **kwargs):
 
 
 def watch(file: os.PathLike, callback: Callable[[Path, time.struct_time], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
-    """Monitor a file for changes by checking periodicially seeing if its modification time has changed (every 5 seconds by default) (not necessarily increasing, such as if an old copy of the file was moved into the original location). Provides the callback function with the file and its new modification time. Optionally, can also print out that the file was updated and when."""
+    """Monitor a file for changes by periodically checking if its modification time has changed (every 5 seconds by default) (not necessarily increasing, such as if an old copy of the file was moved into the original location). Provides the callback function with the file and its new modification time. Optionally, can also print out that the file was updated and when. If the file does not exist and then is created, or if it is deleted, that counts as an update. """
     file = Path(file)
 
-    last_mod_time = os.stat(file).st_mtime
+    # None guaranteed not to come up as an actual file modification time, so non-existence is always not equal to any actual time
+
+    last_mod_time = os.stat(file).st_mtime if file.exists() else None
 
     while True:
-        current_mod_time = os.stat(file).st_mtime
+        current_mod_time = os.stat(file).st_mtime if file.exists() else None
 
         if current_mod_time != last_mod_time:
             if output:
