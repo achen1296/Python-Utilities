@@ -71,6 +71,7 @@ def remove_duplicates_in_place(l: list) -> list:
             i += 1
     return l
 
+
 def random_from(lst: Iterable) -> Any:
     if len(lst) == 0:
         return None
@@ -88,14 +89,14 @@ def count(lst: Iterable[Hashable], bucket: Callable[[Any], Hashable] = lambda x:
 
 
 def histogram(counts: dict, file: os.PathLike = None, *, sort_by="count", bar_char="-", encoding="utf8", **open_kwargs) -> str:
-    """ Pass in a dictionary as returned by count(). If file is specified, the result is written to that file. Whether or not it is specified, the result is also returned. sort_by can be a Callable argument for sorted(), "count", or False, which causes the order of iteration over the dict to be used. """
+    """ Pass in a dictionary as returned by count(). If file is specified, the result is written to that file. Whether or not it is specified, the result is also returned. sort_by can be a Callable key argument for sorted() on counts.keys(), "count", or False, which causes the order of iteration over the dict to be used. """
     if sort_by is False:
         sorted_keys = counts.keys()
     elif sort_by == "count":
         sorted_keys = sorted(
             counts.keys(), key=lambda k: counts[k], reverse=True)
     else:
-        sorted_keys = sorted(counts.keys())
+        sorted_keys = sorted(counts.keys(), key=sort_by)
 
     longest_key = max((len(str(k)) for k in counts))
     longest_count = max((len(str(k)) for k in counts.values()))
