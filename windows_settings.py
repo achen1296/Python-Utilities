@@ -81,7 +81,7 @@ def set_volume_balance(left: float, right: float):
                    r"Realtek(R) Audio\Device\Speakers/Headphones\Render", str(math.floor(left*100)), str(math.floor(right*100))])
 
 
-# def set_wallpaper(image: os.PathLike):
+# def set_wallpaper(image: files.PathLike):
 #     this works but sets for all monitors
 #     # https://c-nergy.be/blog/?p=15291
 #     image = Path(image).absolute()
@@ -112,5 +112,5 @@ WALLPAPER_DLL = cdll.LoadLibrary(
     str(Path(__file__).parent.joinpath("dll/wallpaper.dll").absolute()))
 
 
-def set_wallpaper(monitor: int, image: os.PathLike):
+def set_wallpaper(monitor: int, image: files.PathLike):
     WALLPAPER_DLL.SetWallpaper(monitor, str(Path(image).absolute()))

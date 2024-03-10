@@ -37,7 +37,7 @@ class DownloadException(Exception):
     pass
 
 
-def download_url(url: str, dst: os.PathLike = None, *, output=True, **get_kwargs):
+def download_url(url: str, dst: files.PathLike = None, *, output=True, **get_kwargs):
     """ If file = None, the name is inferred from the last piece of the URL path. get_kwargs passed to requests.get."""
     url_parsed = urlparse(url)
     # remove query, parameters, and fragment, since these are unnecessary (and can even alter the downloaded file, such as by reducing the image resolution)
@@ -84,7 +84,7 @@ def download_url(url: str, dst: os.PathLike = None, *, output=True, **get_kwargs
             clear()
 
 
-def download_urls(plan: dict[str, tuple[os.PathLike, dict[str, str]]], *, wait=0, output=True):
+def download_urls(plan: dict[str, tuple[files.PathLike, dict[str, str]]], *, wait=0, output=True):
     """ plan should be a dictionary mapping a URL to a tuple containing the download destination and a dictionary of keyword arguments for requests.get. If the destination is given as None, it will be in the current working directory with a name determined from the end of the URL path.
 
     Optionally waits for the specified number of seconds in between downloads to avoid pressuring the server; by default does not wait. """
@@ -137,7 +137,7 @@ def tor_driver(**kwargs) -> webdriver.Firefox:
     return driver
 
 
-def chrome_driver(profile: os.PathLike, *, executable_path: os.PathLike = None, user_data_dir: os.PathLike = os.environ['LOCALAPPDATA']+"\\Google\\Chrome\\User Data") -> webdriver.Chrome:
+def chrome_driver(profile: files.PathLike, *, executable_path: files.PathLike = None, user_data_dir: files.PathLike = os.environ['LOCALAPPDATA']+"\\Google\\Chrome\\User Data") -> webdriver.Chrome:
     options = webdriver.ChromeOptions()
     options.add_argument(
         f"user-data-dir={user_data_dir}")
@@ -294,7 +294,7 @@ class PageReader:
         """Whether or not the current page is readable by this PageReader."""
         return True
 
-    def to_download(self, driver: WebDriver) -> dict[str, os.PathLike]:
+    def to_download(self, driver: WebDriver) -> dict[str, files.PathLike]:
         """Returns a dictionary with URLs from the current page to download as keys and the destination filenames as values. The default implementation returns all img element src attributes."""
         images: list[WebElement] = driver.find_elements(By.CSS_SELECTOR, "img")
         download_dict = {}
@@ -355,7 +355,7 @@ class PageBrowser(console.Cmd):
             self.driver.switch_to.window(current)
         return count
 
-    def _plan_download(self) -> dict[str, tuple[os.PathLike, dict[str, str]]]:
+    def _plan_download(self) -> dict[str, tuple[files.PathLike, dict[str, str]]]:
         """ Analyze the current page using PageReaders and return an accumulated dictionary of planned downloads. """
         plan = {}
         for r in self.readers:
@@ -426,14 +426,14 @@ class PageBrowser(console.Cmd):
         """ Specify tab index starting from 0. """
         self.driver.switch_to.window(self.driver.window_handles[tab_index])
 
-    def save_pages(self, file: os.PathLike):
+    def save_pages(self, file: files.PathLike):
         """Save the current pages to a file"""
         urls = []
         for _ in self.iter_tabs():
             urls.append(self.driver.current_url)
         lists.write_file_list(file, urls)
 
-    def load_pages(self, file: os.PathLike):
+    def load_pages(self, file: files.PathLike):
         """Load pages from file"""
         urls = lists.read_file_list(file)
         for u in urls:

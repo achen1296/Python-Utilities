@@ -1,10 +1,11 @@
 import hashlib
-import os
 import random
 from pathlib import Path
 from typing import Union
 
 from PIL import Image
+
+import files
 
 
 def rgb_diff(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> int:
@@ -13,8 +14,8 @@ def rgb_diff(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> int:
     return abs(r1-r2)+abs(g1-g2)+abs(b1-b2)
 
 
-def _image_from_file_or_image(img: Union[os.PathLike, Image.Image]):
-    if isinstance(img, os.PathLike) or isinstance(img, str):
+def _image_from_file_or_image(img: Union[files.PathLike, Image.Image]):
+    if isinstance(img, files.PathLike) or isinstance(img, str):
         return Image.open(img)
     elif isinstance(img, Image.Image):
         return img
@@ -22,13 +23,13 @@ def _image_from_file_or_image(img: Union[os.PathLike, Image.Image]):
         raise TypeError
 
 
-def _optional_save(img: Image.Image, output: os.PathLike):
+def _optional_save(img: Image.Image, output: files.PathLike):
     if output != None:
         output = Path(output)
         img.save(output)
 
 
-def edge_detect(img: Union[os.PathLike, Image.Image], threshold: int = 60, output: os.PathLike = None):
+def edge_detect(img: Union[files.PathLike, Image.Image], threshold: int = 60, output: files.PathLike = None):
     with _image_from_file_or_image(img).convert(mode="RGB") as img:
         new = Image.new("RGB", img.size)
         for x in range(1, img.width):
@@ -46,7 +47,7 @@ def edge_detect(img: Union[os.PathLike, Image.Image], threshold: int = 60, outpu
     return new
 
 
-def scale(img: Union[os.PathLike, Image.Image], scale: float, output: os.PathLike = None) -> str:
+def scale(img: Union[files.PathLike, Image.Image], scale: float, output: files.PathLike = None) -> str:
     with _image_from_file_or_image(img) as img:
         new = img.resize(
             (int(img.width * scale), int(img.height * scale)), resample=Image.BOX)
@@ -54,14 +55,14 @@ def scale(img: Union[os.PathLike, Image.Image], scale: float, output: os.PathLik
     return new
 
 
-def resize(img: Union[os.PathLike, Image.Image], size: tuple[int, int], output: os.PathLike = None):
+def resize(img: Union[files.PathLike, Image.Image], size: tuple[int, int], output: files.PathLike = None):
     with _image_from_file_or_image(img) as img:
         new = img.resize(size, resample=Image.BOX)
     _optional_save(new, output)
     return new
 
 
-def rgb_image_diff(img1: Union[os.PathLike, Image.Image], img2: Union[os.PathLike, Image.Image]) -> tuple[int, int]:
+def rgb_image_diff(img1: Union[files.PathLike, Image.Image], img2: Union[files.PathLike, Image.Image]) -> tuple[int, int]:
     """Returns a pair of ints. The first is the total RGB difference (each pixel pair's difference is always given as the absolute value). The second is the maximum possible RGB difference given the size of the images (which must be the same)."""
     with _image_from_file_or_image(img1).convert(mode="RGB") as img1:
         with _image_from_file_or_image(img2).convert(mode="RGB") as img2:
@@ -77,7 +78,7 @@ def rgb_image_diff(img1: Union[os.PathLike, Image.Image], img2: Union[os.PathLik
     return sum, 765*width*height
 
 
-def collage(imgs: list[Union[os.PathLike, Image.Image]], width: int, height: int, img_width: int, img_height: int, shuffle: bool = False, output: os.PathLike = None):
+def collage(imgs: list[Union[files.PathLike, Image.Image]], width: int, height: int, img_width: int, img_height: int, shuffle: bool = False, output: files.PathLike = None):
     """Make a collage of a list of images which must all be scaled to the same dimensions."""
 
     len_imgs = len(imgs)
@@ -96,7 +97,7 @@ def collage(imgs: list[Union[os.PathLike, Image.Image]], width: int, height: int
         img = resize(imgs[index], (img_width, img_height))
         if img.size != (img_width, img_height):
             raise Exception(
-                f"Current image size {(img.size)} differs from first image size {(img_width,img_height)})")
+                f"Current image size {(img.size)} differs from first image size {(img_width, img_height)})")
 
         row = index // width
         col = index % width
@@ -107,7 +108,7 @@ def collage(imgs: list[Union[os.PathLike, Image.Image]], width: int, height: int
     return new
 
 
-def hash(img: Union[os.PathLike, Image.Image], *, hash_function: str = "MD5", hex: bool = True) -> int:
+def hash(img: Union[files.PathLike, Image.Image], *, hash_function: str = "MD5", hex: bool = True) -> int:
     """ Hash with the specified function (default MD5). Uses PIL to ignore image metadata. """
     img = _image_from_file_or_image(img)
     h = hashlib.new(hash_function, img.tobytes(), usedforsecurity=False)

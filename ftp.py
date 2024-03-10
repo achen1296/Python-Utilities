@@ -4,8 +4,9 @@ import re
 from pathlib import Path
 from typing import Iterable, Union
 
+import files
 
-def _str_path(path: os.PathLike) -> str:
+def _str_path(path: files.PathLike) -> str:
     return str(path).replace("\\", "/")
 
 
@@ -17,7 +18,7 @@ class FTP(ftplib.FTP):
         self.connect(host, int(port))
         self.login(user, pwd)
 
-    def put(self, local: os.PathLike, remote: os.PathLike = None, *, exclude: Iterable[str] = []):
+    def put(self, local: files.PathLike, remote: files.PathLike = None, *, exclude: Iterable[str] = []):
         local = _str_path(local)
         if remote is None:
             remote = local
@@ -40,7 +41,7 @@ class FTP(ftplib.FTP):
 
         recursive_put(local, remote)
 
-    def get(self, remote: os.PathLike, local: os.PathLike = None, *, exclude: Iterable[str] = []):
+    def get(self, remote: files.PathLike, local: files.PathLike = None, *, exclude: Iterable[str] = []):
         remote = _str_path(remote)
         if local is None:
             local = remote
@@ -65,7 +66,7 @@ class FTP(ftplib.FTP):
 
         recursive_get(remote, local)
 
-    def delete(self, file: os.PathLike):
+    def delete(self, file: files.PathLike):
         """Tries deleting as a file, then as a directory, then recursively."""
         file = _str_path(file)
 

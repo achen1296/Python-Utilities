@@ -36,7 +36,8 @@ def name_parts(filename: str) -> tuple[str, str, str]:
     # ext can be None
     return (name, ts, suffix)
 
-def name(filename:str)->str:
+
+def name(filename: str) -> str:
     name, _, suffix = name_parts(filename)
     return name + suffix
 
@@ -218,7 +219,7 @@ def _prune_walk_kwargs_set_ignore_hidden_true(kwargs):
         kwargs["ignore_hidden"] = True
 
 
-def matching_files(root: os.PathLike, name_suffix_re_pattern: str = None, tag_expression: str = None, recursive: bool = True, **kwargs) -> Iterable[Path]:
+def matching_files(root: files.PathLike, name_suffix_re_pattern: str = None, tag_expression: str = None, recursive: bool = True, **kwargs) -> Iterable[Path]:
     r""" The name_suffix_re_pattern is a regular expression that is applied ONLY to the name and suffix of the file, with the tags removed. It may match any part of this. For example, a file with the full name "foo[bar baz].txt" will match pattern="oo\\.tx" """
     if tag_expression is not None:
         tag_expression: TagExpression = TagExpression.compile(tag_expression)
@@ -243,7 +244,7 @@ def matching_files(root: os.PathLike, name_suffix_re_pattern: str = None, tag_ex
     return files.walk(root, file_action=file_action, skip_dir=skip_dir, **kwargs)
 
 
-def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, remove_tags=[], output=False, **matching_files_args) -> int:
+def tag_in_folder(root: files.PathLike, tags: Iterable[str] = [], *, remove_tags=[], output=False, **matching_files_args) -> int:
     """ Adds/removes the tags to each file in the root folder if its name matches the regular expression pattern and/or set of match tags (the default None parameters match anything). Returns number of files moved. """
     tags = bset(tags)
     planned_moves = {}
@@ -256,7 +257,7 @@ def tag_in_folder(root: os.PathLike, tags: Iterable[str] = [], *, remove_tags=[]
     return files.move_by_dict(planned_moves, output=output)
 
 
-def collect(root: os.PathLike, **kwargs) -> dict[str, int]:
+def collect(root: files.PathLike, **kwargs) -> dict[str, int]:
     """ Returns all of the tags on files in this folder, along with counts. """
     collected_tags = {}
 
@@ -270,7 +271,7 @@ def collect(root: os.PathLike, **kwargs) -> dict[str, int]:
     return collected_tags
 
 
-def map_to_folders(root: os.PathLike, tags: Iterable[str], skip_dir: Callable[[Path, int], bool] = None, **kwargs) -> dict[str, bset[Path]]:
+def map_to_folders(root: files.PathLike, tags: Iterable[str], skip_dir: Callable[[Path, int], bool] = None, **kwargs) -> dict[str, bset[Path]]:
     """ Match each tag to a folder with the tag in its name (as a space-separated list).  """
     tags = bset(tags)
     tags_to_folders: dict[str, bset] = {}
@@ -289,7 +290,7 @@ def map_to_folders(root: os.PathLike, tags: Iterable[str], skip_dir: Callable[[P
     return tags_to_folders
 
 
-def tag_by_folder(root: os.PathLike):
+def tag_by_folder(root: files.PathLike):
     """ For each subfolder of the root, tags all the files inside with the tags in the subfolder name (as a space-separated list). """
 
     root = Path(root)

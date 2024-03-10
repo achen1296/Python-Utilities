@@ -1,15 +1,15 @@
 import cmd
 import inspect
 import math
-import os
 import re
 import time
 import traceback
 from enum import Enum
 from pathlib import Path
 from shutil import get_terminal_size
-from typing import Any, Callable, Iterable, Union
+from typing import Any, Callable, Union
 
+import files
 import strings
 
 
@@ -82,7 +82,7 @@ class Cmd(cmd.Cmd):
     command_sep = "\s*;\s*"
     comment = "\s*#"
 
-    def __init__(self, aliases: dict[str, str] = None, scripts_dir: os.PathLike = None, script_suffix=".script", *args, **kwargs):
+    def __init__(self, aliases: dict[str, str] = None, scripts_dir: files.PathLike = None, script_suffix=".script", *args, **kwargs):
         """ If scripts_dir is not specified, command execution will not attempt to find scripts. """
         super().__init__(*args, **kwargs)
         if aliases is None:
@@ -322,7 +322,7 @@ class Cmd(cmd.Cmd):
             self.print_topics(self.scripts_header,
                               list(scripts), None, terminal_width)
 
-    def execute_script(self, script: os.PathLike, *script_args):
+    def execute_script(self, script: files.PathLike, *script_args):
         """ Used before the default method if the class was instantiated with a scripts_dir.
 
         Searches for text files in the scripts_dir with a name matching the first argument and the right suffix. The remaining arguments are used to replace $0, $1, etc. in each command in the script *only* if they appear as the entire argument. If not enough arguments are given, the extras are completely dropped. Can also use $x-y etc. for all arguments in the inclusive range x to y (omit either to capture all arguments before/after a certain point), so e.g. $- or $0- captures all of the arguments. The arguments will not actually be packaged back into a single input string, so they will not be split up again, meaning it is safe to have arguments with spaces.
