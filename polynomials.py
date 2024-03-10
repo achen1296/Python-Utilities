@@ -1,10 +1,10 @@
 import re
-from typing import Iterable, Union
+from typing import Iterable, overload
 
 
 class Polynomial:
     @staticmethod
-    def __remove_high_exp_zeros(coefficients: Iterable[float]):
+    def __remove_high_exp_zeros(coefficients: Iterable[int | float]):
         coefficients = list(coefficients)
         l = len(coefficients)
         if l == 0:
@@ -17,7 +17,7 @@ class Polynomial:
     @staticmethod
     def coefficients_from_str(s: str):
         # remove whitespace
-        s = re.sub("\s+", "", s)
+        s = re.sub("\\s+", "", s)
         # split around +/- operations but keep them on the split terms
         terms = re.split("(?=[-+])", s)
         # remove empty strings
@@ -25,8 +25,8 @@ class Polynomial:
         coefficients = []
         exponents = []
         for t in terms:
-            match: re.Match = re.match(
-                "^([-+])?((\d+)|(\d*\.\d+)|(\d+\.))?\*?(x((\^|\*\*)(\d+))?)?$", t)
+            match: re.Match[str] | None = re.match(
+                "^([-+])?((\\d+)|(\\d*\\.\\d+)|(\\d+\\.))?\\*?(x((\\^|\\*\\*)(\\d+))?)?$", t)
             # group 1: sign, defaults to +
             # group 2: optional coefficient, contains 3-5, defaults to 1
             # group 3: integer coefficient
@@ -65,22 +65,23 @@ class Polynomial:
             combined_coeff[e] += c
         return combined_coeff
 
-    def __init__(self, *coefficients: Union[float, str], high_powers_first=True):
+    def __init__(self, *coefficients: int | float | str, high_powers_first=True):
         """Specify coefficients in order from high to low exponent.
 
         Alternatively, specify a single str argument with the variable x. Supports optional * between coefficients and the variable x. Both ^ and ** may be used for exponentiation.
 
         For example, Polynomial(1,2,3) == Polynomial("x^2+2x+3")."""
+        coefficients: list[int] | list[float]
         if len(coefficients) == 1 and isinstance(coefficients[0], str):
             coefficients = Polynomial.coefficients_from_str(coefficients[0])
-        elif high_powers_first:
-            coefficients = reversed(coefficients)
+        if high_powers_first:
+            coefficients = list(reversed(coefficients))
         self.coefficients: list[float] = Polynomial.__remove_high_exp_zeros(
             coefficients)
 
     @classmethod
     def term(cls, c: float, e: int):
-        coeffs = [0 for _ in range(0, e+1)]
+        coeffs = [0. for _ in range(0, e+1)]
         coeffs[0] = c
         return cls(*coeffs)
 
@@ -96,7 +97,12 @@ class Polynomial:
     def degree(self):
         return len(self) - 1
 
-    def __getitem__(self, e: Union[int, slice]):
+    @overload
+    def __getitem__(self, e: int) -> int | float: ...
+    @overload
+    def __getitem__(self, e: slice) -> list[float]: ...
+
+    def __getitem__(self, e: int | slice):
         if isinstance(e, int):
             if e < 0:
                 raise IndexError("No negative exponents")
@@ -107,7 +113,7 @@ class Polynomial:
         elif isinstance(e, slice):
             return self.coefficients[e]
 
-    def __setitem__(self, e: Union[int, slice], value):
+    def __setitem__(self, e: int | slice, value):
         if isinstance(e, int):
             if e < 0:
                 raise IndexError("No negative exponents")
@@ -179,7 +185,7 @@ class Polynomial:
 
         return Polynomial(*(self[e] - other[e] for e in range(0, l)), high_powers_first=False)
 
-    def __mul__(self, other: Union["Polynomial", int, float]) -> "Polynomial":
+    def __mul__(self, other: "Polynomial | int | float") -> "Polynomial":
         if isinstance(other, int) or isinstance(other, float):
             other = Polynomial(other)
         l1 = len(self)
@@ -187,7 +193,7 @@ class Polynomial:
         # deg(p1) = l1 - 1
         # deg(p2) = l2 - 1
         # deg(p1 * p2) = deg(p1) + deg(p2) = l1 + l2 - 2 = len(p1 * p2) - 1
-        new_coeff = [0 for i in range(0, l1 + l2 - 1)]
+        new_coeff = [0. for i in range(0, l1 + l2 - 1)]
         for e1 in range(0, l1):
             for e2 in range(0, l2):
                 new_coeff[e1 + e2] += self[e1] * other[e2]
@@ -197,7 +203,7 @@ class Polynomial:
         q, _ = divmod(self, other)
         return q
 
-    def __mod__(self, other: Union["Polynomial", int]) -> "Polynomial":
+    def __mod__(self, other: "Polynomial | int") -> "Polynomial":
         if isinstance(other, Polynomial):
             _, r = divmod(self, other)
             return r
@@ -220,7 +226,7 @@ class Polynomial:
 
         return (q, r)
 
-    def __pow__(self, exponent: int, modulus: int = None):
+    def __pow__(self, exponent: int, modulus: int | None = None):
         if exponent < 0:
             raise Exception("negative exponents not supported")
         if exponent == 0:
@@ -245,7 +251,7 @@ class Polynomial:
         return result
 
     @staticmethod
-    def gcd(p1: "Polynomial", p2: "Polynomial", modulus: int = None) -> "Polynomial":
+    def gcd(p1: "Polynomial", p2: "Polynomial", modulus: int | None = None) -> "Polynomial":
         # p1 = q * p2 + r
         if modulus is not None:
             p1 %= modulus
@@ -261,7 +267,7 @@ class Polynomial:
             dividend = divisor
             divisor = r
 
-    def evaluate(self, x: float, modulus: int = None):
+    def evaluate(self, x: float, modulus: int | None = None):
         result = 0
         for e in range(0, len(self)):
             result += self[e] * (x ** e)

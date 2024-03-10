@@ -10,22 +10,14 @@ import time
 import traceback
 import zipfile
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Union
+from typing import Callable, Iterable
 from zipfile import ZipFile
 
 from more_itertools import consume
 
-PathLike = Union[str, os.PathLike]
+PathLike = str | os.PathLike
 
 WINDOWS = platform.system() == "Windows"
-if WINDOWS:
-    import msvcrt
-    import winreg
-
-    from windows_env import *
-
-    LONG_PATH_PREFIX = "\\\\?\\"
-    """ Prefix to allow reading paths >= 260 characters on Windows  """
 
 
 def create_file(path: PathLike, binary=False, **open_kwargs):
@@ -81,7 +73,7 @@ def move_by_dict(planned_moves: dict[PathLike, PathLike], **move_kwargs) -> int:
     return __file_action_by_dict(planned_moves, shutil.move, "Moved", **move_kwargs)
 
 
-def copy_by_dict(planned_copies: dict[PathLike, PathLike], **copy_kwargs) -> None:
+def copy_by_dict(planned_copies: dict[PathLike, PathLike], **copy_kwargs) -> int:
     """Returns the number of items copied."""
     return __file_action_by_dict(planned_copies, shutil.copy2, "Copied", **copy_kwargs)
 
@@ -195,14 +187,14 @@ def yield_file(f: Path, _):
 
 
 def walk(root: PathLike = ".", *,
-         file_action: Callable[[Path, int], Optional[Iterable]] = yield_file,
-         skip_dir: Callable[[Path, int], bool] = None,
-         dir_action: Callable[[Path, int], Optional[Iterable]] = None,
-         dir_post_action: Callable[[Path, int], Optional[Iterable]] = None,
-         symlink_action: Callable[[Path, int], Optional[Iterable]] = None,
-         not_exist_action: Callable[[Path, int], Optional[Iterable]] = None,
+         file_action: Callable[[Path, int], Iterable | None] = yield_file,
+         skip_dir: Callable[[Path, int], bool] | None = None,
+         dir_action: Callable[[Path, int], Iterable | None] | None = None,
+         dir_post_action: Callable[[Path, int], Iterable | None] | None = None,
+         symlink_action: Callable[[Path, int], Iterable | None] | None = None,
+         not_exist_action: Callable[[Path, int], Iterable | None] | None = None,
          error_action: Callable[[Path, int, Exception],
-                                Optional[Iterable]] = None,
+                                Iterable | None] | None = None,
          side_effects: bool = False,
          ignore_hidden: bool = False,
          ) -> Iterable[Path]:
@@ -357,7 +349,7 @@ def mirror(src: PathLike, dst: PathLike, *, output: bool = False, deleted_file_a
     return count
 
 
-def mirror_by_dict(mirror_dict: dict[PathLike, Union[PathLike, Iterable[PathLike]]], *, output=False):
+def mirror_by_dict(mirror_dict: dict[PathLike, PathLike | Iterable[PathLike]], *, output=False):
     """Returns the number of files changed (empty directories do not increase the count)."""
     count = 0
     for src in mirror_dict:
@@ -407,7 +399,7 @@ def link_mirror(src: PathLike, dst: PathLike, *, output: bool = False, deleted_f
     return count
 
 
-def link_mirror_by_dict(mirror_dict: dict[PathLike, Union[PathLike, Iterable[PathLike]]], *, output=False, symbolic=True):
+def link_mirror_by_dict(mirror_dict: dict[PathLike, PathLike | Iterable[PathLike]], *, output=False, symbolic=True):
     """Returns the number of files changed (empty directories do not increase the count)."""
     count = 0
     for src in mirror_dict:
@@ -481,11 +473,11 @@ class ZipException(Exception):
     pass
 
 
-def zip(zip_path: PathLike, files: Iterable[PathLike], relative_root: PathLike = None, *, overwrite: bool = True, exclude: list[str] = []):
+def zip(zip_path: PathLike, files: Iterable[PathLike], relative_root: PathLike | None = None, *, overwrite: bool = True, exclude: Iterable[str] = []):
     """ Zip a set of files using LZMA. If the path doesn't end with .zip, the extension is added automatically for convenience.
 
     exclude is a list of regular expressions applied to full file paths with backslahes replaced with forward slashes. Matching files are not zipped. If a directory matches, none of its contents are zipped. Respects whether the original arguments were relative or absolute for this purpose. """
-    def recursive_zip(files: Iterable[Path], zip: ZipFile, relative_root: Path, exclude: set[Path]):
+    def recursive_zip(files: Iterable[Path], zip: ZipFile, relative_root: Path, exclude: Iterable[str]):
         for f in files:
             skip = False
             for e in exclude:
@@ -521,7 +513,7 @@ def zip(zip_path: PathLike, files: Iterable[PathLike], relative_root: PathLike =
         recursive_zip(files, zip, relative_root, exclude)
 
 
-def unzip(zip_path: PathLike, files: Iterable[PathLike] = None,  output_dir: PathLike = None, *, overwrite: bool = False):
+def unzip(zip_path: PathLike, files: Iterable[PathLike] | None = None,  output_dir: PathLike | None = None, *, overwrite: bool = False):
     """ Unzip a set of files. If the path doesn't end with .zip, the extension is added automatically for convenience. If a set of files is not specified, all of them are extracted."""
     zip_path = Path(zip_path).with_suffix(".zip")
     if output_dir == None:
@@ -529,11 +521,14 @@ def unzip(zip_path: PathLike, files: Iterable[PathLike] = None,  output_dir: Pat
         output_dir = zip_path.parent
     output_dir = Path(output_dir)
     with ZipFile(zip_path, "r") as zip:
+        if files is None:
+            files = zip.namelist()
+        else:
+            files: list[str] = [str(f) for f in files]
         if not overwrite:
-            if files is None:
-                files = zip.namelist()
-            files = [f for f in files if not output_dir.joinpath(f).exists()]
-        zip.extractall(output_dir, files)
+            files = [
+                f for f in files if not output_dir.joinpath(f).exists()]
+        zip.extractall(output_dir,  files)
 
 
 def long_names(root: PathLike = ".", **kwargs) -> Iterable[Path]:
@@ -612,7 +607,7 @@ def size(root: PathLike = ".", unit: float = BYTE, follow_symlinks: bool = False
     return size_recursive(Path(root))/unit
 
 
-def format_size(size_bytes: int):
+def format_size(size_bytes: int | float):
     units = [" bytes", "KB", "MB", "GB", "TB"]
     u = 0
     while size_bytes > 1000:
@@ -633,7 +628,7 @@ def count(root: PathLike = "."):
     return count_recursive(Path(root))
 
 
-def hash(file: PathLike, *, hash_function: str = "MD5", size: int = -1, hex: bool = True) -> int:
+def hash(file: PathLike, *, hash_function: str = "MD5", size: int = -1, hex: bool = True) -> str | bytes:
     """ Hash with the specified function (default MD5). """
     with open(file, "rb") as f:
         h = hashlib.new(hash_function, f.read(size), usedforsecurity=False)
@@ -679,13 +674,14 @@ def delete_empty(root: PathLike = ".", output=True, ignore_errors=False):
                 raise
             if output:
                 print("\tError on "*depth + str(root))
+            return False
 
     root = Path(root)
     delete_empty_recursive(root, 0)
     return count
 
 
-def list_files(root: PathLike = ".", *, skip_file: Callable[[PathLike, int], bool] = None, skip_dir: Callable[[PathLike, int], bool] = None, **kwargs) -> list[Path]:
+def list_files(root: PathLike = ".", *, skip_file: Callable[[PathLike, int], bool] | None = None, skip_dir: Callable[[PathLike, int], bool] | None = None, **kwargs) -> Iterable[Path]:
 
     def file_action(p: Path, i: int):
         if skip_file is None or not skip_file(p, i):
@@ -713,7 +709,7 @@ def flatten(root: PathLike = ".", *, output=True, **kwargs):
     delete_empty(root, output=output)
 
 
-def watch(file: PathLike, callback: Callable[[Path, time.struct_time], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
+def watch(file: PathLike, callback: Callable[[Path, float | None], None], poll_time: float = 5, output=False, time_format="%Y %B %d, %H:%M:%S"):
     """Monitor a file for changes by periodically checking if its modification time has changed (every 5 seconds by default) (not necessarily increasing, such as if an old copy of the file was moved into the original location). Provides the callback function with the file and its new modification time. Optionally, can also print out that the file was updated and when. If the file does not exist and then is created, or if it is deleted, that counts as an update. """
     file = Path(file)
 
@@ -734,7 +730,7 @@ def watch(file: PathLike, callback: Callable[[Path, time.struct_time], None], po
         time.sleep(poll_time)
 
 
-def regex_rename(find: Union[str, re.Pattern[str]], replace: Union[str, Callable[[Union[str, re.Match]], str]], root: PathLike = ".", *, output: bool = False, **kwargs):
+def regex_rename(find: str | re.Pattern[str], replace: str | Callable[[str | re.Match], str], root: PathLike = ".", *, output: bool = False, **kwargs):
     """ Only moves files. Returns the number of files moved. """
     find = re.compile(find)
     moves = {}
@@ -750,7 +746,7 @@ def regex_rename(find: Union[str, re.Pattern[str]], replace: Union[str, Callable
     return move_by_dict(moves, output=output)
 
 
-def text_search(query: str, root: PathLike = ".", output_errors=False, **kwargs) -> list[Path]:
+def text_search(query: str, root: PathLike = ".", output_errors=False, **kwargs) -> Iterable[Path]:
     """ Search for text in files. Intended to be used on the command line, and will not find text that spans in between lines. """
     def file_action(p: Path, i: int):
         with open(p, encoding="utf8") as f:
@@ -767,7 +763,7 @@ def text_search(query: str, root: PathLike = ".", output_errors=False, **kwargs)
     return walk(root, file_action=file_action, error_action=error_action, **kwargs)
 
 
-def search(name_query: str, root: PathLike = ".", output_errors=False, **kwargs) -> list[Path]:
+def search(name_query: str, root: PathLike = ".", output_errors=False, **kwargs) -> Iterable[Path]:
     def name(p: Path, i: int):
         if name_query.lower() in p.name.lower():
             yield p
@@ -802,11 +798,11 @@ def find_ascii(file: PathLike, length_threshold: int) -> Iterable[tuple[int, byt
             bytes_read += 1
 
 
-def gitignored_files(gitignore_file: PathLike = ".gitignore", root: PathLike = ".") -> set[Path]:
+def gitignored_files(gitignore_file: PathLike = ".gitignore", root: PathLike = ".") -> set[str]:
     gitignore_file = Path(gitignore_file)
     root = Path(root)
 
-    ignored_files: set[Path] = set()
+    ignored_files: set[str] = set()
 
     with open(gitignore_file) as gitignore:
         for line in gitignore:
@@ -827,6 +823,14 @@ def gitignored_files(gitignore_file: PathLike = ".gitignore", root: PathLike = "
 
 
 if WINDOWS:
+    import msvcrt
+    import winreg
+
+    from windows_env import *
+
+    LONG_PATH_PREFIX = "\\\\?\\"
+    """ Prefix to allow reading paths >= 260 characters on Windows  """
+
     class LockFile:
         """ Based on Thomas Lux's answer on https://stackoverflow.com/questions/489861/locking-a-file-in-python """
 

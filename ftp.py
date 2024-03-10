@@ -2,9 +2,10 @@ import ftplib
 import os
 import re
 from pathlib import Path
-from typing import Iterable, Union
+from typing import Iterable
 
 import files
+
 
 def _str_path(path: files.PathLike) -> str:
     return str(path).replace("\\", "/")
@@ -13,12 +14,12 @@ def _str_path(path: files.PathLike) -> str:
 class FTP(ftplib.FTP):
     """Adds get and put methods to ftplib FTP using its storbinary and retrbinary methods and makes get and delete recursive."""
 
-    def __init__(self, host: str, port: Union[int, str], user: str, pwd: str):
+    def __init__(self, host: str, port: int | str, user: str, pwd: str):
         ftplib.FTP.__init__(self)
         self.connect(host, int(port))
         self.login(user, pwd)
 
-    def put(self, local: files.PathLike, remote: files.PathLike = None, *, exclude: Iterable[str] = []):
+    def put(self, local: files.PathLike, remote: files.PathLike | None = None, *, exclude: Iterable[str] = []):
         local = _str_path(local)
         if remote is None:
             remote = local
@@ -41,7 +42,7 @@ class FTP(ftplib.FTP):
 
         recursive_put(local, remote)
 
-    def get(self, remote: files.PathLike, local: files.PathLike = None, *, exclude: Iterable[str] = []):
+    def get(self, remote: files.PathLike, local: files.PathLike | None = None, *, exclude: Iterable[str] = []):
         remote = _str_path(remote)
         if local is None:
             local = remote

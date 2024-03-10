@@ -1,11 +1,11 @@
 import os
 import re
-from typing import Any, Callable, Iterable, Union
+from typing import Any, Callable, Iterable, Sized
 
 import files
 
 
-def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\\s*>\\s*", value_list_separator: str = "\\s*\\|\\s*", comment: str = "\\s*#", all_lists: bool = False, key_transform: Callable[[Any], Any] = None, value_transform: Callable[[Any], Any] = None) -> dict:
+def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\\s*>\\s*", value_list_separator: str = "\\s*\\|\\s*", comment: str = "\\s*#", all_lists: bool = False, key_transform: Callable[[Any], Any] | None = None, value_transform: Callable[[Any], Any] | None = None) -> dict:
     """ Reads a dictionary from a list of string entries.
 
     By default each is interpreted as key>value or key>val1|val2|...
@@ -44,17 +44,17 @@ def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str
     return d
 
 
-def read_string_dict(string_dict: str, *, entry_separator="\\s*\n\\s*", **kwargs) -> dict[str, Union[str, list[str]]]:
+def read_string_dict(string_dict: str, *, entry_separator="\\s*\n\\s*", **kwargs) -> dict[str, str | list[str]]:
     """ Reads a dictionary from a string, splitting on entry_separator and then using read_iterable_dict (passing kwargs). All string parameters except the string to read are used as regular expressions. """
     return read_iterable_dict(re.split(entry_separator, string_dict), **kwargs)
 
 
-def read_file_dict(filename: files.PathLike, *, encoding="utf8", entry_separator="\\s*\n\\s*", empty_on_not_exist: bool = False, **kwargs) -> dict[str, Union[str, list[str]]]:
+def read_file_dict(filename: files.PathLike, *, encoding="utf8", entry_separator="\\s*\n\\s*", empty_on_not_exist: bool = False, **kwargs) -> dict[str, str | list[str]]:
     """ Reads a dictionary from a file (using the specified encoding), converting it to a string and using read_iterable_dict (passing kwargs). All string parameters except filename and encoding are used as regular expressions. """
     return read_iterable_dict(files.re_split(filename, entry_separator, encoding=encoding, empty_on_not_exist=empty_on_not_exist), **kwargs)
 
 
-def write_iterable_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, key_value_separator: str = ">", value_list_separator: str = "|", sort_keys: Callable = str, sort_value_lists: Callable = None) -> list[str]:
+def write_iterable_dict(dictionary: dict[Any, Any | Iterable[Any]], *, key_value_separator: str = ">", value_list_separator: str = "|", sort_keys: Callable = str, sort_value_lists: Callable | None = None) -> list[str]:
     """ Default separators > and |, same as reading dictionaries.
 
     Keys and values can be of any type and are converted to strings using str(). For iterable values (but not strings), they are converted one at a time with the value list separator inserted.
@@ -69,13 +69,9 @@ def write_iterable_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, key
         keys = dictionary
     for key in keys:
         val = dictionary[key]
-        try:
-            if val == None or len(val) == 0:
-                l.append(str(key))
-                continue
-        except TypeError:
-            # no length
-            pass
+        if val == None or (isinstance(val, Sized) and len(val) == 0):
+            l.append(str(key))
+            continue
         string = f"{key}{key_value_separator}"
         if isinstance(val, Iterable) and not isinstance(val, str):
             if sort_value_lists:
@@ -87,12 +83,12 @@ def write_iterable_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, key
     return l
 
 
-def write_string_dict(dictionary: dict[Any, Union[Any, Iterable[Any]]], *, entry_separator: str = "\n", **kwargs) -> str:
+def write_string_dict(dictionary: dict[Any, Any | Iterable[Any]], *, entry_separator: str = "\n", **kwargs) -> str:
     """ Joins the results of write_iterable_dict (passing kwargs) with the specified entry separator. """
     return entry_separator.join(write_iterable_dict(dictionary, **kwargs))
 
 
-def write_file_dict(filename: files.PathLike, dictionary: dict[Any, Union[Any, Iterable[Any]]], encoding="utf8", **kwargs) -> None:
+def write_file_dict(filename: files.PathLike, dictionary: dict[Any, Any | Iterable[Any]], encoding="utf8", **kwargs) -> None:
     """ Writes the result of write_string_dict to a file. """
     with open(filename, "w", encoding=encoding) as f:
         f.write(write_string_dict(dictionary, **kwargs))

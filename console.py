@@ -7,7 +7,7 @@ import traceback
 from enum import Enum
 from pathlib import Path
 from shutil import get_terminal_size
-from typing import Any, Callable, Union
+from typing import Any, Callable
 
 import files
 import strings
@@ -28,19 +28,20 @@ def input_generator(prompt: str = ">> "):
 
 def sleep(time_str: str):
     """Pause execution for a certain amount of time, specified in h:mm:ss, m:ss, or s format. """
-    match: re.Match = re.match("^(\d+):(\d{2}):(\d{2})$", time_str)
+    match: re.Match[str] | None = re.match(
+        "^(\\d+):(\\d{2}):(\\d{2})$", time_str)
     if match:
         hours = int(match.group(1))
         minutes = int(match.group(2))
         seconds = int(match.group(3))
     else:
-        match: re.Match = re.match("^(\d):(\d{2})$", time_str)
+        match = re.match("^(\\d):(\\d{2})$", time_str)
         if match:
             hours = 0
             minutes = int(match.group(1))
             seconds = int(match.group(2))
         else:
-            match: re.Match = re.match("^(\d+)$", time_str)
+            match = re.match("^(\\d+)$", time_str)
             if match:
                 hours = minutes = 0
                 seconds = int(match.group(1))
@@ -79,10 +80,10 @@ class Cmd(cmd.Cmd):
     # new attributes
     aliases_header = "Aliases:"
     scripts_header = "Scripts: "
-    command_sep = "\s*;\s*"
-    comment = "\s*#"
+    command_sep = "\\s*;\\s*"
+    comment = "\\s*#"
 
-    def __init__(self, aliases: dict[str, str] = None, scripts_dir: files.PathLike = None, script_suffix=".script", *args, **kwargs):
+    def __init__(self, aliases: dict[str, str] | None = None, scripts_dir: files.PathLike | None = None, script_suffix=".script", *args, **kwargs):
         """ If scripts_dir is not specified, command execution will not attempt to find scripts. """
         super().__init__(*args, **kwargs)
         if aliases is None:
@@ -131,7 +132,7 @@ class Cmd(cmd.Cmd):
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
                     if isinstance(line, list):
-                        whitespace = '\s+'
+                        whitespace = '\\s+'
                         joined_line = ' '.join(
                             (s if not re.search(whitespace, s) else f'"{s}"' for s in line))
                         print(f">> {joined_line}")
@@ -155,7 +156,7 @@ class Cmd(cmd.Cmd):
                             line = line.rstrip('\r\n')
                 line = self.precmd(line)
                 stop = self.onecmd(line)
-                stop = self.postcmd(stop, line)
+                stop = self.postcmd(stop, line)  # type: ignore
                 return stop
 
             stop = False
@@ -175,7 +176,7 @@ class Cmd(cmd.Cmd):
                 except ImportError:
                     pass
 
-    def precmd(self, line: Union[str, list]):
+    def precmd(self, line: str | list[str]):
         """ Split commands by self.command_sep. """
         if isinstance(line, list):
             # pass through pre-parsed command
@@ -189,7 +190,7 @@ class Cmd(cmd.Cmd):
         self.cmdqueue = cmds[1:] + self.cmdqueue
         return cmds[0]
 
-    def onecmd(self, line: Union[str, list[str]]):
+    def onecmd(self, line: str | list[str]) -> bool | None:
         """ Interpret the argument as though it had been typed in response
         to the prompt.
 
@@ -208,12 +209,12 @@ class Cmd(cmd.Cmd):
         while cmd in self.aliases:
             cmd = self.aliases[cmd]
         try:
-            func = getattr(self, 'do_' + cmd)
+            func: Callable[..., bool | None] = getattr(self, 'do_' + cmd)
         except AttributeError:
             if self.scripts_dir is not None and (script_path := self._script_path(cmd)).exists():
                 func = self.execute_script
                 # pass the script path to execute_script
-                args = [script_path] + args
+                args = [str(script_path)] + args
             else:
                 func = self.default
                 # pass the first split argument to default
@@ -264,7 +265,9 @@ class Cmd(cmd.Cmd):
                                             l2 = l
                                             break
                                 if l2:
-                                    match = re.match("\s*", l2)
+                                    # this pattern is guaranteed to match
+                                    match: re.Match[str] = re.match(
+                                        "\\s*", l2)  # type: ignore
                                     whitespace_prefix = match.string[:match.end(
                                     )]
                                     lines = [l.removeprefix(
@@ -284,6 +287,7 @@ class Cmd(cmd.Cmd):
                                     line = line.strip()
                                     if not line:
                                         continue
+                                    match: re.Match[str] | None
                                     if match := re.match(self.comment, line):
                                         print(line[match.end():],
                                               file=self.stdout)
@@ -299,7 +303,7 @@ class Cmd(cmd.Cmd):
                 help_func()
         else:
             names = sorted(set(dir(self)))
-            cmds = {name[3:] for name in names if name[:3] == 'do_'}
+            cmds: set[str] = {name[3:] for name in names if name[:3] == 'do_'}
             help = {name[5:] for name in names if name[:5] == 'help_'}
 
             cmds_doc = {cmd for cmd in cmds if getattr(
@@ -367,7 +371,7 @@ class Cmd(cmd.Cmd):
                     i = 0
                     while i < len(cmd_args):
                         ca = cmd_args[i]
-                        while group := re.search("(\$(\d+)?-(\d+)?)|\$(\d+)", ca):
+                        while group := re.search("(\\$(\\d+)?-(\\d+)?)|\\$(\\d+)", ca):
                             if group.group(1):
                                 # range
                                 if group.group(2):
@@ -407,7 +411,7 @@ def pause(message: str = "Press Enter to continue...: "):
     input(message)
 
 
-def traceback_wrap(f: Callable, pause_message: str = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False) -> Any:
+def traceback_wrap(f: Callable, pause_message: str | None = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False) -> Any:
     """Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     try:
         return f()
@@ -615,7 +619,7 @@ def clear_all_tab_stops():
     print(f"{ESC}[3g", end="")
 
 
-def set_scroll_region(top: int = None, bottom: int = None):
+def set_scroll_region(top: int | None = None, bottom: int | None = None):
     print(f"{ESC}[{top or ''};{bottom or ''}r", end="")
 
 
@@ -688,11 +692,11 @@ def format(s: str,
            overline: bool = False,
            reset: bool = True,
            # foreground
-           fg_color: Union[Color, tuple[int, int, int]] = None,
+           fg_color: Color | tuple[int, int, int] | None = None,
            fg_bright: bool = False,
            fg_dim: bool = False,
            # background
-           bg_color: Union[Color, tuple[int, int, int]] = None,
+           bg_color: Color | tuple[int, int, int] | None = None,
            bg_bright: bool = False,
            ):
     """ Using a custom color will cause bright options to be ignored (but not fg_dim).
@@ -818,7 +822,7 @@ def spin():
 ARC_SPINNER_SEQUENCE = "\u25dc\u25dd\u25de\u25df"
 
 
-def measure_lines(text: str, terminal_width: int = None):
+def measure_lines(text: str, terminal_width: int | None = None):
     """ Measure how many lines tall the text would be in a terminal of the given width. If not given a terminal width, gets the current one. """
     if terminal_width is None:
         terminal_width = get_terminal_size().columns
@@ -838,15 +842,15 @@ class Progress:
     """ Controls a progress indicator in the console that can show a fraction (e.g. "5/100"), a percentage (e.g. "5%"), or both (e.g. "5/100 5%"), optionally with explanation text. """
 
     def __init__(self,
-                 max: Union[int, float],
+                 max: int | float,
                  *,
 
                  show_fraction: bool = True,
-                 numerator_format: str = None,
-                 denominator_format: str = None,
+                 numerator_format: str | None = None,
+                 denominator_format: str | None = None,
 
                  show_percent: bool = True,
-                 percent_format: str = None,
+                 percent_format: str | None = None,
 
                  min_update_time: float = 0.1,
                  ):
@@ -883,7 +887,7 @@ class Progress:
         self.last_update_time = None
         self.last_progress = 0
 
-    def progress_text(self, value: Union[int, float], comment: str):
+    def progress_text(self, value: int | float, comment: str | None):
         prog_text = ""
         if self.show_fraction:
             prog_text += f"{value:{self.numerator_format}}/{self.denominator}"
@@ -897,7 +901,7 @@ class Progress:
             prog_text += " "
         return prog_text
 
-    def update_progress(self, value: Union[int, float], comment: str = None):
+    def update_progress(self, value: int | float, comment: str | None = None):
         """ Set and print the updated progress value. Comments are appended after the progress text (with a space in between). If the comment is not specified, any prior comments are not cleared (specify "") to clear comments. """
         self.last_progress = value
 
@@ -915,7 +919,7 @@ class Progress:
         cursor_up(measure_lines(prog_text + (comment or ""))-1)
         cursor_horizontal_absolute(1)
 
-    def increase_progress(self, value: Union[int, float], comment: str = None):
+    def increase_progress(self, value: int | float, comment: str | None = None):
         self.update_progress(self.last_progress + value, comment)
 
     def clear(self):
@@ -927,7 +931,7 @@ class Progress:
 class ProgressBar(Progress):
     """ Display a visual bar along with Progress text. """
 
-    def __init__(self, max: Union[int, float], *, left: str = "|", right: str = "|", incomplete: str = " ", complete: str = "\u2588", width: Union[int, None] = None, **progress_kwargs):
+    def __init__(self, max: int | float, *, left: str = "|", right: str = "|", incomplete: str = " ", complete: str = "\u2588", width: int | None = None, **progress_kwargs):
         """ left and right: bar boundary characters
         incomplete: the initial character the bar is filled with
         complete: the character the bar is replaced with as progress increases
@@ -939,7 +943,7 @@ class ProgressBar(Progress):
         self.complete = complete
         self.width = width
 
-    def progress_text(self, value: Union[int, float], comment: str = None):
+    def progress_text(self, value: int | float, comment: str | None = None):
         """ Append the progress bar onto the normal progress text and push comments onto the next line. """
         prog_text = super().progress_text(value, comment)
         if not prog_text.endswith(" "):

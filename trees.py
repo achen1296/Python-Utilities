@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Any, Union
+from typing import TYPE_CHECKING
 
 import lists
 
@@ -50,15 +50,12 @@ class KDNodeLeaf():
         return all(self_d == other_d for self_d, other_d in zip(self.data, other.data))
 
 
-AnyKDNode = Union["KDNodeInternal", KDNodeLeaf]
-
-
 class KDNodeInternal():
     def __init__(self,
                  split_index: int,
                  split_value: float,
-                 left: AnyKDNode,
-                 right: AnyKDNode):
+                 left: "KDNodeInternal | KDNodeLeaf",
+                 right: "KDNodeInternal | KDNodeLeaf"):
         self.split_index = split_index
         self.split_value = split_value
         self.left = left
@@ -106,7 +103,7 @@ class KDTree():
     def __init__(self,
                  dimensions: int,
                  max_leaf: int,
-                 root: AnyKDNode = None):
+                 root: "KDNodeInternal | KDNodeLeaf | None" = None):
         self.dimensions = dimensions
         self.max_leaf = max_leaf
         self.root = root
@@ -127,7 +124,7 @@ class KDTree():
             raise Exception(
                 f"Coordinates {coords} had incorrect number of dimensions, expected {self.dimensions}")
 
-        def _insert(root: AnyKDNode):
+        def _insert(root: "KDNodeInternal | KDNodeLeaf | None"):
             if root is None:
                 return KDNodeLeaf([KDDatum(coords, [value])])
 
@@ -186,16 +183,18 @@ class KDTree():
             raise Exception(
                 f"Coordinates {coords} had incorrect number of dimensions, expected {self.dimensions}")
 
-        def _delete(root: AnyKDNode):
+        def _delete(root: "KDNodeInternal | KDNodeLeaf"):
             if isinstance(root, KDNodeInternal):
                 if coords[root.split_index] >= root.split_value:
-                    root.right = _delete(root.right)
-                    if root.right is None:
+                    right = _delete(root.right)
+                    if right is None:
                         return root.left
+                    root.right = right
                 else:
-                    root.left = _delete(root.left)
-                    if root.left is None:
+                    left = _delete(root.left)
+                    if left is None:
                         return root.right
+                    root.left = left
             else:
                 # assert isinstance(root, KDNodeLeaf)
                 for i in range(0, len(root.data)):
@@ -209,6 +208,8 @@ class KDTree():
             root.update_bounding_box()
             return root
 
+        if self.root is None:
+            return
         self.root = _delete(self.root)
 
     def nearest(self, coords: tuple[float, ...], count: int) -> list[KDDatum]:
@@ -223,9 +224,9 @@ class KDTree():
             return []
 
         nearest: list[KDDatum] = [
-            KDDatum((math.inf,) * self.dimensions, "")]
+            KDDatum((math.inf,) * self.dimensions, [])]
 
-        def _nearest(root: AnyKDNode):
+        def _nearest(root: "KDNodeInternal | KDNodeLeaf"):
             nonlocal nearest
             if isinstance(root, KDNodeInternal):
                 left_d2 = dist_sq_point_box(
@@ -277,7 +278,7 @@ class KDTree():
 
         within_distance: list[KDDatum] = []
 
-        def _within_distance(root: AnyKDNode):
+        def _within_distance(root: "KDNodeInternal | KDNodeLeaf"):
             nonlocal within_distance
             if isinstance(root, KDNodeInternal):
                 left_d2 = dist_sq_point_box(
@@ -303,7 +304,7 @@ class KDTree():
 if __name__ == "__main__":
 
     def validate_kd_structure(kd: KDTree) -> list[KDDatum]:
-        def _validate(node: AnyKDNode, depth: int = 0) -> tuple[list[KDDatum], int]:
+        def _validate(node: "KDNodeInternal | KDNodeLeaf | None", depth: int = 0) -> tuple[list[KDDatum], int]:
             if not node:
                 return [], -1
             if isinstance(node, KDNodeInternal):

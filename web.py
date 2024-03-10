@@ -1,7 +1,7 @@
 import os
 import time
 from pathlib import Path
-from typing import Iterable, Union
+from typing import Iterable
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 import requests
@@ -12,6 +12,7 @@ from selenium.common.exceptions import (ElementClickInterceptedException,
                                         NoSuchWindowException,
                                         StaleElementReferenceException,
                                         TimeoutException)
+from selenium.types import WaitExcTypes
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
@@ -19,7 +20,7 @@ from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.wait import WebDriverWait
 
 import console
 import files
@@ -37,7 +38,7 @@ class DownloadException(Exception):
     pass
 
 
-def download_url(url: str, dst: files.PathLike = None, *, output=True, **get_kwargs):
+def download_url(url: str, dst: files.PathLike | None = None, *, output=True, **get_kwargs):
     """ If file = None, the name is inferred from the last piece of the URL path. get_kwargs passed to requests.get."""
     url_parsed = urlparse(url)
     # remove query, parameters, and fragment, since these are unnecessary (and can even alter the downloaded file, such as by reducing the image resolution)
@@ -137,7 +138,7 @@ def tor_driver(**kwargs) -> webdriver.Firefox:
     return driver
 
 
-def chrome_driver(profile: files.PathLike, *, executable_path: files.PathLike = None, user_data_dir: files.PathLike = os.environ['LOCALAPPDATA']+"\\Google\\Chrome\\User Data") -> webdriver.Chrome:
+def chrome_driver(profile: files.PathLike, *, executable_path: files.PathLike | None = None, user_data_dir: files.PathLike = os.environ['LOCALAPPDATA']+"\\Google\\Chrome\\User Data") -> webdriver.Chrome:
     options = webdriver.ChromeOptions()
     options.add_argument(
         f"user-data-dir={user_data_dir}")
@@ -154,7 +155,10 @@ def chrome_driver(profile: files.PathLike, *, executable_path: files.PathLike = 
     return driver
 
 
-def wait_element(driver: WebDriver, css_selector: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[Exception] = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)) -> Union[WebElement, Iterable[WebElement]]:
+def wait_element(driver: WebDriver, css_selector: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: WaitExcTypes =
+                 (ElementNotInteractableException,
+                  NoSuchElementException, StaleElementReferenceException)
+                 ) -> WebElement | Iterable[WebElement] | None:
     """ Replaces the TimeoutException with the last Exception raised by trying to find element(s). """
     last_exc = None
 
@@ -168,6 +172,7 @@ def wait_element(driver: WebDriver, css_selector: str, *, all: bool = False, tim
             return driver.find_elements(By.CSS_SELECTOR, css_selector)[index]
         except Exception as exc:
             last_exc = exc
+
     try:
         return WebDriverWait(driver, timeout, ignored_exceptions=ignored_exceptions).until(try_find)
     except TimeoutException:
@@ -180,7 +185,10 @@ def wait_url(driver: WebDriver, url_contains: str, timeout: int = 10):
         expected_conditions.url_contains(url=url_contains))
 
 
-def find_and_get_attribute(driver: WebDriver, css_selector: str, attribute: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[Exception] = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)) -> Union[str, Iterable[str]]:
+def find_and_get_attribute(driver: WebDriver, css_selector: str, attribute: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: WaitExcTypes =
+                           (ElementNotInteractableException,
+                            NoSuchElementException, StaleElementReferenceException)
+                           ) -> str | Iterable[str | None] | None:
     """ Replaces the TimeoutException with the last Exception raised by trying to find element(s) and get attribute(s). If all=True then will return a list of the results for all elements found, or specify an index > 0 to select only that index out of the list of all matching elements. """
     last_exc = None
 
@@ -203,7 +211,7 @@ def find_and_get_attribute(driver: WebDriver, css_selector: str, attribute: str,
         raise last_exc
 
 
-def find_and_click(driver: WebDriver, css_selector: str, *, timeout: int = 10,  index: int = 0, ignored_exceptions: Iterable[Exception] = (ElementClickInterceptedException, ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
+def find_and_click(driver: WebDriver, css_selector: str, *, timeout: int = 10,  index: int = 0, ignored_exceptions: WaitExcTypes = (ElementClickInterceptedException, ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
     """ Replaces the TimeoutException with the last Exception raised by trying to find element(s) and click. """
     last_exc = None
 
@@ -226,7 +234,7 @@ def find_and_click(driver: WebDriver, css_selector: str, *, timeout: int = 10,  
         raise last_exc
 
 
-def find_and_send_keys(driver: WebDriver, css_selector: str, *keys, timeout: int = 10, index: int = 0,  ignored_exceptions: Iterable[Exception] = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
+def find_and_send_keys(driver: WebDriver, css_selector: str, *keys, timeout: int = 10, index: int = 0,  ignored_exceptions: WaitExcTypes = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
     """ Replaces the TimeoutException with the last Exception raised by trying to find element(s) and send keys. """
     last_exc = None
 
@@ -288,7 +296,7 @@ class PageReader:
     def __init__(self, get_kwargs=None):
         if get_kwargs is None:
             get_kwargs = {}
-        self.get_kwargs: dict[str, str] = get_kwargs
+        self.get_kwargs: dict[str, str | dict[str, str]] = get_kwargs
 
     def can_read(self, driver: WebDriver) -> bool:
         """Whether or not the current page is readable by this PageReader."""
@@ -466,4 +474,4 @@ class PageBrowser(console.Cmd):
 if __name__ == "__main__":
     import console
     console.traceback_wrap(PageBrowser(
-        firefox_driver(), [PageReader()]).cmdloop())
+        firefox_driver(), [PageReader()]).cmdloop)
