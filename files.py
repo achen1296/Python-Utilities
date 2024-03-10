@@ -607,13 +607,27 @@ def size(root: PathLike = ".", unit: float = BYTE, follow_symlinks: bool = False
     return size_recursive(Path(root))/unit
 
 
-def format_size(size_bytes: int | float):
-    units = [" bytes", "KB", "MB", "GB", "TB"]
+# base 10, following SI units: kilo, mega, giga, tera, peta, exa, zetta, yotta, ronna, quetta
+SIZE_UNITS_10 = [" bytes", "KB", "MB", "GB",
+                 "TB", "PB", "EB", "ZB", "YB", "RB", "QB"]
+# base-2 versions: kibi, mebi, gibi, tebi, pebi, exbi, zebi, yobi, robi, quebi
+SIZE_UNITS_2 = [" bytes", "KiB", "MiB", "GiB",
+                "TiB", "PiB", "EiB", "ZiB", "YiB", "RiB", "QiB"]
+
+
+def format_size(size_bytes: int | float, base_2=False):
+    if base_2:
+        divisor = 1024
+    else:
+        divisor = 1000
     u = 0
-    while size_bytes > 1000:
-        size_bytes /= 1000
+    while size_bytes > divisor:
+        size_bytes /= divisor
         u += 1
-    return f"{size_bytes:.3f} {units[u]}"
+    if base_2:
+        return f"{size_bytes:.3f} {SIZE_UNITS_2[u]}"
+    else:
+        return f"{size_bytes:.3f} {SIZE_UNITS_10[u]}"
 
 
 def count(root: PathLike = "."):
