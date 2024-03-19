@@ -25,21 +25,32 @@ TAG_RE = re.compile(r"(.*)(\[[^\[\]]+\])")
 
 def name_parts(filename: str) -> tuple[str, str, str]:
     p = Path(filename)
-    name_and_tags = p.stem
+    stem_and_tags = p.stem
     suffix = p.suffix
-    match = TAG_RE.match(name_and_tags)
+    match = TAG_RE.match(stem_and_tags)
     if match:
-        name, ts = match.groups()
+        stem, ts = match.groups()
     else:
-        name = name_and_tags
+        stem = stem_and_tags
         ts = ""
-    # ext can be None
-    return (name, ts, suffix)
+    # suffix can be None
+    return (stem, ts, suffix)
+
+
+def stem(filename: str) -> str:
+    return name_parts(filename)[0]
 
 
 def name(filename: str) -> str:
     name, _, suffix = name_parts(filename)
     return name + suffix
+
+# tags handled by everything else, no function to return that piece of the filename
+
+
+def suffix(filename: str) -> str:
+    # tags don't change the suffix since they are part of the stem according to pathlib
+    return Path(filename).suffix
 
 
 def _remove_whitespace(tags: Iterable[str]) -> bset[str]:
