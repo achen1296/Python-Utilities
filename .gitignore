@@ -1,4 +1,4 @@
 # compiled and metadata files
 **.vs*
-dll/*/x64
+dll/**/x64
 dll/**.dll
