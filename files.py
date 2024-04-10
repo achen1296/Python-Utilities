@@ -310,7 +310,7 @@ def mirror(src: PathLike, dst: PathLike, *, output: bool = False, deleted_file_a
     count = 0
     src = Path(src)
     dst = Path(dst)
-    if src.exists() and dst.exists():
+    if (src.is_symlink() or src.exists()) and (dst.is_symlink() or dst.exists()):
         if src.is_symlink() != dst.is_symlink():
             raise FileMismatchException(
                 f"One of {src} and {dst} is a symlink, the other is not")
@@ -318,12 +318,12 @@ def mirror(src: PathLike, dst: PathLike, *, output: bool = False, deleted_file_a
             raise FileMismatchException(
                 f"One of {src} and {dst} is a file, the other a directory")
     if src.is_symlink():
-        if dst.exists():
-            if src.readlink() != dst.readlink():
+        if dst.is_symlink() or dst.exists():
+            if src.readlink().resolve() != dst.readlink().resolve():
                 if output:
                     print(f"{output_prefix}Updating symbolic link <\
                         {src}> -> <{dst}>")
-            shutil.copy2(src, dst, follow_symlinks=False)
+                shutil.copy2(src, dst, follow_symlinks=False)
         else:
             if output:
                 print(f"{output_prefix}Creating symbolic link <\
