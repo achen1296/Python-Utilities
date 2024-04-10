@@ -192,7 +192,8 @@ def walk(root: PathLike = ".", *,
          dir_action: Callable[[Path, int], Iterable | None] | None = None,
          dir_post_action: Callable[[Path, int], Iterable | None] | None = None,
          symlink_action: Callable[[Path, int], Iterable | None] | None = None,
-         not_exist_action: Callable[[Path, int], Iterable | None] | None = None,
+         not_exist_action: Callable[[Path, int],
+                                    Iterable | None] | None = None,
          error_action: Callable[[Path, int, Exception],
                                 Iterable | None] | None = None,
          side_effects: bool = False,
@@ -309,10 +310,26 @@ def mirror(src: PathLike, dst: PathLike, *, output: bool = False, deleted_file_a
     count = 0
     src = Path(src)
     dst = Path(dst)
-    if src.exists() and dst.exists() and src.is_dir() != dst.is_dir():
-        raise FileMismatchException(
-            f"One of {src} and {dst} is a file, the other a directory")
-    if src.is_file():
+    if src.exists() and dst.exists():
+        if src.is_symlink() != dst.is_symlink():
+            raise FileMismatchException(
+                f"One of {src} and {dst} is a symlink, the other is not")
+        if src.is_dir() != dst.is_dir():
+            raise FileMismatchException(
+                f"One of {src} and {dst} is a file, the other a directory")
+    if src.is_symlink():
+        if dst.exists():
+            if src.readlink() != dst.readlink():
+                if output:
+                    print(f"{output_prefix}Updating symbolic link <\
+                        {src}> -> <{dst}>")
+            shutil.copy2(src, dst, follow_symlinks=False)
+        else:
+            if output:
+                print(f"{output_prefix}Creating symbolic link <\
+                    {src}> -> <{dst}>")
+            shutil.copy2(src, dst, follow_symlinks=False)
+    elif src.is_file():
         # copy file if newer
         # round to decrease precision to seconds (different file systems may save different precision)
         if not dst.exists():
