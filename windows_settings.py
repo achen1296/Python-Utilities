@@ -76,9 +76,13 @@ def set_system_sounds_volume(volume: float):
                    creationflags=subprocess.CREATE_NO_WINDOW)
 
 
+# open the SoundVolumeView GUI and find the "Command-Line Friendly ID"
+SOUND_DEVICE_ID = r"High Definition Audio Device\Device\Headphones\Render"
+
+
 def set_volume_balance(left: float, right: float):
     subprocess.run(["soundvolumeview ", "/setvolumechannels",
-                   r"Realtek(R) Audio\Device\Speakers/Headphones\Render", str(math.floor(left*100)), str(math.floor(right*100))])
+                   SOUND_DEVICE_ID, str(math.floor(left*100)), str(math.floor(right*100))])
 
 
 # def set_wallpaper(image: files.PathLike):
