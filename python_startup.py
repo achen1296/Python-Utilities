@@ -1,3 +1,4 @@
+import quaternions
 import itertools
 import json
 import math
@@ -39,7 +40,6 @@ from polynomials import Polynomial
 from web import By
 
 Poly = Polynomial
-
 
 if platform.system() == "Windows":
     import clipboard
