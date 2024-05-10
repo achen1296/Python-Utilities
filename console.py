@@ -1,12 +1,15 @@
+import asyncio
 import cmd
 import inspect
 import math
 import re
+import sys
 import time
 import traceback
 from enum import Enum
 from pathlib import Path
 from shutil import get_terminal_size
+from subprocess import PIPE
 from typing import Any, Callable
 
 import files
@@ -963,6 +966,57 @@ class ProgressBar(Progress):
             bar += "\n"
 
         return prog_text + bar
+
+
+NO_INPUT = "NO_INPUT"
+
+
+async def stdio_middleman(program: str, *subprocess_args: str, on_input: Callable[[str], bool] | None = None, on_output: Callable[[str], bool] | None = None, on_error: Callable[[str], bool] | None = None, **subprocess_kwargs):
+    """ Whenever the program receives data on stdin, call on_input with the data. Likewise, if the wrapped program produces data on stdout/stderr, call on_output/on_error. Return a truthy value to prevent the data from being forwarded. Leave as None to simply forward all input/output. Specify on_input=NO_INPUT to disable reading from stdin entirely, which removes the need to press enter after the program terminates. """
+    process = await asyncio.create_subprocess_exec(program, *subprocess_args, **subprocess_kwargs, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+
+    async def forward_input(process: asyncio.subprocess.Process):
+        # https://stackoverflow.com/questions/31510190/aysncio-cannot-read-stdin-on-windows
+        loop = asyncio.get_event_loop()
+        assert process.stdin
+        while process.returncode is None:
+            input = await loop.run_in_executor(None, sys.stdin.readline)
+            if on_input and on_input(input):
+                continue  # do not forward
+            process.stdin.write(input.encode("utf8"))
+
+    async def forward_output(process: asyncio.subprocess.Process):
+        assert process.stdout
+        while process.returncode is None:
+            output = await process.stdout.read(4096)
+            if process.stdout.at_eof():
+                # EOF, server terminated (return code check doesn't seem to work?)
+                break
+            if on_output and on_output(str(output, encoding="utf8")):
+                continue  # do not forward
+            print(str(output, encoding="utf8"), end="")
+
+    async def forward_error(process: asyncio.subprocess.Process):
+        assert process.stderr
+        while process.returncode is None:
+            error_output = await process.stderr.read(4096)
+            if process.stderr.at_eof():
+                # EOF, server terminated (return code check doesn't seem to work?)
+                break
+            if on_error and on_error(str(error_output, encoding="utf8")):
+                continue  # do not forward
+            print(str(error_output, encoding="utf8"), end="", file=sys.stderr)
+
+    # process termination wait should be first completed
+    coroutines = [process.wait(), forward_output(process),
+                  forward_error(process)]
+    if on_input != NO_INPUT:
+        coroutines.append(forward_input(process))
+    await asyncio.wait([asyncio.create_task(coro) for coro in coroutines], return_when=asyncio.FIRST_COMPLETED)
+
+    if on_input != NO_INPUT:
+        # sys.stdin.readline in forward_input is still blocking, couldn't find a way to stop it from doing this
+        print("Press enter to continue...")
 
 
 def test():
