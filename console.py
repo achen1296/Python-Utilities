@@ -2,6 +2,7 @@ import asyncio
 import cmd
 import inspect
 import math
+import os
 import re
 import sys
 import time
@@ -414,7 +415,7 @@ def pause(message: str = "Press Enter to continue...: "):
     input(message)
 
 
-def traceback_wrap(f: Callable, pause_message: str | None = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False) -> Any:
+def traceback_wrap(f: Callable[[], Any], pause_message: str | None = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False) -> Any:
     """Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     try:
         return f()
@@ -434,9 +435,16 @@ def traceback_wrap(f: Callable, pause_message: str | None = "Press Enter to cont
             pause(pause_message)
 
 
+def main_wrap(module_name: str, module_file: str, main_function: Callable[[], Any]):
+    """ Call as: `main_wrap(__name__, __file__, main)` """
+    if module_name == "__main__":
+        os.chdir(Path(module_file).parent)
+        traceback_wrap(main_function)
+
 # en.wikipedia.org/wiki/ANSI_escape_code
 # learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
 # all of these functions print directly to the console because they are not supposed to be used anywhere else anyway
+
 
 ESC = "\x1b"
 ST = ESC + "\\"
