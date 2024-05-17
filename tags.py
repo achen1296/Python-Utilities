@@ -230,9 +230,9 @@ def _prune_walk_kwargs_set_ignore_hidden_true(kwargs):
         kwargs["ignore_hidden"] = True
 
 
-def matching_files(root: files.PathLike, name_suffix_re_pattern: str = None, tag_expression: str = None, recursive: bool = True, **kwargs) -> Iterable[Path]:
+def matching_files(root: files.PathLike, name_suffix_re_pattern: str | None = None, tag_expression: str | TagExpression | None = None, recursive: bool = True, **kwargs) -> Iterable[Path]:
     r""" The name_suffix_re_pattern is a regular expression that is applied ONLY to the name and suffix of the file, with the tags removed. It may match any part of this. For example, a file with the full name "foo[bar baz].txt" will match pattern="oo\\.tx" """
-    if tag_expression is not None:
+    if isinstance(tag_expression, str):
         tag_expression: TagExpression = TagExpression.compile(tag_expression)
 
     def file_action(f: Path, d: int):
