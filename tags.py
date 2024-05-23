@@ -247,12 +247,8 @@ def matching_files(root: files.PathLike, name_suffix_re_pattern: str | None = No
         if matches_name_suffix and matches_tag_expression:
             yield f
 
-    def skip_dir(f: Path, d: int):
-        # still go over the top-level folder's contents if not recursive
-        return (not recursive) and d > 0
-
     _prune_walk_kwargs_set_ignore_hidden_true(kwargs)
-    return files.walk(root, file_action=file_action, skip_dir=skip_dir, **kwargs)
+    return files.walk(root, file_action=file_action, **kwargs)
 
 
 def tag_in_folder(root: files.PathLike, tags: Iterable[str] = [], *, remove_tags=[], output=False, **matching_files_args) -> int:
