@@ -19,6 +19,12 @@ class FTP(ftplib.FTP):
         self.connect(host, int(port))
         self.login(user, pwd)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.quit()
+
     def put(self, local: files.PathLike, remote: files.PathLike | None = None, *, exclude: Iterable[str] = []):
         local = _str_path(local)
         if remote is None:
@@ -69,21 +75,21 @@ class FTP(ftplib.FTP):
 
     def delete(self, file: files.PathLike):
         """Tries deleting as a file, then as a directory, then recursively."""
-        file = _str_path(file)
+        file: str = _str_path(file)
+
+        d = super().delete
 
         def recursive_delete(file: str):
             try:
-                super().delete(file)
-                return
+                return d(file)
             except (ftplib.error_perm, ftplib.error_reply):
                 pass
             try:
-                self.rmd(file)
-                return
+                return self.rmd(file)
             except (ftplib.error_perm, ftplib.error_reply):
                 pass
             for f in self.nlst(file):
                 self.delete(file + "/" + f)
-            self.rmd(file)
+            return self.rmd(file)
 
         recursive_delete(file)
