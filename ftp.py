@@ -15,7 +15,7 @@ class FTP(ftplib.FTP):
     """Adds get and put methods to ftplib FTP using its storbinary and retrbinary methods and makes get and delete recursive."""
 
     def __init__(self, host: str, port: int | str, user: str, pwd: str):
-        ftplib.FTP.__init__(self)
+        super().__init__()
         self.connect(host, int(port))
         self.login(user, pwd)
 
