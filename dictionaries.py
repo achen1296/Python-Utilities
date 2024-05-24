@@ -121,6 +121,7 @@ def flip_dict(d: dict) -> dict:
 
 class FileBackedDict(dict):
     def __init__(self, file: files.PathLike, *read_write_args, **read_write_kwargs):
+        """ Call batch() to delay updates to file, then call flush(). """
         self.file = Path(file)
         if self.file.exists():
             self.update(read_file_dict(
@@ -128,7 +129,17 @@ class FileBackedDict(dict):
         self.read_write_args = read_write_args
         self.read_write_kwargs = read_write_kwargs
 
+        self.batch_flag = False
+
     def __setitem__(self, key, value):
         super().__setitem__(key, value)
+        if not self.batch:
+            self.flush()
+
+    def batch(self):
+        self.batch_flag = True
+
+    def flush(self):
+        self.batch_flag = False
         write_file_dict(self.file, self, *self.read_write_args,
                         **self.read_write_kwargs)
