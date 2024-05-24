@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 from typing import Any, Callable, Iterable, Sized
 
 import files
@@ -116,3 +117,18 @@ def flip_dict(d: dict) -> dict:
         else:
             _dict_list_add(new_d, value, key)
     return new_d
+
+
+class FileBackedDict(dict):
+    def __init__(self, file: files.PathLike, *read_write_args, **read_write_kwargs):
+        self.file = Path(file)
+        if self.file.exists():
+            self.update(read_file_dict(
+                self.file, *read_write_args, **read_write_kwargs))
+        self.read_write_args = read_write_args
+        self.read_write_kwargs = read_write_kwargs
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        write_file_dict(self.file, self, *self.read_write_args,
+                        **self.read_write_kwargs)
