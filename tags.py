@@ -110,7 +110,7 @@ class TagExpression(ABC):
                 i += len(re.match(r"\s*", s[i:]).group(0))
                 if i >= len(s):
                     raise TagExpressionException(
-                        "Not enough closing parentheses for tag expression " + tag_expression_str)
+                        "Not enough closing brackets for tag expression " + tag_expression_str)
                 elif s[i] == "]":
                     break
                 if i >= len(s):
