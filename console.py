@@ -1027,6 +1027,12 @@ async def stdio_middleman(program: str, *subprocess_args: str, on_input: Callabl
         print("Press enter to continue...")
 
 
+def split_print(*args, file=None, **kwargs):
+    """ Print both to the specified file and sys.stdout as usual. A convenient way to use this is to reassign print = console.split_print. """
+    print(*args, **kwargs)
+    print(*args, file=file, **kwargs)
+
+
 def test():
     class CmdTest(Cmd):
         def __init__(self):
