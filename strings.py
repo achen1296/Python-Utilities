@@ -1,5 +1,5 @@
 import re
-from typing import Iterable
+from typing import Iterable, Sequence
 
 
 def unescape(s: str, *, escape_char: str = "\\") -> str:
@@ -528,6 +528,30 @@ def contains_all_words(s: str, word_list: list[str], *, in_order=True, allow_oth
                 if s_words[start:start + lw] == word_list:
                     return True
             return False
+
+
+def levenshtein(a: Sequence, b: Sequence):
+    # https://en.wikipedia.org/wiki/Wagner%E2%80%93Fischer_algorithm
+    # with 2-row-at-a-time storage optimization
+    la = len(a)
+    lb = len(b)
+    # make b always the short one since its length determines the storage use
+    if la < lb:
+        lb, la = la, lb
+        a, b = b, a
+    prev = list(range(lb+1))
+    curr = list(range(lb+1))  # just need another list the same size
+    # print(prev)
+    for i in range(1, la+1):
+        curr[0] = i
+        for j in range(1, lb+1):
+            if a[i-1] == b[j-1]:
+                curr[j] = prev[j-1]
+            else:
+                curr[j] = 1+min(prev[j-1], prev[j], curr[j-1])
+        # print(curr)
+        prev, curr = curr, prev
+    return prev[lb]
 
 
 if __name__ == "__main__":
