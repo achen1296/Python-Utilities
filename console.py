@@ -233,6 +233,22 @@ class Cmd(cmd.Cmd):
     def _script_path(self, script_name):
         return self.scripts_dir.joinpath(script_name).with_suffix(self.script_suffix)
 
+    LEVENSHTEIN_MAX = 3
+
+    def default(self, cmd, *_: str):
+        print("Unknown command. ", end="")
+        first = True
+        for attr in dir(self):
+            if attr.startswith("do_"):
+                attr_cmd = attr.removeprefix("do_")
+                d = strings.levenshtein(cmd, attr_cmd)
+                if d < self.LEVENSHTEIN_MAX:
+                    if first:
+                        print("Did you mean one of these?")
+                        first = False
+                    print(attr_cmd + "\t", end="")
+        print()
+
     def do_help(self, *cmds: str):
         """ List available commands with "help" or detailed help with "help cmd".
 
