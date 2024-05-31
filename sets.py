@@ -117,7 +117,7 @@ class DisjointSets:
         self._subset_size[r] = len(subset)
 
     def __iter__(self):
-        return self._parent
+        return iter(self._parent)
 
     def subsets(self) -> Iterable[set]:
         """ Expensive operation! Return iterable of all subsets. """
@@ -129,7 +129,7 @@ class DisjointSets:
             subsets[r].add(e)
         return subsets.values()
 
-    def __eq__(self, other: "DisjointSets"):
+    def __eq__(self, other: object):
         """ Expensive operation! Compares subset contents only, not tree structure. """
 
         if not isinstance(other, DisjointSets):
