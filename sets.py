@@ -38,7 +38,7 @@ class DisjointSets:
         self._parent[e1] = e1
         for e in es:
             self._parent[e] = e1
-        self._subset_size[e] = 1 + len(es)
+        self._subset_size[e1] = 1 + len(es)
 
     def representative(self, e: Hashable) -> Hashable:
         """ Find the representative element for e. Performs path compression. """
