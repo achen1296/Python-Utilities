@@ -13,6 +13,7 @@ from selenium.common.exceptions import (ElementClickInterceptedException,
                                         StaleElementReferenceException,
                                         TimeoutException)
 from selenium.types import WaitExcTypes
+from selenium.webdriver import FirefoxOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
@@ -109,10 +110,15 @@ def download_urls(plan: dict[str, tuple[files.PathLike, dict[str, str]]], *, wai
         console.erase_line()
 
 
-def firefox_driver(**kwargs) -> webdriver.Firefox:
+def firefox_driver(profile: str | None = None, **kwargs) -> webdriver.Firefox:
     # discard log output
     service = FirefoxService(log_path="NUL:")
-    driver = webdriver.Firefox(service=service, **kwargs)
+    if profile:
+        options = FirefoxOptions()
+        options.profile = FirefoxProfile(profile)
+    else:
+        options = None
+    driver = webdriver.Firefox(options=options, service=service, **kwargs)
     driver.implicitly_wait(2)
     driver.set_page_load_timeout(15)
     return driver
