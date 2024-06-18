@@ -16,6 +16,8 @@ from typing import Any, Callable
 import files
 import strings
 
+IN_VS_CODE = (os.environ.get("TERM_PROGRAM") == "vscode")
+
 
 def print_as_exc(s: str, **print_kwargs):
     print(format(s, fg_color=Color.RED), **print_kwargs)
@@ -431,7 +433,7 @@ def pause(message: str = "Press Enter to continue...: "):
     input(message)
 
 
-def traceback_wrap(f: Callable[[], Any], pause_message: str | None = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False) -> Any:
+def traceback_wrap(f: Callable[[], Any], pause_message: str | None = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False, no_pause_in_vs_code: bool = True) -> Any:
     """Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     try:
         return f()
@@ -442,12 +444,11 @@ def traceback_wrap(f: Callable[[], Any], pause_message: str | None = "Press Ente
             err_text = traceback.format_exc()
         # traceback.format_exc includes a \n
         print_as_exc(err_text, end="")
-        if pause_on_exc_only and pause_message is not None:
-            pause(pause_message)
         if reraise:
             raise
     finally:
-        if not pause_on_exc_only and pause_message is not None:
+        if pause_on_exc_only and pause_message is not None and not (
+                no_pause_in_vs_code and IN_VS_CODE):
             pause(pause_message)
 
 
