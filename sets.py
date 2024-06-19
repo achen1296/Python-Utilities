@@ -175,12 +175,12 @@ class FileBackedSet(set):
 
     def add(self, value):
         super().add(value)
-        if not self.batch:
+        if not self.batch_flag:
             self.flush()
 
     def remove(self, value):
         super().remove(value)
-        if not self.batch:
+        if not self.batch_flag:
             self.flush()
 
     def batch(self):

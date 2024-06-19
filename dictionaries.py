@@ -133,7 +133,7 @@ class FileBackedDict(dict):
 
     def __setitem__(self, key, value):
         super().__setitem__(key, value)
-        if not self.batch:
+        if not self.batch_flag:
             self.flush()
 
     def batch(self):
