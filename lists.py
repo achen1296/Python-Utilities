@@ -1,12 +1,13 @@
 import os
 import random
 import re
+from pathlib import Path
 from typing import Any, Callable, Hashable, Iterable
 
 import files
 
 
-def read_file_lists(filename: files.PathLike, *, list_separator="\s*\n\s*", list_item_separator: str = "\s*,\s*", comment: str = "\s*#", encoding="utf8", empty_on_not_exist: bool = False) -> Iterable[str]:
+def read_file_lists(filename: files.PathLike, *, list_separator="\\s*\n\\s*", list_item_separator: str = "\\s*,\\s*", comment: str = "\\s*#", encoding="utf8", empty_on_not_exist: bool = False) -> Iterable[str]:
     """Read a file as a list (technically a generator) of lists. Use comment=None for no comments."""
     for list_str in files.re_split(filename, list_separator, encoding=encoding, empty_on_not_exist=empty_on_not_exist):
         if comment and re.match(comment, list_str):
@@ -28,7 +29,7 @@ def write_file_lists(filename: files.PathLike, lists: Iterable[Iterable], *, lis
             f.write(list_separator)
 
 
-def read_file_list(filename: files.PathLike, *, separator: str = "\s*\n\s*", comment: str = "\s*#", **re_split_kwargs) -> Iterable[str]:
+def read_file_list(filename: files.PathLike, *, separator: str = "\\s*\n\\s*", comment: str = "\\s*#", **re_split_kwargs) -> Iterable[str]:
     """Read a file as a list (technically a generator). Use comment=None for no comments."""
     for item in files.re_split(filename, separator, **re_split_kwargs):
         if comment and re.match(comment, item):
