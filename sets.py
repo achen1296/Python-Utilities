@@ -162,14 +162,16 @@ class DisjointSets:
 
 
 class FileBackedSet(set):
-    def __init__(self, file: files.PathLike, *read_write_args, **read_write_kwargs):
+    def __init__(self, file: files.PathLike, *read_args, **read_kwargs):
         """ Call batch() to delay updates to file, then call flush(). """
         self.file = Path(file)
         if self.file.exists():
             self |= set(lists.read_file_list(
-                self.file, *read_write_args, **read_write_kwargs))
-        self.read_write_args = read_write_args
-        self.read_write_kwargs = read_write_kwargs
+                self.file, *read_args, **read_kwargs))
+
+    def set_write_args(self, *write_args, **write_kwargs):
+        self.write_args = write_args
+        self.write_kwargs = write_kwargs
 
         self.batch_flag = False
 
@@ -188,5 +190,5 @@ class FileBackedSet(set):
 
     def flush(self):
         self.batch_flag = False
-        lists.write_file_list(self.file, self, *self.read_write_args,
-                              **self.read_write_kwargs)
+        lists.write_file_list(self.file, self, *self.write_args,
+                              **self.write_kwargs)
