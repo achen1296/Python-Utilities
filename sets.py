@@ -1,4 +1,8 @@
+from pathlib import Path
 from typing import Hashable, Iterable
+
+import files
+import lists
 
 
 def nonempty_intersection(s1: set, s2: set) -> bool:
@@ -155,3 +159,34 @@ class DisjointSets:
                     return False
 
         return True
+
+
+class FileBackedSet(set):
+    def __init__(self, file: files.PathLike, *read_write_args, **read_write_kwargs):
+        """ Call batch() to delay updates to file, then call flush(). """
+        self.file = Path(file)
+        if self.file.exists():
+            self |= set(lists.read_file_list(
+                self.file, *read_write_args, **read_write_kwargs))
+        self.read_write_args = read_write_args
+        self.read_write_kwargs = read_write_kwargs
+
+        self.batch_flag = False
+
+    def add(self, value):
+        super().add(value)
+        if not self.batch:
+            self.flush()
+
+    def remove(self, value):
+        super().remove(value)
+        if not self.batch:
+            self.flush()
+
+    def batch(self):
+        self.batch_flag = True
+
+    def flush(self):
+        self.batch_flag = False
+        lists.write_file_list(self.file, self, *self.read_write_args,
+                              **self.read_write_kwargs)
