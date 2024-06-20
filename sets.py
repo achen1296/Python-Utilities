@@ -169,11 +169,11 @@ class FileBackedSet(set):
             self |= set(lists.read_file_list(
                 self.file, *read_args, **read_kwargs))
 
+        self.batch_flag = False
+
     def set_write_args(self, *write_args, **write_kwargs):
         self.write_args = write_args
         self.write_kwargs = write_kwargs
-
-        self.batch_flag = False
 
     def add(self, value):
         super().add(value)
