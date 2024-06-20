@@ -129,6 +129,9 @@ class FileBackedDict(dict):
 
         self.batch_flag = False
 
+        self.write_args = ()
+        self.write_kwargs = {}
+
     def set_write_args(self, *write_args, **write_kwargs):
         self.write_args = write_args
         self.write_kwargs = write_kwargs
