@@ -698,15 +698,25 @@ def erase_line(from_cursor: bool = True, to_cursor: bool = True):
 
 
 class Color(Enum):
-    BLACK = 0
-    RED = 1
-    GREEN = 2
-    YELLOW = 3
-    BLUE = 4
-    MAGENTA = 5
-    CYAN = 6
-    WHITE = 7
-    DEFAULT = 9
+    BLACK = 30
+    RED = 31
+    GREEN = 32
+    YELLOW = 33
+    BLUE = 34
+    MAGENTA = 35
+    CYAN = 36
+    WHITE = 37
+
+    BRIGHT_BLACK = 90
+    BRIGHT_RED = 91
+    BRIGHT_GREEN = 92
+    BRIGHT_YELLOW = 93
+    BRIGHT_BLUE = 94
+    BRIGHT_MAGENTA = 95
+    BRIGHT_CYAN = 96
+    BRIGHT_WHITE = 97
+
+    DEFAULT = 39
 
 
 FORMAT_RESET = f"{ESC}[0m"
@@ -714,6 +724,7 @@ FORMAT_RESET = f"{ESC}[0m"
 
 def format(s: str,
            # general options
+           bold: bool = False,  # alias for fg_bright
            italic: bool = False,
            underline: bool = False,
            negative: bool = False,
@@ -776,13 +787,13 @@ def format(s: str,
         format_options.append(53)
 
     if isinstance(fg_color, Color):
-        format_options.append(str(30 + fg_color.value))
+        format_options.append(str(fg_color.value))
     elif isinstance(fg_color, tuple):
         if len(fg_color) != 3:
             raise Exception("fg_color must be an RGB 3-tuple")
         format_options.extend((38, 2))
         format_options.extend(fg_color)
-    if fg_bright:
+    if bold or fg_bright:
         format_options.append(1)
     if fg_dim:
         format_options.append(2)
