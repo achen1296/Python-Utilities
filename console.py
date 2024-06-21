@@ -435,9 +435,11 @@ def pause(message: str = "Press Enter to continue...: "):
 
 def traceback_wrap(f: Callable[[], Any], pause_message: str | None = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False, no_pause_in_vs_code: bool = True) -> Any:
     """Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
+    exception_occurred = False
     try:
         return f()
     except (Exception, KeyboardInterrupt) as x:
+        exception_occurred = True
         if isinstance(x, KeyboardInterrupt):
             err_text = "KeyboardInterrupt\n"
         else:
@@ -447,8 +449,9 @@ def traceback_wrap(f: Callable[[], Any], pause_message: str | None = "Press Ente
         if reraise:
             raise
     finally:
-        if pause_on_exc_only and pause_message is not None and not (
-                no_pause_in_vs_code and IN_VS_CODE):
+        if (exception_occurred or not pause_on_exc_only) \
+                and pause_message is not None \
+                and not (no_pause_in_vs_code and IN_VS_CODE):
             pause(pause_message)
 
 
