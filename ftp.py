@@ -14,8 +14,8 @@ def _str_path(path: files.PathLike) -> str:
 class FTP(ftplib.FTP):
     """Adds get and put methods to ftplib FTP using its storbinary and retrbinary methods and makes get and delete recursive."""
 
-    def __init__(self, host: str, port: int | str, user: str, pwd: str):
-        super().__init__()
+    def __init__(self, host: str, port: int | str, user: str, pwd: str, **kwargs):
+        super().__init__(**kwargs)
         self.connect(host, int(port))
         self.login(user, pwd)
 
