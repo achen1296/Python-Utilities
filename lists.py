@@ -74,10 +74,10 @@ def remove_duplicates_in_place(l: list) -> list:
 
 
 def random_from(lst: Iterable) -> Any:
-    if len(lst) == 0:
-        return None
     if not isinstance(lst, list):
         lst = list(lst)
+    if len(lst) == 0:
+        return None
     return lst[random.randrange(0, len(lst))]
 
 
