@@ -174,6 +174,8 @@ class FileBackedSet(set):
         self.write_args = ()
         self.write_kwargs = {}
 
+        self.sort_keys = None
+
     def set_write_args(self, *write_args, **write_kwargs):
         self.write_args = write_args
         self.write_kwargs = write_kwargs
@@ -193,5 +195,5 @@ class FileBackedSet(set):
 
     def flush(self):
         self.batch_flag = False
-        lists.write_file_list(self.file, self, *self.write_args,
+        lists.write_file_list(self.file, sorted(self, key=self.sort_keys), *self.write_args,
                               **self.write_kwargs)
