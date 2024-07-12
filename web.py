@@ -40,7 +40,7 @@ class DownloadException(Exception):
 
 
 def download_url(url: str, dst: files.PathLike | None = None, *, output=True, **get_kwargs):
-    """ If file = None, the name is inferred from the last piece of the URL path. get_kwargs passed to requests.get."""
+    """ If file = None, the name is inferred from the last piece of the URL path. get_kwargs passed to requests.get. Returns destination file Path. """
     url_parsed = urlparse(url)
     # remove query, parameters, and fragment, since these are unnecessary (and can even alter the downloaded file, such as by reducing the image resolution)
     url_parsed = ParseResult(scheme=url_parsed.scheme, netloc=url_parsed.netloc,
@@ -53,7 +53,7 @@ def download_url(url: str, dst: files.PathLike | None = None, *, output=True, **
     dst = Path(dst).absolute()
 
     with requests.get(url, stream=True, **get_kwargs) as req:
-        if req.status_code != 200:
+        if not req.ok:
             raise DownloadException(url, req.status_code,
                                     req.reason, get_kwargs)
         if output:
@@ -84,6 +84,8 @@ def download_url(url: str, dst: files.PathLike | None = None, *, output=True, **
                 f.write(chunk)
         if output:
             clear()
+
+    return dst
 
 
 def download_urls(plan: dict[str, tuple[files.PathLike, dict[str, str]]], *, wait=0, output=True):
