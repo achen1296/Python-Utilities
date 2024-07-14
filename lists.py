@@ -1,8 +1,7 @@
-import os
 import random
 import re
 from pathlib import Path
-from typing import Any, Callable, Hashable, Iterable
+from typing import Any, Callable, Hashable, Iterable, Self, SupportsIndex
 
 import files
 
@@ -115,3 +114,92 @@ def histogram(counts: dict, file: files.PathLike = None, *, sort_by="count", bar
             f.write(hist_str)
 
     return hist_str
+
+
+class FileBackedList(list):
+    def __init__(self, file: files.PathLike, *read_args, **read_kwargs):
+        """ Call batch() to delay updates to file, then call flush(). """
+        self.file = Path(file)
+        if self.file.exists():
+            super().extend(list(read_file_list(
+                self.file, *read_args, **read_kwargs)))
+
+        self.batch_flag = False
+
+        self.write_args = ()
+        self.write_kwargs = {}
+
+    def set_write_args(self, *write_args, **write_kwargs):
+        self.write_args = write_args
+        self.write_kwargs = write_kwargs
+
+    def batch(self):
+        self.batch_flag = True
+
+    def flush(self):
+        self.batch_flag = False
+        write_file_list(self.file, self, *self.write_args,
+                        **self.write_kwargs)
+
+    def __delitem__(self, key: SupportsIndex | slice) -> None:
+        super().__delitem__(key)
+        if not self.batch_flag:
+            self.flush()
+
+    def __iadd__(self, value: Iterable) -> Self:
+        super().__iadd__(value)
+        if not self.batch_flag:
+            self.flush()
+        return self
+
+    def __imul__(self, value: SupportsIndex) -> Self:
+        super().__imul__(value)
+        if not self.batch_flag:
+            self.flush()
+        return self
+
+    def __setitem__(self, key: SupportsIndex, value):
+        super().__setitem__(key, value)
+        if not self.batch_flag:
+            self.flush()
+
+    def append(self, object: Any) -> None:
+        super().append(object)
+        if not self.batch_flag:
+            self.flush()
+
+    def clear(self) -> None:
+        super().clear()
+        if not self.batch_flag:
+            self.flush()
+
+    def extend(self, iterable: Iterable) -> None:
+        super().extend(iterable)
+        if not self.batch_flag:
+            self.flush()
+
+    def insert(self, index: SupportsIndex, object: Any) -> None:
+        super().insert(index, object)
+        if not self.batch_flag:
+            self.flush()
+
+    def pop(self, index: SupportsIndex = -1) -> Any:
+        v = super().pop(index)
+        if not self.batch_flag:
+            self.flush()
+        return v
+
+    def remove(self, value: Any) -> None:
+        super().remove(value)
+        if not self.batch_flag:
+            self.flush()
+
+    def reverse(self) -> None:
+        super().reverse()
+        if not self.batch_flag:
+            self.flush()
+
+    def sort(self, *, key=None, reverse: bool = False):
+        super().sort(key=key, reverse=reverse)
+        if not self.batch_flag:
+            self.flush()
