@@ -30,9 +30,7 @@ import lists
 
 def url_filename(url: str):
     """ Get filename in a URL pointing to a file -- the last path component. """
-    path = urlparse(url).path
-    last_slash = path.rfind("/")
-    return files.remove_forbidden_chars(path[last_slash+1:], name_only=True)
+    return files.remove_forbidden_chars(Path(urlparse(url).path).name, name_only=True)
 
 
 class DownloadException(Exception):
