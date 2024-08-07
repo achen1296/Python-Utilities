@@ -777,18 +777,35 @@ def regex_rename(find: str | re.Pattern[str], replace: str | Callable[[str | re.
     return move_by_dict(moves, output=output)
 
 
-def text_search(query: str, root: PathLike = ".", output_errors=False, **kwargs) -> Iterable[Path]:
-    """ Search for text in files. Intended to be used on the command line, and will not find text that spans in between lines. """
+def text_search(query: str, root: PathLike = ".", output_errors=False, pre_context: int = 2, post_context: int = 2, **kwargs) -> Iterable[tuple[Path, tuple[int, int], list[str]]]:
+    """ Search for text in files. Intended to be used on the command line, and will not find text that spans in between lines. Yields additional lines around the one with the query text specified as pre_context and post_context. """
     def file_action(p: Path, i: int):
+        context: list[str] = []
+        context_length = pre_context + post_context + 1
+        delayed_yield: list[int] = []
+        line_num = 1
         with open(p, encoding="utf8") as f:
             for line in f:
+                context.append(line)
+                if len(context) > context_length:
+                    context.pop(0)
                 if query.lower() in line.lower():
-                    yield p
-                    return
+                    delayed_yield.append(post_context+1)
+                for i in range(0, len(delayed_yield)):
+                    delayed_yield[i] -= 1
+                if len(delayed_yield) > 0 and delayed_yield[0] <= 0:
+                    # make a copy of the context to yield, otherwise always produces the last few lines
+                    yield p, (max(line_num - context_length+1, 1), line_num), [l for l in context]
+                    delayed_yield.pop(0)
+                line_num += 1
+        line_num -= 1
+        if len(delayed_yield) > 0:
+            yield p, (max(line_num - context_length+1, 1), line_num), context
 
     def error_action(p: Path, i: int, e: Exception):
         if output_errors:
             print("error on " + str(p))
+            print(e)
 
     prune_walk_kwargs(kwargs)
     return walk(root, file_action=file_action, error_action=error_action, **kwargs)
