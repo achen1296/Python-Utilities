@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import itertools
 import json
 import math
@@ -10,6 +11,7 @@ import shutil
 import socket
 import sys
 import time
+from base64 import b64decode, b64encode
 from datetime import datetime, timedelta
 from importlib import reload
 from itertools import combinations, permutations
