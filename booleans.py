@@ -15,7 +15,38 @@ class BooleanExpression(ABC):
         return False
 
     @staticmethod
-    def compile(expression_str: str,
+    def tokenize(expression: str,
+
+                 group_pairs: dict[str, str] = {"[": "]"},
+
+                 not_chars: str = "!",
+
+                 and_chars: str = "&",
+                 or_chars: str = "|",
+                 ):
+
+        all_operators = list(itertools.chain(
+            group_pairs.keys(), group_pairs.values(), not_chars, and_chars, or_chars))
+
+        tokens = []
+        t = ""
+        for i in range(0, len(expression)):
+            c = expression[i]
+            if c in all_operators:
+                tokens.append(t)
+                t = ""
+                tokens.append(c)
+            elif c.isspace():
+                tokens.append(t)
+                t = ""
+            else:
+                t += c
+        tokens.append(t)
+        # print(tokens)
+        return tokens
+
+    @staticmethod
+    def compile(expression: str | list[str],
 
                 group_pairs: dict[str, str] = {"[": "]"},
 
@@ -44,21 +75,11 @@ class BooleanExpression(ABC):
 
         implicit_operator_cls = BooleanExpressionOr if implicit_binary == "or" else BooleanExpressionAnd
 
-        tokens = []
-        t = ""
-        for i in range(0, len(expression_str)):
-            c = expression_str[i]
-            if c in all_operators:
-                tokens.append(t)
-                t = ""
-                tokens.append(c)
-            elif c.isspace():
-                tokens.append(t)
-                t = ""
-            else:
-                t += c
-        tokens.append(t)
-        # print(tokens)
+        if isinstance(expression, str):
+            tokens = BooleanExpression.tokenize(
+                expression, group_pairs, not_chars, and_chars, or_chars)
+        else:
+            tokens = expression
 
         # get an arbitrary grouping character
         for end_char in group_pairs.values():
