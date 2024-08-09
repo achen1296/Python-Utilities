@@ -189,11 +189,7 @@ class NoPairException(Exception):
 
 
 class Pair:
-    pass
-
-
-class Pair:
-    def __init__(self, original_str: str, start_span: tuple[int, int], end_span: tuple[int, int], internal_pairs: Iterable[Pair] = None):
+    def __init__(self, original_str: str, start_span: tuple[int, int], end_span: tuple[int, int], internal_pairs: list["Pair"] | None = None):
         # no zero length start/end strings, therefore <, but they can be directly adjacent, therefore <=
         if not (start_span[0] < start_span[1] <= end_span[0] < end_span[1]) or start_span[0] < 0 or end_span[1] > len(original_str):
             raise Exception(
@@ -206,7 +202,7 @@ class Pair:
         else:
             self.internal_pairs = internal_pairs
 
-    def add_internal(self, internal: Pair):
+    def add_internal(self, internal: "Pair"):
         self.internal_pairs.append(internal)
         list.sort(self.internal_pairs)
 
@@ -217,6 +213,10 @@ class Pair:
     @property
     def span(self) -> tuple[int, int]:
         return (self.start_span[0], self.end_span[1])
+
+    @property
+    def internal_span(self) -> tuple[int, int]:
+        return (self.start_span[1], self.end_span[0])
 
     @property
     def end_index(self) -> int:
@@ -244,7 +244,7 @@ class Pair:
     def __str__(self) -> str:
         return "Pair " + str(self.start_span) + "-" + str(self.end_span) + " \"" + self.original_str[self.start_span[0]:self.start_span[1]] + "\" \"" + self.original_str[self.end_span[0]:self.end_span[1]] + "\"" + (","+str(self.internal_pairs) if self.internal_pairs != [] else "") + ")"
 
-    def __lt__(self, other: Pair):
+    def __lt__(self, other: "Pair"):
         if self.start_span[0] != other.start_span[0]:
             return self.start_span[0] < other.start_span[0]
         elif self.start_span[1] != other.start_span[1]:
@@ -254,7 +254,7 @@ class Pair:
         else:
             return self.end_span[1] < other.end_span[1]
 
-    def __gt__(self, other: Pair):
+    def __gt__(self, other: "Pair"):
         if self.start_span[0] != other.start_span[0]:
             return self.start_span[0] > other.start_span[0]
         elif self.start_span[1] != other.start_span[1]:
@@ -264,8 +264,8 @@ class Pair:
         else:
             return self.end_span[1] > other.end_span[1]
 
-    def __eq__(self, other: Pair):
-        return self.original_str == other.original_str and self.start_span == other.start_span and self.end_span == other.end_span and self.internal_pairs == other.internal_pairs
+    def __eq__(self, other):
+        return isinstance(other, Pair) and self.original_str == other.original_str and self.start_span == other.start_span and self.end_span == other.end_span and self.internal_pairs == other.internal_pairs
 
 
 def span_include_inclusive(greater: tuple[int, int], lesser: tuple[int, int]):
@@ -289,7 +289,7 @@ def find_pair(s: str, start: int, **find_pairs_kwargs):
         f"Didn't find a pair beginning at index {start} of {s}")
 
 
-def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, require_balanced_pairs=True, escape="\\") -> list[Pair]:
+def find_pairs(s: str, *, pairs: dict[str, str] | None = None, ignore_internal_pairs: Iterable[str] | None = None, require_balanced_pairs=True, escape: str | None = "\\") -> list[Pair]:
     """ Only supports pairs that start and end with single characters, but which can handle escape characters (also limited to a single character) as a result. """
     if pairs is None:
         # negative look behind for \
@@ -345,7 +345,7 @@ def find_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: I
     return flattened
 
 
-def find_regex_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pairs: Iterable[str] = None, require_balanced_pairs=True) -> list[Pair]:
+def find_regex_pairs(s: str, *, pairs: dict[str, str] | None = None, ignore_internal_pairs: Iterable[str] | None = None, require_balanced_pairs=True) -> list[Pair]:
     """ Finds pairs in the string of the specified expressions and returns the indices of the start and end of each pair (the first index of the matches).
 
     Any unbalanced pairs result in a NoPairException unless require_balanced_pairs is set to False. The expressions for pair starts and ends should not allow overlap with themselves (although pair starts and ends can be the same character, like quotes), otherwise the results are undefined.
@@ -353,7 +353,6 @@ def find_regex_pairs(s: str, *, pairs: dict[str, str] = None, ignore_internal_pa
     `ignore_internal_pairs` is a set of pair starter regular expressions and is only used if `pairs` matches a piece of the string first. """
 
     if pairs is None:
-        # negative look behind for \
         pairs = {"\"": "\"", "'": "'", "\\(": "\\)",
                  "\\[": "\\]", "{": "}"}
     if ignore_internal_pairs is None:

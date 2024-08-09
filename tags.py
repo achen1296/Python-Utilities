@@ -1,19 +1,16 @@
-import os
 import re
-from abc import ABC, abstractmethod
 from builtins import set as bset
 from pathlib import Path
 from typing import Callable, Iterable
 
 import files
-
-SUPPORTED_CHARACTERS_RE = "[\\w\\-()]+"
+from booleans import BooleanExpression
 
 FORBIDDEN_CHARS = "[]!&"
 
 
 def remove_forbidden_chars(name: str, name_only=False):
-    """ Variant of files.remove_forbidden_chars that also removes square brackets, intended to be used on file names that are known not to (or intended not to) have any tags. """
+    """ Variant of files.remove_forbidden_chars that also removes square brackets and ! and & (expression characters), intended to be used on file names that are known not to (or intended not to) have any tags. """
     name = files.remove_forbidden_chars(name, name_only)
     for c in FORBIDDEN_CHARS:
         name = name.replace(c, "")
@@ -88,141 +85,6 @@ def rename(filename: str, new_name: str) -> str:
     return new_name + filename[len(name(filename)):]
 
 
-class TagExpressionException(Exception):
-    pass
-
-
-class TagExpression(ABC):
-    @abstractmethod
-    def match(self, tags: Iterable[str]):
-        return False
-
-    @staticmethod
-    def compile(tag_expression_str: str):
-        # because [] is used for the tags at the end of file names, they are implicitly forbidden characters in tags, so they can be used for grouping in tag expressions
-        s = "["+tag_expression_str+"]"
-
-        def _compile_and_or(i: int) -> tuple[TagExpression, int]:
-            # represents an overall and, each sublist is an or
-            and_or_sub_expressions = [[]]
-            while True:
-                # consume whitespace
-                i += len(re.match(r"\s*", s[i:]).group(0))
-                if i >= len(s):
-                    raise TagExpressionException(
-                        "Not enough closing brackets for tag expression " + tag_expression_str)
-                elif s[i] == "]":
-                    break
-                if i >= len(s):
-                    break
-                if s[i] == "&":
-                    and_or_sub_expressions.append([])
-                    i += 1
-                    continue
-                sub, i = _compile(i)
-                and_or_sub_expressions[-1].append(sub)
-            and_or_sub_expressions = [subs[0]
-                                      if len(subs) == 1 else
-                                      TagExpressionOr.create(*subs)
-                                      for subs in and_or_sub_expressions]
-            if len(and_or_sub_expressions) == 1:
-                return and_or_sub_expressions[0], i+1
-            return TagExpressionAnd.create(*and_or_sub_expressions), i+1
-
-        def _compile(i: int) -> tuple[TagExpression, int]:
-            i += len(re.match(r"\s*", s[i:]).group(0))
-            c = s[i]
-            if c == "!":
-                sub, i = _compile(i+1)
-                return TagExpressionNot(sub), i
-            if s[i] == "[":
-                return _compile_and_or(i+1)
-            match = re.match(SUPPORTED_CHARACTERS_RE, s[i:])
-            if not match:
-                raise TagExpressionException("Unsupported character " + s[i])
-            tag = match.group(0)
-            return TagExpressionSingle(tag), i + len(tag)
-
-        exp, _ = _compile(0)
-        return exp
-
-
-class TagExpressionSingle(TagExpression):
-    def __init__(self, tag: str):
-        self.tag = tag
-
-    def match(self, tags: Iterable[str]):
-        return self.tag in tags
-
-    def __repr__(self):
-        return "TagExpressionSingle(\""+self.tag+"\")"
-
-    def __eq__(self, other):
-        return isinstance(other, TagExpressionSingle) and self.tag == other.tag
-
-
-class TagExpressionNot(TagExpression):
-    def __init__(self, sub_expression: TagExpression):
-        self.sub_expression = sub_expression
-
-    def match(self, tags: Iterable[str]):
-        return not self.sub_expression.match(tags)
-
-    def __repr__(self):
-        return "TagExpressionNot("+repr(self.sub_expression)+")"
-
-    def __eq__(self, other):
-        return isinstance(other, TagExpressionNot) and self.sub_expression == other.sub_expression
-
-
-class TagExpressionMulti(TagExpression):
-    @classmethod
-    def create(cls, *sub_expressions: TagExpression):
-        # For and/or, it would be useless to wrap a single tag expression.
-        # On the other hand, wrapping an empty list actually does something different -- for and, it will be always false, and for or, always true.
-        if len(sub_expressions) == 1:
-            return sub_expressions[0]
-        return cls(*sub_expressions)
-
-
-class TagExpressionAnd(TagExpressionMulti):
-    def __init__(self, *sub_expressions: TagExpression):
-        self.sub_expressions = sub_expressions
-
-    def match(self, tags: Iterable[str]):
-        return all(sub.match(tags) for sub in self.sub_expressions)
-
-    def __repr__(self):
-        return "TagExpressionAnd("+", ".join((repr(sub) for sub in self.sub_expressions))+")"
-
-    def __eq__(self, other):
-        # not order independent
-        try:
-            return isinstance(other, TagExpressionAnd) and all(sub_self == sub_other for sub_self, sub_other in zip(self.sub_expressions, other.sub_expressions, strict=True))
-        except ValueError:
-            # from zip
-            return False
-
-
-class TagExpressionOr(TagExpressionMulti):
-    def __init__(self, *sub_expressions: TagExpression):
-        self.sub_expressions = sub_expressions
-
-    def match(self, tags: Iterable[str]):
-        return any(sub.match(tags) for sub in self.sub_expressions)
-
-    def __repr__(self):
-        return "TagExpressionOr("+", ".join((repr(sub) for sub in self.sub_expressions))+")"
-
-    def __eq__(self, other):
-        # not order independent
-        try:
-            return isinstance(other, TagExpressionOr) and all(sub_self == sub_other for sub_self, sub_other in zip(self.sub_expressions, other.sub_expressions, strict=True))
-        except ValueError:
-            # from zip
-            return False
-
-
 def _prune_walk_kwargs_set_ignore_hidden_true(kwargs):
     # default ignore_hidden to True for functions in this module using files.walk
     files.prune_walk_kwargs(kwargs)
@@ -230,10 +92,11 @@ def _prune_walk_kwargs_set_ignore_hidden_true(kwargs):
         kwargs["ignore_hidden"] = True
 
 
-def matching_files(root: files.PathLike, name_suffix_re_pattern: str | None = None, tag_expression: str | TagExpression | None = None, recursive: bool = True, **kwargs) -> Iterable[Path]:
+def matching_files(root: files.PathLike, name_suffix_re_pattern: str | None = None, tag_expression: str | BooleanExpression | None = None, recursive: bool = True, **kwargs) -> Iterable[Path]:
     r""" The name_suffix_re_pattern is a regular expression that is applied ONLY to the name and suffix of the file, with the tags removed. It may match any part of this. For example, a file with the full name "foo[bar baz].txt" will match pattern="oo\\.tx" """
     if isinstance(tag_expression, str):
-        tag_expression: TagExpression = TagExpression.compile(tag_expression)
+        tag_expression: BooleanExpression = BooleanExpression.compile(
+            tag_expression)
 
     def file_action(f: Path, d: int):
         name, _, suffix = name_parts(f.name)
@@ -278,7 +141,7 @@ def collect(root: files.PathLike, **kwargs) -> dict[str, int]:
     return collected_tags
 
 
-def map_to_folders(root: files.PathLike, tags: Iterable[str], skip_dir: Callable[[Path, int], bool] = None, **kwargs) -> dict[str, bset[Path]]:
+def map_to_folders(root: files.PathLike, tags: Iterable[str], skip_dir: Callable[[Path, int], bool] | None = None, **kwargs) -> dict[str, bset[Path]]:
     """ Match each tag to a folder with the tag in its name (as a space-separated list).  """
     tags = bset(tags)
     tags_to_folders: dict[str, bset] = {}
@@ -343,42 +206,3 @@ if __name__ == "__main__":
     assert result == "file.txt", result
     result = remove("file[tag3].txt", ["tag1", "tag2"])
     assert result == "file[tag3].txt", result
-
-    result = TagExpression.compile("asdf")
-    assert result == TagExpressionSingle("asdf"), result
-    result = TagExpression.compile("a b c d e")
-    assert result == TagExpressionOr(TagExpressionSingle(
-        "a"), TagExpressionSingle("b"), TagExpressionSingle("c"), TagExpressionSingle("d"), TagExpressionSingle("e")), result
-    result = TagExpression.compile("a b c&d e")
-    assert result == TagExpressionAnd(
-        TagExpressionOr(TagExpressionSingle(
-            "a"), TagExpressionSingle("b"), TagExpressionSingle("c")),
-        TagExpressionOr(TagExpressionSingle("d"), TagExpressionSingle("e"))
-    ), result
-    result = TagExpression.compile("a !b [!c&d] e")
-    assert result == TagExpressionOr(
-        TagExpressionSingle("a"),
-        TagExpressionNot(TagExpressionSingle("b")),
-        TagExpressionAnd(
-            TagExpressionNot(TagExpressionSingle("c")),
-            TagExpressionSingle("d")
-        ),
-        TagExpressionSingle("e")
-    ), result
-    result = TagExpression.compile("a [!b ![!c&d] e]")
-    assert result == TagExpressionOr(
-        TagExpressionSingle("a"),
-        TagExpressionOr(
-            TagExpressionNot(TagExpressionSingle("b")),
-            TagExpressionNot(
-                TagExpressionAnd(
-                    TagExpressionNot(TagExpressionSingle("c")),
-                    TagExpressionSingle("d")
-                )
-            ),
-            TagExpressionSingle("e")
-        )
-    ), result
-    assert result.match(["a"])
-    assert result.match(["e"])
-    assert not result.match(["b", "d"])

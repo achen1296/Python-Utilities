@@ -24,6 +24,7 @@ import numpy as np
 import selenium
 from PIL import Image
 
+import booleans
 import byte_operations as bop
 import console
 import dictionaries
@@ -39,10 +40,12 @@ import sets
 import strings
 import tags
 import web
+from booleans import BooleanExpression
 from polynomials import Polynomial
 from web import By
 
 Poly = Polynomial
+BE = BooleanExpression
 
 if platform.system() == "Windows":
     import clipboard
