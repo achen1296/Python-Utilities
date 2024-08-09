@@ -28,7 +28,7 @@ class BooleanExpression(ABC):
         all_operators = list(itertools.chain(
             group_pairs.keys(), group_pairs.values(), not_chars, and_chars, or_chars))
 
-        tokens = []
+        tokens: list[str] = []
         t = ""
         for i in range(0, len(expression)):
             c = expression[i]
