@@ -196,7 +196,7 @@ class Cmd(cmd.Cmd):
         self.cmdqueue = cmds[1:] + self.cmdqueue
         return cmds[0]
 
-    def onecmd(self, line: str | list[str]) -> bool | None:
+    def onecmd(self, line: str | list[str] | tuple[str, ...]) -> bool | None:
         """ Interpret the argument as though it had been typed in response
         to the prompt.
 
@@ -207,7 +207,7 @@ class Cmd(cmd.Cmd):
             if not line:
                 return self.emptyline()
             cmd, *args = strings.argument_split(line)
-        elif isinstance(line, list):
+        elif isinstance(line, list) or isinstance(line, tuple):
             cmd, *args = line
         else:
             raise TypeError(
