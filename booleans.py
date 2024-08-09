@@ -43,7 +43,7 @@ class BooleanExpression(ABC):
                 t += c
         tokens.append(t)
         # print(tokens)
-        return tokens
+        return [t for t in tokens if t != ""]
 
     @staticmethod
     def compile(expression: str | list[str],
@@ -89,8 +89,7 @@ class BooleanExpression(ABC):
 
         # logically surround entire expression with a group to simplify the code, which may now assume it is always inside a group
         # not actually necessary to prepend a starter
-        # also filter out blank tokens
-        tokens = [t for t in tokens if t != ""] + [end_char]
+        tokens += [end_char]
 
         def _compile(i: int, group_end: str) -> tuple[BooleanExpression, int]:
             if tokens[i] in binary_operators:
