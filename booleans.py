@@ -14,15 +14,22 @@ class BooleanExpression(ABC):
         """ vars is an iterable of variables that are true, the rest are false implicitly """
         return False
 
+    DEFAULT_GROUP_PAIRS = {"[": "]"}
+    DEFAULT_NOT_CHARS = "!"
+    DEFAULT_AND_CHARS = "&"
+    DEFAULT_OR_CHARS = "|"
+    DEFAULT_OPERATORS = list(itertools.chain(
+        DEFAULT_GROUP_PAIRS.keys(), DEFAULT_GROUP_PAIRS.values(), DEFAULT_NOT_CHARS, DEFAULT_AND_CHARS, DEFAULT_OR_CHARS))
+
     @staticmethod
     def tokenize(expression: str,
 
-                 group_pairs: dict[str, str] = {"[": "]"},
+                 group_pairs: dict[str, str] = DEFAULT_GROUP_PAIRS,
 
-                 not_chars: str = "!",
+                 not_chars: str = DEFAULT_NOT_CHARS,
 
-                 and_chars: str = "&",
-                 or_chars: str = "|",
+                 and_chars: str = DEFAULT_AND_CHARS,
+                 or_chars: str = DEFAULT_OR_CHARS,
                  ):
 
         all_operators = list(itertools.chain(
@@ -48,12 +55,12 @@ class BooleanExpression(ABC):
     @staticmethod
     def compile(expression: str | list[str],
 
-                group_pairs: dict[str, str] = {"[": "]"},
+                group_pairs: dict[str, str] = DEFAULT_GROUP_PAIRS,
 
-                not_chars: str = "!",
+                not_chars: str = DEFAULT_NOT_CHARS,
 
-                and_chars: str = "&",
-                or_chars: str = "|",
+                and_chars: str = DEFAULT_AND_CHARS,
+                or_chars: str = DEFAULT_OR_CHARS,
 
                 implicit_binary: Literal['or'] | Literal['and'] | None = "or",
                 ):
