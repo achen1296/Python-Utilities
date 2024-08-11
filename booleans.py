@@ -96,7 +96,8 @@ class BooleanExpression(ABC):
 
         # logically surround entire expression with a group to simplify the code, which may now assume it is always inside a group
         # not actually necessary to prepend a starter
-        tokens += [end_char]
+        # not using += to avoid side effects on a tokens list passed in as expression
+        tokens = tokens + [end_char]
 
         def _compile(i: int, group_end: str) -> tuple[BooleanExpression, int]:
             if tokens[i] in binary_operators:
