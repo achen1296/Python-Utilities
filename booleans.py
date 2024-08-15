@@ -18,6 +18,7 @@ class BooleanExpression(ABC):
     DEFAULT_NOT_CHARS = "!"
     DEFAULT_AND_CHARS = "&"
     DEFAULT_OR_CHARS = "|"
+    DEFAULT_STRING_PAIRS = {"'": "'", '"': '"'}
     DEFAULT_OPERATORS = list(itertools.chain(
         DEFAULT_GROUP_PAIRS.keys(), DEFAULT_GROUP_PAIRS.values(), DEFAULT_NOT_CHARS, DEFAULT_AND_CHARS, DEFAULT_OR_CHARS))
 
@@ -30,6 +31,8 @@ class BooleanExpression(ABC):
 
                  and_chars: str = DEFAULT_AND_CHARS,
                  or_chars: str = DEFAULT_OR_CHARS,
+
+                 string_pairs: dict[str, str] = DEFAULT_STRING_PAIRS,
                  ):
 
         all_operators = list(itertools.chain(
@@ -37,17 +40,26 @@ class BooleanExpression(ABC):
 
         tokens: list[str] = []
         t = ""
+        end_quote = None
         for i in range(0, len(expression)):
             c = expression[i]
-            if c in all_operators:
-                tokens.append(t)
-                t = ""
-                tokens.append(c)
-            elif c.isspace():
-                tokens.append(t)
-                t = ""
+            if end_quote is not None:
+                if c == end_quote:
+                    end_quote = None
+                else:
+                    t += c
             else:
-                t += c
+                if c in string_pairs:
+                    end_quote = string_pairs[c]
+                elif c in all_operators:
+                    tokens.append(t)
+                    t = ""
+                    tokens.append(c)
+                elif c.isspace():
+                    tokens.append(t)
+                    t = ""
+                else:
+                    t += c
         tokens.append(t)
         # print(tokens)
         return [t for t in tokens if t != ""]
@@ -61,6 +73,8 @@ class BooleanExpression(ABC):
 
                 and_chars: str = DEFAULT_AND_CHARS,
                 or_chars: str = DEFAULT_OR_CHARS,
+
+                string_pairs: dict[str, str] = DEFAULT_STRING_PAIRS,
 
                 implicit_binary: Literal['or'] | Literal['and'] | None = "or",
                 ):
@@ -237,6 +251,9 @@ if __name__ == "__main__":
     result = BooleanExpression.compile("a b c d e")
     assert result == BooleanExpressionOr(BooleanVar(
         "a"), BooleanVar("b"), BooleanVar("c"), BooleanVar("d"), BooleanVar("e")), result
+    result = BooleanExpression.compile("a b 'c d' e")
+    assert result == BooleanExpressionOr(BooleanVar(
+        "a"), BooleanVar("b"), BooleanVar("c d"), BooleanVar("e")), result
     result = BooleanExpression.compile("a b c&d e")
     assert result == BooleanExpressionAnd(
         BooleanExpressionOr(BooleanVar(
