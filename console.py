@@ -106,6 +106,9 @@ class Cmd(cmd.Cmd):
             self.scripts_dir = Path(scripts_dir)
         self.script_suffix = script_suffix
 
+        # when errors occur, cmdqueue is moved into this variable for the continue command
+        self.dropped_cmdqueue = []
+
     def do_exit(self):
         """ Exit the console. """
         # stop flag
@@ -134,7 +137,10 @@ class Cmd(cmd.Cmd):
             if self.intro:
                 self.stdout.write(str(self.intro)+"\n")
 
+            line = ""
+
             def loop_body():
+                nonlocal line
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
                     if isinstance(line, list):
@@ -171,7 +177,9 @@ class Cmd(cmd.Cmd):
                     stop = traceback_wrap(
                         loop_body, pause_message=None, reraise=True)
                 except:
-                    self.cmdqueue.clear()
+                    # put the failed command back on the front
+                    self.dropped_cmdqueue = [line]+self.cmdqueue
+                    self.cmdqueue = []
 
             self.postloop()
         finally:
@@ -231,6 +239,10 @@ class Cmd(cmd.Cmd):
         # except TypeError:
         # for compatibility with superclass
         # return func(" ".join(args))
+
+    def do_continue(self):
+        """ Continue a command queue (either script or using command separators) after an error, including retrying the command that produced the error. """
+        self.cmdqueue = self.dropped_cmdqueue
 
     def _script_path(self, script_name):
         return self.scripts_dir.joinpath(script_name).with_suffix(self.script_suffix)
@@ -433,7 +445,7 @@ def pause(message: str = "Press Enter to continue...: "):
     input(message)
 
 
-def traceback_wrap(f: Callable[[], Any], pause_message: str | None = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False, no_pause_in_vs_code: bool = True) -> Any:
+def traceback_wrap[T](f: Callable[[], T], pause_message: str | None = "Press Enter to continue...", pause_on_exc_only: bool = True, reraise: bool = False, no_pause_in_vs_code: bool = True) -> T | None:
     """Wraps a function in an exception handler that prints tracebacks. Intended as a wrapper for standalone script main methods -- pauses to keep the console popup window open so the output may be inspected. Set pause_message=None to skip pausing, usually if this is used inside something else. """
     exception_occurred = False
     try:

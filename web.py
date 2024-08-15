@@ -1,7 +1,7 @@
 import os
 import time
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Literal, overload
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 import requests
@@ -159,6 +159,20 @@ def chrome_driver(profile: files.PathLike, *, executable_path: files.PathLike | 
     driver.implicitly_wait(2)
     driver.set_page_load_timeout(15)
     return driver
+
+
+@overload
+def wait_element(driver: WebDriver, css_selector: str, *, all: Literal[False] = False, timeout: int = 10, index: int = 0, ignored_exceptions: WaitExcTypes =
+                 (ElementNotInteractableException,
+                  NoSuchElementException, StaleElementReferenceException)) -> WebElement | None:
+    pass
+
+
+@overload
+def wait_element(driver: WebDriver, css_selector: str, *, all: Literal[True] = True, timeout: int = 10, index: int = 0, ignored_exceptions: WaitExcTypes =
+                 (ElementNotInteractableException,
+                  NoSuchElementException, StaleElementReferenceException)) -> Iterable[WebElement] | None:
+    pass
 
 
 def wait_element(driver: WebDriver, css_selector: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: WaitExcTypes =
