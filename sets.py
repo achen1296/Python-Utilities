@@ -160,7 +160,8 @@ class DisjointSets:
         return True
 
 
-class FileBackedSet(set, FileBackedData):
+class FileBackedSet(FileBackedData, set):
+    """ Keep in mind that all data will be converted to strings when writing to file! """
     def __init__(self, sort_keys: Callable, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.sort_keys = sort_keys

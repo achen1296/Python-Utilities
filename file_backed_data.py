@@ -5,7 +5,8 @@ import files
 
 class FileBackedData:
     """ Subclasses should only need to override read() and write(). """
-    def __init__(self, file: files.PathLike, read_args: tuple, read_kwargs: dict, write_args: tuple, write_kwargs: dict):
+
+    def __init__(self, file: files.PathLike, read_args: tuple = (), read_kwargs: dict = {}, write_args: tuple = (), write_kwargs: dict = {}):
         """ Use as a context manager or explicitly call close(). Either way, will use the write_args and write_kwargs when calling write(). """
         self.file = Path(file)
 

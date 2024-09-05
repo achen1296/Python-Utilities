@@ -120,7 +120,8 @@ def flip_dict(d: dict) -> dict:
     return new_d
 
 
-class FileBackedDict(dict, FileBackedData):
+class FileBackedDict(FileBackedData, dict):
+    """ Keep in mind that all data will be converted to strings when writing to file! """
     def read(self, *args, **kwargs):
         if self.file.exists():
             self.update(read_file_dict(

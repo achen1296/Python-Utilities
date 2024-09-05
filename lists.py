@@ -117,7 +117,9 @@ def histogram(counts: dict, file: files.PathLike = None, *, sort_by="count", bar
     return hist_str
 
 
-class FileBackedList(list, FileBackedData):
+class FileBackedList(FileBackedData, list):
+    """ Keep in mind that all data will be converted to strings when writing to file! """
+
     def read(self, *args, **kwargs):
         if self.file.exists():
             self.extend(read_file_list(self.file, *args, **kwargs))
