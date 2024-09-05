@@ -1,5 +1,6 @@
 from typing import Callable, Hashable, Iterable
 
+import files
 import lists
 from file_backed_data import FileBackedData
 
@@ -162,8 +163,9 @@ class DisjointSets:
 
 class FileBackedSet(FileBackedData, set):
     """ Keep in mind that all data will be converted to strings when writing to file! """
-    def __init__(self, sort_keys: Callable, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+
+    def __init__(self, file: files.PathLike, sort_keys: Callable | None = None, *args, **kwargs):
+        super().__init__(file=file, *args, **kwargs)
         self.sort_keys = sort_keys
 
     def read(self, *args, **kwargs):
