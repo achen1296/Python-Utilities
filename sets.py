@@ -1,8 +1,7 @@
-from pathlib import Path
-from typing import Hashable, Iterable
+from typing import Callable, Hashable, Iterable
 
-import files
 import lists
+from file_backed_data import FileBackedData
 
 
 def nonempty_intersection(s1: set, s2: set) -> bool:
@@ -161,39 +160,16 @@ class DisjointSets:
         return True
 
 
-class FileBackedSet(set):
-    def __init__(self, file: files.PathLike, *read_args, **read_kwargs):
-        """ Call batch() to delay updates to file, then call flush(). """
-        self.file = Path(file)
+class FileBackedSet(set, FileBackedData):
+    def __init__(self, sort_keys: Callable, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.sort_keys = sort_keys
+
+    def read(self, *args, **kwargs):
         if self.file.exists():
-            self |= set(lists.read_file_list(
-                self.file, *read_args, **read_kwargs))
+            for v in lists.read_file_list(self.file, *args, **kwargs):
+                self.add(v)
 
-        self.batch_flag = False
-
-        self.write_args = ()
-        self.write_kwargs = {}
-
-        self.sort_keys = None
-
-    def set_write_args(self, *write_args, **write_kwargs):
-        self.write_args = write_args
-        self.write_kwargs = write_kwargs
-
-    def add(self, value):
-        super().add(value)
-        if not self.batch_flag:
-            self.flush()
-
-    def remove(self, value):
-        super().remove(value)
-        if not self.batch_flag:
-            self.flush()
-
-    def batch(self):
-        self.batch_flag = True
-
-    def flush(self):
-        self.batch_flag = False
-        lists.write_file_list(self.file, sorted(self, key=self.sort_keys), *self.write_args,
-                              **self.write_kwargs)
+    def write(self, *args, **kwargs):
+        lists.write_file_list(self.file, sorted(
+            self, key=self.sort_keys), *args, **kwargs)

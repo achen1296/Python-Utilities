@@ -1,9 +1,10 @@
 import os
 import re
 from pathlib import Path
-from typing import Any, Callable, Iterable, Sized
+from typing import Any, Callable, Iterable, Sized, overload
 
 import files
+from file_backed_data import FileBackedData
 
 
 def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\\s*>\\s*", value_list_separator: str = "\\s*\\|\\s*", comment: str = "\\s*#", all_lists: bool = False, key_transform: Callable[[Any], Any] | None = None, value_transform: Callable[[Any], Any] | None = None) -> dict:
@@ -119,32 +120,12 @@ def flip_dict(d: dict) -> dict:
     return new_d
 
 
-class FileBackedDict(dict):
-    def __init__(self, file: files.PathLike, *read_args, **read_kwargs):
-        """ Call batch() to delay updates to file, then call flush(). """
-        self.file = Path(file)
+class FileBackedDict(dict, FileBackedData):
+    def read(self, *args, **kwargs):
         if self.file.exists():
             self.update(read_file_dict(
-                self.file, *read_args, **read_kwargs))
+                self.file, *args, **kwargs))
 
-        self.batch_flag = False
-
-        self.write_args = ()
-        self.write_kwargs = {}
-
-    def set_write_args(self, *write_args, **write_kwargs):
-        self.write_args = write_args
-        self.write_kwargs = write_kwargs
-
-    def __setitem__(self, key, value):
-        super().__setitem__(key, value)
-        if not self.batch_flag:
-            self.flush()
-
-    def batch(self):
-        self.batch_flag = True
-
-    def flush(self):
-        self.batch_flag = False
-        write_file_dict(self.file, self, *self.write_args,
-                        **self.write_kwargs)
+    def write(self, *args, **kwargs):
+        write_file_dict(self.file, self, *args,
+                        **kwargs)
