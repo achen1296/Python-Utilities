@@ -187,7 +187,8 @@ def yield_file(f: Path, _):
 
 
 def walk(root: PathLike = ".", *,
-         file_action: Callable[[Path, int], Iterable | None] = yield_file,
+         file_action: Callable[[Path, int],
+                               Iterable | None] | None = yield_file,
          skip_dir: Callable[[Path, int], bool] | None = None,
          dir_action: Callable[[Path, int], Iterable | None] | None = None,
          dir_post_action: Callable[[Path, int], Iterable | None] | None = None,
