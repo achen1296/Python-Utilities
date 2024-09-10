@@ -81,8 +81,8 @@ def random_from(lst: Iterable) -> Any:
     return lst[random.randrange(0, len(lst))]
 
 
-def count(lst: Iterable[Hashable], bucket: Callable[[Any], Hashable] = lambda x: x) -> dict[Hashable, int]:
-    counts = {}
+def count(lst: Iterable[Hashable], bucket: Callable[[Any], Hashable] = lambda x: x, initial_counts: dict[Hashable, int] | None = None) -> dict[Hashable, int]:
+    counts = initial_counts or {}
     for i in lst:
         b = bucket(i)
         counts[b] = counts.get(b, 0) + 1
