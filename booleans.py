@@ -98,7 +98,7 @@ class BooleanExpression(ABC):
 
         if isinstance(expression, str):
             tokens = BooleanExpression.tokenize(
-                expression, group_pairs, not_chars, and_chars, or_chars)
+                expression, group_pairs, not_chars, and_chars, or_chars, string_pairs)
         else:
             tokens = expression
 
