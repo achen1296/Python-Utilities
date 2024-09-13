@@ -1,5 +1,6 @@
 import hashlib
 import random
+from enum import StrEnum
 from pathlib import Path
 
 from PIL import Image
@@ -13,7 +14,10 @@ def rgb_diff(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int]) -> int:
     return abs(r1-r2)+abs(g1-g2)+abs(b1-b2)
 
 
-def _image_from_file_or_image(img: files.PathLike | Image.Image):
+FileOrImage = files.PathLike | Image.Image
+
+
+def _image_from_file_or_image(img: FileOrImage):
     if isinstance(img, files.PathLike):
         return Image.open(Path(img))
     elif isinstance(img, Image.Image):
@@ -28,7 +32,7 @@ def _optional_save(img: Image.Image, output: files.PathLike | None):
         img.save(output)
 
 
-def edge_detect(img: files.PathLike | Image.Image, threshold: int = 60, output: files.PathLike | None = None):
+def edge_detect(img: FileOrImage, threshold: int = 60, output: files.PathLike | None = None):
     with _image_from_file_or_image(img).convert(mode="RGB") as img:
         new = Image.new("RGB", img.size)
         for x in range(1, img.width):
@@ -46,7 +50,7 @@ def edge_detect(img: files.PathLike | Image.Image, threshold: int = 60, output: 
     return new
 
 
-def scale(img: files.PathLike | Image.Image, scale: float, output: files.PathLike | None = None) -> Image.Image:
+def scale(img: FileOrImage, scale: float, output: files.PathLike | None = None) -> Image.Image:
     with _image_from_file_or_image(img) as img:
         new = img.resize(
             (int(img.width * scale), int(img.height * scale)), resample=Image.BOX)
@@ -54,14 +58,14 @@ def scale(img: files.PathLike | Image.Image, scale: float, output: files.PathLik
     return new
 
 
-def resize(img: files.PathLike | Image.Image, size: tuple[int, int], output: files.PathLike | None = None) -> Image.Image:
+def resize(img: FileOrImage, size: tuple[int, int], output: files.PathLike | None = None) -> Image.Image:
     with _image_from_file_or_image(img) as img:
         new = img.resize(size, resample=Image.BOX)
     _optional_save(new, output)
     return new
 
 
-def rgb_image_diff(img1: files.PathLike | Image.Image, img2: files.PathLike | Image.Image) -> tuple[int, int]:
+def rgb_image_diff(img1: FileOrImage, img2: FileOrImage) -> tuple[int, int]:
     """Returns a pair of ints. The first is the total RGB difference (each pixel pair's difference is always given as the absolute value). The second is the maximum possible RGB difference given the size of the images (which must be the same)."""
     with _image_from_file_or_image(img1).convert(mode="RGB") as img1:
         with _image_from_file_or_image(img2).convert(mode="RGB") as img2:
@@ -77,7 +81,7 @@ def rgb_image_diff(img1: files.PathLike | Image.Image, img2: files.PathLike | Im
     return sum, 765*width*height
 
 
-def collage(imgs: list[files.PathLike | Image.Image], width: int, height: int, img_width: int, img_height: int, shuffle: bool = False, output: files.PathLike | None = None):
+def collage(imgs: list[FileOrImage], width: int, height: int, img_width: int, img_height: int, shuffle: bool = False, output: files.PathLike | None = None):
     """Make a collage of a list of images which must all be scaled to the same dimensions."""
 
     len_imgs = len(imgs)
@@ -107,8 +111,25 @@ def collage(imgs: list[files.PathLike | Image.Image], width: int, height: int, i
     return new
 
 
-def hash(img: files.PathLike | Image.Image, *, hash_function: str = "MD5", hex: bool = True) -> str | bytes:
+def hash(img: FileOrImage, *, hash_function: str = "MD5", hex: bool = True) -> str | bytes:
     """ Hash with the specified function (default MD5). Uses PIL to ignore image metadata. """
     img = _image_from_file_or_image(img)
     h = hashlib.new(hash_function, img.tobytes(), usedforsecurity=False)
     return h.hexdigest() if hex else h.digest()
+
+
+class Orientation(StrEnum):
+    HORIZONTAL = "horiz"
+    VERTICAL = "vert"
+    SQUARE = "square"
+
+
+def orientation(img: FileOrImage) -> Orientation:
+    img = _image_from_file_or_image(img)
+    width, height = img.size
+    if width > height:
+        return Orientation.HORIZONTAL
+    elif width == height:
+        return Orientation.SQUARE
+    else:
+        return Orientation.VERTICAL
