@@ -119,8 +119,8 @@ def hash(img: FileOrImage, *, hash_function: str = "MD5", hex: bool = True) -> s
 
 
 class Orientation(StrEnum):
-    HORIZONTAL = "horiz"
-    VERTICAL = "vert"
+    HORIZ = HORIZONTAL = "horiz"
+    VERT = VERTICAL = "vert"
     SQUARE = "square"
 
 
