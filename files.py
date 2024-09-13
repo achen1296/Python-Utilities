@@ -1,3 +1,4 @@
+import itertools
 import glob
 import hashlib
 import io
@@ -869,6 +870,24 @@ def gitignored_files(gitignore_file: PathLike = ".gitignore", root: PathLike = "
                                   for g in glob.glob(line, root_dir=root, recursive=True)}
 
     return ignored_files
+
+
+def _last_common_ancestor_2(p1: Path | None, p2: Path | None):
+    if p1 is None or p2 is None:
+        return None
+    for par in itertools.chain([p1], p1.parents):
+        if par == p2 or par in p2.parents:
+            return par
+    return None
+
+
+def last_common_ancestor(*ps: Path):
+    if len(ps) == 0:
+        return None
+    lca = ps[0]
+    for p in ps[1:]:
+        lca = _last_common_ancestor_2(lca, p)
+    return lca
 
 
 if WINDOWS:
