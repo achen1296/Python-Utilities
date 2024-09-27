@@ -26,22 +26,25 @@ def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str
     d = {}
     for entry in iterable_dict:
         # skip whitespace and comments
-        if entry.strip() == "" or (comment is not None and re.match(comment, entry) != None):
+        if entry.strip() == "" or (comment and re.match(comment, entry)):
             continue
-        if re.search(key_value_separator, entry) is None:
+        if not re.search(key_value_separator, entry):
             k = entry
             v = ""
         else:
             # only use first k-v separator (after that regarded as part of value)
             k, v = re.split(key_value_separator, entry, 1)
-            if value_list_separator is not None and re.search(value_list_separator, v) != None:
-                v = re.split(value_list_separator, v)
-            elif all_lists:
-                v = [v]
+
+        if value_list_separator and re.search(value_list_separator, v):
+            v = re.split(value_list_separator, v)
+        elif all_lists:
+            v = [v]
+
         if key_transform:
             k = key_transform(k)
         if value_transform:
             v = value_transform(v)
+
         d[k] = v
     return d
 
@@ -122,6 +125,7 @@ def flip_dict(d: dict) -> dict:
 
 class FileBackedDict(FileBackedData, dict):
     """ Keep in mind that all data will be converted to strings when writing to file! """
+
     def read(self, *args, **kwargs):
         if self.file.exists():
             self.update(read_file_dict(
