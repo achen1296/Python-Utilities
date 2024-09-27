@@ -79,7 +79,7 @@ class Cmd(cmd.Cmd):
     - Python Exceptions and keyboard interrupts are caught and printed
     - help shows function signatures
     - help adapts its output to the current terminal size
-    - catch KeyboardInterrupts instead of completely terminating, but terminate on EOF
+    - catch KeyboardInterrupts instead of completely terminating, but terminate on EOF after calling do_exit
     """
     # override
     prompt = ">> "
@@ -120,7 +120,7 @@ class Cmd(cmd.Cmd):
     do_sleep.__doc__ = sleep.__doc__
 
     def cmdloop(self, intro=None):
-        """ Modifies the superclass cmdloop to catch KeyboardInterrupt without stopping, but conversely will stop on EOF (like the Python interactive shell). """
+        """ Modifies the superclass cmdloop to catch KeyboardInterrupt without stopping, but conversely will stop on EOF (like the Python interactive shell), just after calling do_exit. """
 
         self.preloop()
         if self.use_rawinput and self.completekey:
@@ -156,6 +156,7 @@ class Cmd(cmd.Cmd):
                             line = input(self.prompt)
                         except EOFError:
                             # stop on EOF
+                            self.do_exit()
                             return True
                     else:
                         self.stdout.write(self.prompt)
@@ -163,6 +164,7 @@ class Cmd(cmd.Cmd):
                         line = self.stdin.readline()
                         if not len(line):
                             # stop on EOF
+                            self.do_exit()
                             return True
                         else:
                             line = line.rstrip('\r\n')
