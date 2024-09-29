@@ -60,6 +60,9 @@ def sleep(time_str: str):
     time.sleep(sleep_time)
 
 
+CmdLineType = str | list[str] | tuple[str, ...]
+
+
 class Cmd(cmd.Cmd):
     """ Adds some more features onto cmd.Cmd:
     - pre-includes these actions:
@@ -170,7 +173,9 @@ class Cmd(cmd.Cmd):
                             line = line.rstrip('\r\n')
                 line = self.precmd(line)
                 stop = self.onecmd(line)
-                stop = self.postcmd(stop, line)  # type: ignore
+                stop = self.postcmd(stop, line)
+                if not self.cmdqueue:
+                    stop = self.postqueue(stop, line)
                 return stop
 
             stop = False
@@ -192,9 +197,9 @@ class Cmd(cmd.Cmd):
                 except ImportError:
                     pass
 
-    def precmd(self, line: str | list[str]):
+    def precmd(self, line: CmdLineType):  # type: ignore (intentional incompatible override)
         """ Split commands by self.command_sep. """
-        if isinstance(line, list):
+        if not isinstance(line, str):
             # pass through pre-parsed command
             return line
         # keep empty splits since this can be used intentionally to repeat a command
@@ -206,7 +211,8 @@ class Cmd(cmd.Cmd):
         self.cmdqueue = cmds[1:] + self.cmdqueue
         return cmds[0]
 
-    def onecmd(self, line: str | list[str] | tuple[str, ...]) -> bool | None:
+    def onecmd(self, line: CmdLineType) -> bool | None:  # type: ignore
+        # (intentional incompatible override)
         """ Interpret the argument as though it had been typed in response
         to the prompt.
 
@@ -235,12 +241,22 @@ class Cmd(cmd.Cmd):
                 func = self.default
                 # pass the first split argument to default
                 args = [cmd] + args
-        self.lastcmd = line
+        self.lastcmd: CmdLineType = line  # type: ignore
+        # (intentional incompatible override)
+
         # try:
         return func(*args)
         # except TypeError:
         # for compatibility with superclass
         # return func(" ".join(args))
+
+    def postcmd(self, stop: bool | None, line: CmdLineType):  # type: ignore
+        # (intentional incompatible override)
+        return stop
+
+    def postqueue(self, stop: bool | None, line: CmdLineType):
+        """ Run after all of the commands in a queue (including a single command) """
+        return stop
 
     def do_continue(self):
         """ Continue a command queue (either script or using command separators) after an error, including retrying the command that produced the error. """
