@@ -477,22 +477,19 @@ def ascii_table(hex: bool = True):
             print()
 
 
-DEFAULT_WORD_SEPARATOR_RE = r"[\\/_\-\s\.\?!]+"
+def words(s: str) -> list[str]:
+    return [s for s in re.split("\\b", s) if re.match("\\w+", s)]
 
 
-def words(s: str, word_separator_re=DEFAULT_WORD_SEPARATOR_RE) -> list[str]:
-    return re.split(word_separator_re, s)
-
-
-def contains_any_word(s: str, word_list: list[str], *, word_separator_re=DEFAULT_WORD_SEPARATOR_RE) -> bool:
-    s_words = words(s, word_separator_re)
+def contains_any_word(s: str, word_list: list[str]) -> bool:
+    s_words = words(s)
     for w in word_list:
         if w in s_words:
             return True
     return False
 
 
-def contains_all_words(s: str, word_list: list[str], *, in_order=True, allow_other_words_between=False, word_separator_re=DEFAULT_WORD_SEPARATOR_RE) -> bool:
+def contains_all_words(s: str, word_list: list[str], *, in_order=True, allow_other_words_between=False) -> bool:
     """ Does not do simple string inclusion -- for example, `"owe" in "power"` would be `True`, but `contains_words("power", ["owe"])` would not be `True` because "owe" is not the entire word.
 
     If `in_order` is `False`, then just checks if the string contains all of the words. (`allow_other_words_between` has no effect.)
@@ -500,7 +497,7 @@ def contains_all_words(s: str, word_list: list[str], *, in_order=True, allow_oth
     If `in_order` is `True` and `allow_other_words_between` is `True`, then just checks if the string contains all of the words in the order given.
 
     If `in_order` is `True` and `allow_other_words_between` is `False`, then checks if the string contains all of the words in the order given AND that no other words interrupt the sequence. (This is the default.) """
-    s_words = words(s, word_separator_re)
+    s_words = words(s)
 
     # special case for no words
     if len(word_list) == 0:
