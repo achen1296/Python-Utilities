@@ -1,6 +1,9 @@
 import re
 from typing import Iterable, Sequence
 
+alphabet = "abcdefghijklmnopqrstuvwxyz"
+ALPHABET = alphabet.upper()
+
 
 def unescape(s: str, *, escape_char: str = "\\") -> str:
     """Removes one level of escape characters. Only supports single characters."""
