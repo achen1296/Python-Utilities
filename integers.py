@@ -3,15 +3,22 @@ from typing import Iterable
 import lists
 
 
-def primes(max: int):
+def primes(max: int | None = None):
+    # this is fast enough for "small" numbers (e.g. on order of millions)
     def prime_candidates():
         yield 2
         yield 3
-        n = 1
+        # n = 1
+        n = 5
         while True:
-            yield 6 * n - 1
-            yield 6 * n + 1
-            n += 1
+            # yield 6 * n - 1
+            # yield 6 * n + 1
+            # n += 1
+            # equivalent to the above but no multiplication
+            yield n
+            n += 2
+            yield n
+            n += 4
 
     def divisible_by_any(num: int, factors: list[int]):
         for f in factors:
@@ -23,7 +30,7 @@ def primes(max: int):
 
     primes = []
     for p in prime_candidates():
-        if p > max:
+        if max is not None and p > max:
             break
         if not divisible_by_any(p, primes):
             primes.append(p)
