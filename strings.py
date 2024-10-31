@@ -579,6 +579,17 @@ def title_case(s: str):
     for p in TITLE_ENDING_PUNCTUATION:
         for m in re.finditer(f"\\{p}\\s*[a-z]", s):
             capitalize_letters.append(m.end()-1)
+
+    first_word = None
+    last_word = None
+    for m in re.finditer(f"[a-z]+", s, re.I):
+        first_word = first_word or m
+        last_word = m
+    if first_word:
+        capitalize_letters.append(first_word.start())
+    if last_word:
+        capitalize_letters.append(last_word.start())
+
     capitalize_letters.sort()
 
     sio = StringIO()
