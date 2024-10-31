@@ -1,4 +1,5 @@
 import re
+from io import StringIO
 from typing import Iterable, Sequence
 
 alphabet = "abcdefghijklmnopqrstuvwxyz"
@@ -551,6 +552,43 @@ def levenshtein(a: Sequence, b: Sequence):
         # print(curr)
         prev, curr = curr, prev
     return prev[lb]
+
+
+TITLE_MINOR_WORDS = [
+    # articles
+    "a", "an", "the",
+    # prepositions
+    "as", "at", "but", "by", "for", "in", "of", "off", "on", "out", "per", "to", "up", "via",
+    # conjunctions
+    "and", "but", "or", "so", "yet", "nor", "for", "as", "if",
+]
+""" Probably not exhaustive even considering it only has to be words that are at most 3 letters """
+
+# hyphen, en-dash, and em-dash
+TITLE_ENDING_PUNCTUATION = ".?!:-–—"
+""" Also maybe not exhaustive """
+
+
+def title_case(s: str):
+    """ Applies rules for English, making "minor words" lowercase except when first/last/just after end punctuation """
+    s = s.title()
+    for w in TITLE_MINOR_WORDS:
+        s = re.sub(f"\\b{w}\\b", w, s, flags=re.I)
+
+    capitalize_letters = []
+    for p in TITLE_ENDING_PUNCTUATION:
+        for m in re.finditer(f"\\{p}\\s*[a-z]", s):
+            capitalize_letters.append(m.end()-1)
+    capitalize_letters.sort()
+
+    sio = StringIO()
+    prev = -1
+    for i in capitalize_letters:
+        sio.write(s[prev+1:i])
+        sio.write(s[i].upper())
+        prev = i
+    sio.write(s[prev+1:])
+    return sio.getvalue()
 
 
 if __name__ == "__main__":
