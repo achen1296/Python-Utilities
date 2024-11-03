@@ -161,17 +161,18 @@ class DisjointSets:
         return True
 
 
-class FileBackedSet(FileBackedData, set):
+class FileBackedSet[T](FileBackedData, set[T]):
     """ Keep in mind that all data will be converted to strings when writing to file! """
 
-    def __init__(self, file: files.PathLike, sort_keys: Callable | None = None, *args, **kwargs):
+    def __init__(self, file: files.PathLike, sort_keys: Callable | None = None, value_transform: Callable[[str], T] = (lambda x: x), *args, **kwargs):
         super().__init__(file=file, *args, **kwargs)
         self.sort_keys = sort_keys
+        self.value_transform = value_transform
 
     def read(self, *args, **kwargs):
         if self.file.exists():
             for v in lists.read_file_list(self.file, *args, **kwargs):
-                self.add(v)
+                self.add(self.value_transform(v))
 
     def write(self, *args, **kwargs):
         lists.write_file_list(self.file, sorted(
