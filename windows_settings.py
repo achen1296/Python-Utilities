@@ -52,8 +52,8 @@ def change_theme(theme: str):
 def set_brightness(b: float):
     """ Argument should be float between 0.0 and 1.0 inclusive """
     print(f"Setting brightness to {b}")
-    # Monitorian takes ints only
-    subprocess.run(["monitorian", "/set", "all", str(math.floor(b*100))],
+    # command takes ints only
+    subprocess.run(["powershell", f"(Get-WmiObject -Namespace root/WMI -Class WmiMonitorBrightnessMethods).WmiSetBrightness(1,{math.floor(b*100)})"],
                    creationflags=subprocess.CREATE_NO_WINDOW)
 
 

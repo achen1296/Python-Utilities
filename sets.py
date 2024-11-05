@@ -165,9 +165,9 @@ class FileBackedSet[T](FileBackedData, set[T]):
     """ Keep in mind that all data will be converted to strings when writing to file! """
 
     def __init__(self, file: files.PathLike, sort_keys: Callable | None = None, value_transform: Callable[[str], T] = (lambda x: x), *args, **kwargs):
+        self.value_transform = value_transform
         super().__init__(file=file, *args, **kwargs)
         self.sort_keys = sort_keys
-        self.value_transform = value_transform
 
     def read(self, *args, **kwargs):
         if self.file.exists():
