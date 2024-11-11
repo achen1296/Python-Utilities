@@ -116,3 +116,22 @@ def divisors(x: int) -> Iterable[int]:
             yield from (fi * d for d in _divisors(factors[1:]))
 
     return _divisors(factors)
+
+
+def int_input(prompt: str, min: int | None = None, max: int | None = None, default: int | None = None):
+    while True:
+        try:
+            t = input(prompt)
+            if default is not None and not t.strip():
+                return default
+            n = int(t)
+        except ValueError:
+            print("Invalid integer")
+            continue
+        if (min is None or min <= n) and (max is None or n <= max):
+            return n
+        else:
+            print(f"Expected number {", ".join([
+                "" if min is None else f"at least {min}",
+                "" if max is None else f"at most {max}"
+            ])}")
