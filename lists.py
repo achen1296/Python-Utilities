@@ -135,7 +135,7 @@ class FileBackedList[T](FileBackedData, list):
 
 
 class TriangularArray[T]:
-    """ Represents a square 2D array that is symmetrical, i.e. where swapping the indices points to the same information, without actually duplicating values.
+    """ Represents a square 2D array that is symmetrical, i.e. where swapping the indices points to the same information, without actually duplicating values. Can be expand()ed but not contracted (copy the values to a new, smaller one instead if desired).
 
     Note that it behaves differently from an actual 2D array in that:
     - len() will return the side length, not the number of elements
@@ -156,6 +156,8 @@ class TriangularArray[T]:
         one_d_length = self.triangular_number(side_length)
         self.side_length = side_length
         self.default_value = default_value
+        self.numpy_array = numpy_array
+        self.data: list[T] | np.ndarray
         if numpy_array:
             self.data = np.ndarray((one_d_length,))
             self.data.fill(default_value)
@@ -167,13 +169,13 @@ class TriangularArray[T]:
             self.tri_array = tri_array
             self.x = x
 
-        def __getitem__(self, y: int):
+        def __getitem__(self, y: int) -> T:
             return self.tri_array.data[self.tri_array._index(self.x, y)]
 
         def __setitem__(self, y: int, v: T):
             self.tri_array.data[self.tri_array._index(self.x, y)] = v
 
-        def __iter__(self):
+        def __iter__(self) -> Iterable[T]:
             for c in range(0, self.tri_array.side_length):
                 yield self.tri_array.data[self.tri_array._index(self.x, c)]
 
@@ -189,7 +191,7 @@ class TriangularArray[T]:
         for y in range(0, self.side_length):
             self.data[self._index(x, y)] = values[y]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[tuple[int, int, T]]:
         i = 0
         for x in range(0, self.side_length):
             for y in range(0, x+1):
@@ -216,3 +218,16 @@ class TriangularArray[T]:
 
     def __repr__(self):
         return self.__str__()
+
+    def expand(self, n: int):
+        old_length = self.triangular_number(self.side_length)
+        self.side_length += n
+        new_length = self.triangular_number(self.side_length)
+
+        if self.numpy_array:
+            assert isinstance(self.data, np.ndarray)
+            self.data.resize(new_length)
+            self.data[old_length:].fill(self.default_value)
+        else:
+            assert isinstance(self.data, list)
+            self.data += [self.default_value] * (new_length-old_length)
