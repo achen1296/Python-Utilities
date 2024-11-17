@@ -1,7 +1,11 @@
 import random
 import re
+from io import StringIO
 from pathlib import Path
-from typing import Any, Callable, Hashable, Iterable, Self, SupportsIndex
+from typing import (Any, Callable, Hashable, Iterable, Self, Sequence, Sized,
+                    SupportsIndex)
+
+import numpy as np
 
 import files
 from file_backed_data import FileBackedData
@@ -128,3 +132,87 @@ class FileBackedList[T](FileBackedData, list):
     def write(self, *args, **kwargs):
         write_file_list(self.file, self, *args,
                         **kwargs)
+
+
+class TriangularArray[T]:
+    """ Represents a square 2D array that is symmetrical, i.e. where swapping the indices points to the same information, without actually duplicating values.
+
+    Note that it behaves differently from an actual 2D array in that:
+    - len() will return the side length, not the number of elements
+    - iter() will return an iterator that produces r(ow index), c(olumn index), v(alue) tuples, not rows
+    """
+
+    @staticmethod
+    def triangular_number(n: int):
+        return n*(n+1)//2
+
+    @staticmethod
+    def _index(x: int, y: int):
+        small = min(x, y)
+        large = max(x, y)
+        return TriangularArray.triangular_number(large)+small
+
+    def __init__(self, side_length: int, *, numpy_array=False, default_value: T = 0.):
+        one_d_length = self.triangular_number(side_length)
+        self.side_length = side_length
+        self.default_value = default_value
+        if numpy_array:
+            self.data = np.ndarray((one_d_length,))
+            self.data.fill(default_value)
+        else:
+            self.data = [default_value] * one_d_length
+
+    class Row:
+        def __init__(self, tri_array: "TriangularArray[T]", x: int):
+            self.tri_array = tri_array
+            self.x = x
+
+        def __getitem__(self, y: int):
+            return self.tri_array.data[self.tri_array._index(self.x, y)]
+
+        def __setitem__(self, y: int, v: T):
+            self.tri_array.data[self.tri_array._index(self.x, y)] = v
+
+        def __iter__(self):
+            for c in range(0, self.tri_array.side_length):
+                yield self.tri_array.data[self.tri_array._index(self.x, c)]
+
+        def __len__(self):
+            return len(self.tri_array)
+
+    def __getitem__(self, x: int):
+        return self.Row(self, x)
+
+    def __setitem__(self, x: int, values: Sequence[T]):
+        if len(values) != self.side_length:
+            raise TypeError("values must be same length as a single row")
+        for y in range(0, self.side_length):
+            self.data[self._index(x, y)] = values[y]
+
+    def __iter__(self):
+        i = 0
+        for x in range(0, self.side_length):
+            for y in range(0, x+1):
+                # assert self._index(x, y) == i
+                yield x, y, self.data[i]
+                i += 1
+
+    def __len__(self):
+        return self.side_length
+
+    def __str__(self):
+        s = StringIO()
+        s.write("[\n")
+        i = 0
+        for x in range(0, self.side_length):
+            s.write("\t[")
+            for y in range(0, x+1):
+                # assert self._index(x, y) == i
+                s.write(f"{self.data[i]}, ")
+                i += 1
+            s.write("]\n")
+        s.write("]")
+        return s.getvalue()
+
+    def __repr__(self):
+        return self.__str__()
