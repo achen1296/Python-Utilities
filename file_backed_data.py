@@ -4,7 +4,7 @@ import files
 
 
 class FileBackedData:
-    """ Subclasses should only need to override read() and write(). """
+    """ Subclasses should mostly only need to override read() and write(). """
 
     def __init__(self, file: files.PathLike, read_args: tuple = (), read_kwargs: dict = {}, write_args: tuple = (), write_kwargs: dict = {}):
         """ Use as a context manager or explicitly call flush or close(). Either way, will use the write_args and write_kwargs when calling write(). """
