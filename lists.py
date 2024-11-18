@@ -1,3 +1,4 @@
+import math
 import random
 import re
 from io import StringIO
@@ -152,17 +153,41 @@ class TriangularArray[T]:
         large = max(x, y)
         return TriangularArray.triangular_number(large)+small
 
-    def __init__(self, side_length: int, *, numpy_array=False, default_value: T = 0.):
-        one_d_length = self.triangular_number(side_length)
-        self.side_length = side_length
+    def __init__(self, side_length: int | None = None, *, data: list[T] | np.ndarray | None = None, numpy_array=False, default_value: T = 0.):
+        """ Specify either side_length or data. data will take precedence if it is not None, and the correct side_length will be calculated accordingly. This will also override the numpy_array argument. data is expected to be in the same format/memory order this class creates, not an ordinary 2D array, so that the class can be easily copied/expanded/loaded from file. If the data length is not a triangular number, it is filled with default_value until it is. """
         self.default_value = default_value
-        self.numpy_array = numpy_array
+
         self.data: list[T] | np.ndarray
-        if numpy_array:
-            self.data = np.ndarray((one_d_length,))
-            self.data.fill(default_value)
+        self.side_length: int
+        self.numpy_array: bool
+
+        if data is not None:
+            self.data = data
+            self.numpy_array = isinstance(self.data, np.ndarray)
+            l = len(data)
+            # check if length is a triangular number
+            # if l = n*(n+1)//2, n an integer, then n < sqrt(2*l) < n+1 -> floor(sqrt(2*l)) == n
+            n = math.floor(math.sqrt(2*l))
+            t = self.triangular_number(n)
+            if l > t:
+                # can have both l < t(n) (e.g. l=2 -> t(n)=3) and l > t (e.g. l=4 -> also t(n)=3)
+                # but always have t(n-1) < l < t(n+1), so either t(n) or t(n+1) is the next largest triangular number
+                # therefore if is sufficient, while is not needed
+                n += 1
+                t = self.triangular_number(n)
+            self._resize(l, self.triangular_number(n))
+            self.side_length = n
         else:
-            self.data = [default_value] * one_d_length
+            self.numpy_array = numpy_array
+            if side_length is None:
+                raise TypeError("must specify side_length if data is not specified")
+            self.side_length = side_length
+            one_d_length = self.triangular_number(side_length)
+            if numpy_array:
+                self.data = np.ndarray((one_d_length,))
+                self.data.fill(default_value)
+            else:
+                self.data = [default_value] * one_d_length
 
     class Row:
         def __init__(self, tri_array: "TriangularArray[T]", x: int):
@@ -223,10 +248,12 @@ class TriangularArray[T]:
         old_length = self.triangular_number(self.side_length)
         self.side_length += n
         new_length = self.triangular_number(self.side_length)
+        self._resize(old_length, new_length)
 
+    def _resize(self, old_length: int, new_length: int):
         if self.numpy_array:
             assert isinstance(self.data, np.ndarray)
-            self.data.resize(new_length)
+            self.data.resize(new_length, refcheck=False)
             self.data[old_length:].fill(self.default_value)
         else:
             assert isinstance(self.data, list)
