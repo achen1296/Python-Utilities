@@ -36,6 +36,8 @@ class FileBackedData:
 
 
 class JSONFile[DataType]:
+    """ Only use this class for object (dict) or array (list) data, not simple types, as reassigning the variable returned from __enter__ will *not* update the value that will be saved to file! As a workaround, simply use a one-element array. """
+
     def __init__(self, file: str | Path, default_data: DataType = {}):
         self.file = Path(file)
 
