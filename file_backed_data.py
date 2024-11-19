@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import files
@@ -32,3 +33,23 @@ class FileBackedData:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
+
+
+class JSONFile[DataType]:
+    def __init__(self, file: str | Path, default_data: DataType = {}):
+        self.file = Path(file)
+
+        if self.file.exists():
+            with open(self.file) as f:
+                self.data = json.load(f)
+        else:
+            # default argument is only evaluated once, make sure it's a new dict on each construction instead
+            # default_data = {} instead of None to make the type annotation look right
+            self.data: DataType = {} if default_data == {} else default_data  # type: ignore
+
+    def __enter__(self) -> DataType:
+        return self.data
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        with open(self.file, "w") as f:
+            json.dump(self.data, f)
