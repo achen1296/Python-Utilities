@@ -1,10 +1,12 @@
 import os
+import sqlite3
 import time
 from pathlib import Path
 from typing import Iterable, Literal, overload
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 import requests
+import requests.cookies
 from selenium import webdriver
 from selenium.common.exceptions import (ElementClickInterceptedException,
                                         ElementNotInteractableException,
@@ -489,6 +491,14 @@ class PageBrowser(console.Cmd):
     def do_od(self, wait: int = 0):
         self.open_and_download(int(wait))
     do_od.__doc__ = open_and_download.__doc__
+
+
+def get_firefox_cookies(profile: files.PathLike):
+    con = sqlite3.connect(Path(profile)/"cookies.sqlite")
+    jar = requests.cookies.RequestsCookieJar()
+    for name, value, host, path in con.execute("select name, value, host, path from moz_cookies").fetchall():
+        jar.set(name, value, domain=host, path=path)
+    return jar
 
 
 if __name__ == "__main__":
