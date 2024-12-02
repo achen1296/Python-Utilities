@@ -54,4 +54,4 @@ class JSONFile[DataType]:
 
     def __exit__(self, exc_type, exc_value, traceback):
         with open(self.file, "w") as f:
-            json.dump(self.data, f)
+            json.dump(self.data, f, indent="\t")
