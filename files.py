@@ -616,12 +616,15 @@ def size(root: PathLike = ".", unit: float = BYTE, follow_symlinks: bool = False
                 else:
                     return size_recursive(path.parent.joinpath(target))
             else:
-                return os.stat(path).st_size
+                try:
+                    return os.stat(path).st_size
+                except:
+                    # e.g. FileNotFoundError for a broken symbolic link
+                    return 0
         elif path.is_file():
             try:
                 return os.stat(path).st_size
             except:
-                # e.g. FileNotFoundError for a broken symbolic link
                 return 0
         else:
             return sum(
