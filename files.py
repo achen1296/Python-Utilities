@@ -1,7 +1,7 @@
-import itertools
 import glob
 import hashlib
 import io
+import itertools
 import os
 import platform
 import re
@@ -618,7 +618,11 @@ def size(root: PathLike = ".", unit: float = BYTE, follow_symlinks: bool = False
             else:
                 return os.stat(path).st_size
         elif path.is_file():
-            return os.stat(path).st_size
+            try:
+                return os.stat(path).st_size
+            except:
+                # e.g. FileNotFoundError for a broken symbolic link
+                return 0
         else:
             return sum(
                 (size_recursive(f) for f in path.iterdir())
