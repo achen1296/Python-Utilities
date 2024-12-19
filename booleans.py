@@ -1,5 +1,6 @@
 
 import itertools
+import re
 from abc import ABC, abstractmethod
 from typing import Iterable, Literal
 
@@ -12,7 +13,7 @@ class BooleanExpression(ABC):
     @abstractmethod
     def match(self, vars: Iterable[str]) -> bool:
         """ vars is an iterable of variables that are true, the rest are false implicitly """
-        return False
+        pass
 
     DEFAULT_GROUP_PAIRS = {"[": "]"}
     DEFAULT_NOT_CHARS = "!"
@@ -67,6 +68,9 @@ class BooleanExpression(ABC):
     @staticmethod
     def compile(expression: str | list[str],
 
+                true_names: list[str | re.Pattern] = [re.compile("true", re.I)],
+                false_names: list[str | re.Pattern] = [re.compile("false", re.I)],
+
                 group_pairs: dict[str, str] = DEFAULT_GROUP_PAIRS,
 
                 not_chars: str = DEFAULT_NOT_CHARS,
@@ -78,9 +82,11 @@ class BooleanExpression(ABC):
 
                 implicit_binary: Literal['or'] | Literal['and'] | None = "or",
                 ):
-        """ Group chars should be a dictionary of start chars mapping to end chars. All others should be strings (treated as lists of single chars).
+        """ `true_names` and `false_names` are lists of regular expression strings. If any of them match, the variable is instead interpreted as a constant. Defaults are of course "true" and "false", case-insensitive.
 
-        Implicit binary operator is used when variables are separated only by whitespace and grouping characters or not operators. If None, then explicit binary operators are required.
+        `group_pairs` should be a dictionary of start chars mapping to end chars. All others should be strings (treated as lists of single chars).
+
+        `implicit_binary` operator is used when variables are separated only by whitespace and grouping characters or not operators. If None, then explicit binary operators are required.
 
         Precedence highest to lowest:
         - not
@@ -159,6 +165,12 @@ class BooleanExpression(ABC):
                 return _compile(i+1, group_pairs[t])
             else:
                 assert t not in all_operators, t
+                for tn in true_names:
+                    if re.fullmatch(tn, t):
+                        return BooleanConstant(True), i+1
+                for fn in false_names:
+                    if re.fullmatch(fn, t):
+                        return BooleanConstant(False), i+1
                 return BooleanVar(t), i+1
 
         e, i = _compile(0, end_char)
@@ -166,6 +178,20 @@ class BooleanExpression(ABC):
             raise BooleanExpressionException(
                 "Mismatched grouping characters")
         return e
+
+
+class BooleanConstant(BooleanExpression):
+    def __init__(self, value: bool):
+        self.value = value
+
+    def match(self, vars: Iterable[str]):
+        return self.value
+
+    def __repr__(self):
+        return f"BooleanConstant({self.value})"
+
+    def __eq__(self, other):
+        return isinstance(other, BooleanConstant) and self.value == other.value
 
 
 class BooleanVar(BooleanExpression):
@@ -229,7 +255,6 @@ class BooleanExpressionAnd(BooleanExpressionMulti):
 
 
 class BooleanExpressionOr(BooleanExpressionMulti):
-
     def match(self, vars: Iterable[str]):
         return any(sub.match(vars) for sub in self.sub_expressions)
 
@@ -248,6 +273,10 @@ class BooleanExpressionOr(BooleanExpressionMulti):
 if __name__ == "__main__":
     result = BooleanExpression.compile("asdf")
     assert result == BooleanVar("asdf"), result
+    result = BooleanExpression.compile("true")
+    assert result == BooleanConstant(True), result
+    result = BooleanExpression.compile("false")
+    assert result == BooleanConstant(False), result
     result = BooleanExpression.compile("a b c d e")
     assert result == BooleanExpressionOr(BooleanVar(
         "a"), BooleanVar("b"), BooleanVar("c"), BooleanVar("d"), BooleanVar("e")), result
