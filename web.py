@@ -39,7 +39,7 @@ class DownloadException(Exception):
     pass
 
 
-def download_url(url: str, dst: files.PathLike | None = None, *, output=True, **get_kwargs):
+def download_url(url: str, dst: files.PathLike | None = None, *, output=True, chunk_size=8192, **get_kwargs):
     """ If file = None, the name is inferred from the last piece of the URL path. get_kwargs passed to requests.get. Returns destination file Path. """
     url_parsed = urlparse(url)
     # remove query, parameters, and fragment, since these are unnecessary (and can even alter the downloaded file, such as by reducing the image resolution)
@@ -78,7 +78,7 @@ def download_url(url: str, dst: files.PathLike | None = None, *, output=True, **
                 clear = prog.clear
                 prog.update_progress(0, f"Downloading <{url}> -> <{dst}>")
         with open(dst, "wb") as f:
-            for chunk in req.iter_content(8192):
+            for chunk in req.iter_content(chunk_size):
                 if output:
                     increase_progress(len(chunk))
                 f.write(chunk)
