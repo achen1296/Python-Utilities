@@ -1,3 +1,5 @@
+from strings import unicode_literal
+from strings import ALPHABET, alphabet
 import asyncio
 import base64
 import itertools
@@ -53,3 +55,6 @@ if platform.system() == "Windows":
     import clipboard
     import environment
     import windows_settings
+
+def ulit(char:str):
+    print(unicode_literal(char))

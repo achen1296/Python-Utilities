@@ -602,6 +602,19 @@ def title_case(s: str):
     return sio.getvalue()
 
 
+def unicode_literal(char: str):
+    hex_str = hex(ord(char[0])).removeprefix("0x")  # silently ignore if more than one character given
+    if len(hex_str) <= 4:
+        while len(hex_str) < 4:
+            hex_str = "0"+hex_str
+        return f"\\u{hex_str}"
+    elif len(hex_str) <= 8:
+        while len(hex_str) < 8:
+            hex_str = "0"+hex_str
+        return f"\\U{hex_str}"
+    assert False
+
+
 if __name__ == "__main__":
     assert contains_all_words("a d e c b", ["a", "b", "c"], in_order=False)
     assert contains_all_words("a b c e f d g", [
