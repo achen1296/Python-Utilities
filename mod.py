@@ -29,3 +29,11 @@ def exp(i: int, pow: int, N: int) -> int:
             r = (r*i) % N
             pow -= 1
     return (i * r) % N
+
+
+def in_range(i: int, lower: int, upper: int, modulus: int):
+    i -= lower
+    upper -= lower
+    i %= modulus
+    upper %= modulus
+    return 0 <= i <= upper
