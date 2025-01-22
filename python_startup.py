@@ -21,6 +21,7 @@ from socket import socket as Socket
 from urllib.parse import quote, unquote, urlparse
 
 import numpy as np
+import requests
 import selenium
 from PIL import Image
 
