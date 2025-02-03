@@ -27,9 +27,7 @@ class IterAheadThread[T](Thread):
         return self
 
     def __next__(self):
-        if not self.is_alive():
-            if self.stop_iteration:
-                raise StopIteration
+        if not self.is_alive() and not self.stop_iteration:
             self.start()
         try:
             return self.queue.get(timeout=self.queue_get_timeout)
