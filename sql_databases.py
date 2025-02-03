@@ -1,4 +1,6 @@
+import csv
 import json
+import os
 import sqlite3
 from functools import cache
 from pathlib import Path
@@ -33,13 +35,13 @@ def _col_str(columns: Iterable[str]):
 
 
 class Database:
-    def __init__(self, db: str | Path):
-        self.db = Path(db)
-        self.con = sqlite3.connect(self.db, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+    def __init__(self, db_file: str | Path):
+        self.db_file = Path(db_file)
+        self.con = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         self.cur = self.con.cursor()
         self.con.row_factory = sqlite3.Row
 
-    def tables(self):
+    def tables(self) -> list[str]:
         with self.con:
             return [name[0].lower() for name in self.cur.execute(""" select name from sqlite_schema where type = 'table' """).fetchall()]
 
@@ -48,7 +50,8 @@ class Database:
 
         col_str = ",".join(f'"{c}"' if isinstance(c, str) else f'"{c[0]}" "{c[1]}"' for c in columns)
         primary_keys_str = _col_str(primary_keys)
-        self.cur.execute(f""" create table \"{name}\" ( {col_str}, primary key ({primary_keys_str}) ) """)
+        with self.con:
+            self.cur.execute(f""" create table \"{name}\" ( {col_str}, primary key ({primary_keys_str}) ) """)
         return self.table(name)
 
     @cache
@@ -98,12 +101,13 @@ class Table:
     def _parse_row(self, row: Mapping[str, Any] | Sequence, *, add_missing_columns: bool, add_column_types: bool, ignore_extra_data: bool):
         if isinstance(row, Mapping):
             if add_missing_columns:
-                for c in row.keys():
-                    if c.lower() not in self.columns:
-                        col_definition = f'"{c.lower()}"'
-                        if add_column_types:
-                            col_definition += f' "{type(row[c]).__name__}"'
-                        self.cur.execute(f""" alter table {self.name} add column {col_definition} """)
+                with self.con:
+                    for c in row.keys():
+                        if c.lower() not in self.columns:
+                            col_definition = f'"{c.lower()}"'
+                            if add_column_types:
+                                col_definition += f' "{type(row[c]).__name__}"'
+                            self.cur.execute(f""" alter table {self.name} add column {col_definition} """)
                 self.altered_table = True
             elif not ignore_extra_data:
                 extra_keys = [c for c in row.keys() if c.lower() not in self.columns]
@@ -134,6 +138,37 @@ class Table:
         with self.con:
             self.cur.execute(sql, params)
 
+    def import_csv(self, csv_file: Path | str, *, add_missing_columns: bool = False, ignore_extra_data=False, upsert=False):
+        """ Cannot add types to columns this way, as CSV reader would of course always produce string values. """
+        with open(csv_file, encoding="utf-8-sig") as f:  # encoding handles byte order mark
+            reader = csv.reader(f)
+            try:
+                csv_cols = next(reader)
+            except StopIteration:
+                # empty file
+                return
+            try:
+                first_row = next(reader)
+            except StopIteration:
+                return  # CSV has header only, no data
+            operation_cols, _ = self._parse_row({c: v for c, v in zip(csv_cols, first_row)}, add_missing_columns=add_missing_columns, add_column_types=False, ignore_extra_data=ignore_extra_data)  # update columns and get columns to operate on
+
+        with self.con:
+            self.cur.execute(""" drop table if exists temp_table """)
+
+        os.system(f""" sqlite3 "{self.db.db_file}" ".import '{csv_file}' temp_table --csv" """)
+
+        sql = f""" insert into \"{self.name}\" ({_col_str(operation_cols)})
+        select {_col_str(operation_cols)} from temp_table where true """  # where true needed for upsert clause https://sqlite.org/lang_upsert.html 2.2
+        if upsert:
+            sql += f""" on conflict do update set ({_col_str(operation_cols)}) = ({",".join(f"excluded.\"{c}\"" for c in operation_cols)}) """
+        else:
+            sql += "on conflict do nothing"
+
+        with self.con:
+            self.cur.execute(sql)
+            self.cur.execute("drop table if exists temp_table")
+
     def upsert(self, row: Mapping[str, Any] | Sequence, *, upsert=True, **kwargs,):
         """ See `insert`. """
         return self.insert(row, upsert=True, **kwargs)
@@ -146,7 +181,7 @@ class Table:
             self.cur.execute(sql, params)
 
     def select(self, columns: Iterable[str] | None = None, where: str = "true", *, as_types: Mapping[str, str] = {}) -> list[sqlite3.Row]:
-        """ Don't forget to `sqlite3.register_converter` if you use `as_types`! """
+        """ Don't forget to `sqlite3.register_converter` if you use `as_types`! Some converters have already been registered for common Python built-in types. """
         if columns is None:
             columns = self.columns
         else:
@@ -171,8 +206,9 @@ class Table:
 
 
 if __name__ == "__main__":
-    db = Database(":memory:")
-    t = db.create_table("t", ["a"], ["a"])
+    os.remove("test.db")
+    db = Database("test.db")
+    t = db.create_table("t", [("a", "int")], ["a"])
     assert t.columns == ("a",), t.columns
     assert t.primary_keys == ("a",), t.primary_keys
 
@@ -195,7 +231,7 @@ if __name__ == "__main__":
     rows = list(dict(**r) for r in t)
     assert rows == [{"a": 1}, {"a": 3}], rows
 
-    t.insert({"a": 5, "b": 6}, add_missing_columns=True)
+    t.insert({"a": 5, "b": 6}, add_missing_columns=True, add_column_types=False)
 
     assert t.columns == ("a", "b"), t.columns
 
@@ -217,4 +253,19 @@ if __name__ == "__main__":
 
     selected = [dict(**r) for r in t.select(where="a=8", as_types={"c": "str"})]
     assert selected == [{"a": 8, "b": None, "c": "[]"}], selected
-5
+
+    with open("test.csv", "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["a", "c"])
+        w.writerow([9, '["hello", "world"]'])
+        w.writerow([7, '["bye", "world"]'])
+    t.import_csv("test.csv", upsert=True)
+    os.remove("test.csv")
+
+    selected = [dict(**r) for r in t.select(where="a=9", as_types={"c": "list"})]
+    assert selected == [{"a": 9, "b": None, "c": ["hello", "world"]}], selected
+    selected = [dict(**r) for r in t.select(where="a=7", as_types={"c": "list"})]
+    assert selected == [{"a": 7, "b": '["asdf"]', "c": ["bye", "world"]}], selected
+
+    db.con.close()
+    os.remove(db.db_file)
