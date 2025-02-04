@@ -236,14 +236,15 @@ class Table:
         """ See `insert`. """
         return self.insert(row, upsert=True, **kwargs)
 
-    def update(self, row: Mapping[str, Any] | Sequence, where: str, *, add_missing_columns: bool = False, add_column_types=True, ignore_extra_data=False):
+    def update(self, row: Mapping[str, Any] | Sequence, where: str, where_params=[], *, add_missing_columns: bool = False, add_column_types=True, ignore_extra_data=False):
         """ See `insert`. """
         operation_cols, params = self._parse_row(row, add_missing_columns=add_missing_columns, add_column_types=add_column_types, ignore_extra_data=ignore_extra_data)
         sql = f""" update {self.name} set ({cols_joined_str(operation_cols)}) = ({",".join("?"*len(params))}) where {where} """
+        params += where_params
         with self.con:
             self.cur.execute(sql, params)
 
-    def select(self, columns: Iterable[str] | None = None, where: str = "true", *, as_types: Mapping[str, str] = {}) -> list[sqlite3.Row]:
+    def select(self, columns: Iterable[str] | None = None, where: str = "true", where_params=[], *, as_types: Mapping[str, str] = {}) -> list[sqlite3.Row]:
         """ Don't forget to `sqlite3.register_converter` if you use `as_types`! Some converters have already been registered for common Python built-in types. """
         if columns is None:
             columns = self.columns
@@ -257,12 +258,12 @@ class Table:
 
         with self.con:
             sql = f""" select {col_str} from {self.name} where {where} """
-            return self.cur.execute(sql).fetchall()
+            return self.cur.execute(sql, where_params).fetchall()
 
-    def delete(self, where: str = "true"):
+    def delete(self, where: str = "true", where_params = [], ):
         with self.con:
             sql = f""" delete from "{self.name}" where {where} """
-            self.cur.execute(sql)
+            self.cur.execute(sql, where_params)
 
     def __iter__(self):
         return iter(self.select())
