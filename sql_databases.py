@@ -30,11 +30,15 @@ sqlite3.register_converter("int", int)
 sqlite3.register_converter("bool", bool)
 
 
-def col_str(column: str | tuple[str, str]):
+def col_str(column: str | tuple[str, str], table: str | None = None):
     if isinstance(column, str):
-        return f'"{column.lower()}"'
+        c = f'"{column.lower()}"'
     else:
-        return f'"{column[0].lower()}" "{column[1]}"'
+        c = f'"{column[0].lower()}" "{column[1]}"'
+    if table is not None:
+        return f'"{table}".{c}'
+    else:
+        return c
 
 
 def col_name_type(column: str | tuple[str, str]) -> tuple[str, str]:
@@ -44,12 +48,12 @@ def col_name_type(column: str | tuple[str, str]) -> tuple[str, str]:
         return (column[0].lower(), column[1])
 
 
-def cols_strs(columns: Mapping[str, str] | Iterable[str | tuple[str, str]]) -> list:
+def cols_strs(columns: Mapping[str, str] | Iterable[str | tuple[str, str]], table: str | None = None) -> list:
     """ `columns`: `Iterable` of either just the column name or `tuple` of the column's name and declared type, or `Mapping` of column name and type. """
     if isinstance(columns, Mapping):
-        return [col_str((c, columns[c])) for c in columns]
+        return [col_str((c, columns[c]), table=table) for c in columns]
     else:
-        return [col_str(c) for c in columns]
+        return [col_str(c, table=table) for c in columns]
 
 
 def cols_names_types(columns: Mapping[str, str] | Iterable[str | tuple[str, str]]) -> dict[str, str]:
@@ -62,8 +66,8 @@ def cols_names_types(columns: Mapping[str, str] | Iterable[str | tuple[str, str]
         }
 
 
-def cols_joined_str(columns: Mapping[str, str] | Iterable[str | tuple[str, str]]) -> str:
-    return ",".join(cols_strs(columns))
+def cols_joined_str(columns: Mapping[str, str] | Iterable[str | tuple[str, str]], table: str | None = None) -> str:
+    return ",".join(cols_strs(columns, table=table))
 
 
 class Database:
@@ -108,15 +112,26 @@ class Table:
         self.altered_table = True
         self.columns  # evaluate for existence check
 
-    @property
-    def columns(self) -> tuple[str]:
+    def _cache_columns_and_types(self):
         if self.altered_table:
             with self.con:
-                cols = tuple(name[0].lower() for name in self.cur.execute(""" select name from pragma_table_info(?) """, (self.name, )).fetchall())
-            if not cols:
+                cols_and_types = tuple(name[0].lower() for name in self.cur.execute(""" select name from pragma_table_info(?) """, (self.name, )).fetchall())
+            if not cols_and_types:
                 raise TableNotFound(self.name)
-            self._columns = cols
+            self._columns = tuple(c[0] for c in cols_and_types)
+            self._column_types = tuple(c[1] for c in cols_and_types)
+
+            self.altered_table = False
+
+    @property
+    def columns(self) -> tuple[str]:
+        self._cache_columns_and_types()
         return self._columns
+
+    @property
+    def column_types(self) -> tuple[tuple[str, str]]:
+        self._cache_columns_and_types()
+        return self._column_types
 
     def add_columns(self, columns: Mapping[str, str] | Iterable[str | tuple[str, str]]):
         """ Adds columns, unless they are already in the table. Returns `True` if any new columns were added, `False` otherwise. """
