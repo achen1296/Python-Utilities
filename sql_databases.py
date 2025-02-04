@@ -115,7 +115,7 @@ class Table:
     def _cache_columns_and_types(self):
         if self.altered_table:
             with self.con:
-                cols_and_types = self.cur.execute(""" select name from pragma_table_info(?) """, (self.name, )).fetchall()
+                cols_and_types = self.cur.execute(""" select name, type from pragma_table_info(?) """, (self.name, )).fetchall()
             if not cols_and_types:
                 raise TableNotFound(self.name)
             self._columns: tuple[str, ...] = tuple(c[0] for c in cols_and_types)
@@ -260,7 +260,7 @@ class Table:
 
     def delete(self, where: str = "true"):
         with self.con:
-            sql = f""" delete from {self.name} where {where} """
+            sql = f""" delete from "{self.name}" where {where} """
             self.cur.execute(sql)
 
     def __iter__(self):
