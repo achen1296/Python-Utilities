@@ -4,7 +4,7 @@ import os
 import sqlite3
 from functools import cache
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence, overload
 
 sqlite3.enable_callback_tracebacks(True)
 
@@ -30,8 +30,40 @@ sqlite3.register_converter("int", int)
 sqlite3.register_converter("bool", bool)
 
 
-def _col_str(columns: Iterable[str]):
-    return ",".join(f'"{c}"' for c in columns)
+def col_str(column: str | tuple[str, str]):
+    if isinstance(column, str):
+        return f'"{column.lower()}"'
+    else:
+        return f'"{column[0].lower()}" "{column[1]}"'
+
+
+def col_name_type(column: str | tuple[str, str]) -> tuple[str, str]:
+    if isinstance(column, str):
+        return column.lower(), ""
+    else:
+        return (column[0].lower(), column[1])
+
+
+def cols_strs(columns: Mapping[str, str] | Iterable[str | tuple[str, str]]) -> list:
+    """ `columns`: `Iterable` of either just the column name or `tuple` of the column's name and declared type, or `Mapping` of column name and type. """
+    if isinstance(columns, Mapping):
+        return [col_str((c, columns[c])) for c in columns]
+    else:
+        return [col_str(c) for c in columns]
+
+
+def cols_names_types(columns: Mapping[str, str] | Iterable[str | tuple[str, str]]) -> dict[str, str]:
+    if isinstance(columns, Mapping):
+        return columns
+    else:
+        return {
+            c: t
+            for c, t in (col_name_type(col) for col in columns)
+        }
+
+
+def cols_joined_str(columns: Mapping[str, str] | Iterable[str | tuple[str, str]]) -> str:
+    return ",".join(cols_strs(columns))
 
 
 class Database:
@@ -45,13 +77,11 @@ class Database:
         with self.con:
             return [name[0].lower() for name in self.cur.execute(""" select name from sqlite_schema where type = 'table' """).fetchall()]
 
-    def create_table(self, name: str, columns: Iterable[str | tuple[str, str]], primary_keys: Iterable[str]):
-        """ `columns`: `Iterable` of either just the column name or `tuple` of the column's name and declared type. """
-
-        col_str = ",".join(f'"{c}"' if isinstance(c, str) else f'"{c[0]}" "{c[1]}"' for c in columns)
-        primary_keys_str = _col_str(primary_keys)
+    def create_table(self, name: str, columns: Mapping[str, str] | Iterable[str | tuple[str, str]], primary_keys: Iterable[str]):
+        cs = cols_joined_str(columns)
+        primary_keys_str = cols_joined_str(primary_keys)
         with self.con:
-            self.cur.execute(f""" create table \"{name}\" ( {col_str}, primary key ({primary_keys_str}) ) """)
+            self.cur.execute(f""" create table \"{name}\" ( {cs}, primary key ({primary_keys_str}) ) """)
         return self.table(name)
 
     @cache
@@ -69,7 +99,6 @@ class ExtraData(Exception):
 
 class Table:
     # not worrying about SQL injection here
-
     def __init__(self, db: Database, name: str):
         self.db = db
         self.con = db.con
@@ -89,6 +118,20 @@ class Table:
             self._columns = cols
         return self._columns
 
+    def add_columns(self, columns: Mapping[str, str] | Iterable[str | tuple[str, str]]):
+        """ Adds columns, unless they are already in the table. Returns `True` if any new columns were added, `False` otherwise. """
+        with self.con:
+            added_any = False
+            existing_cols = self.columns
+            for c, t in cols_names_types(columns).items():
+                if c not in existing_cols:
+                    added_any = True
+                    if t:
+                        self.cur.execute(f""" alter table "{self.name}" add column {col_str((c, t))} """)
+                    else:
+                        self.cur.execute(f""" alter table "{self.name}" add column {col_str(c)} """)
+            return added_any
+
     @property
     @cache  # primary keys cannot be changed except by recreating the table
     def primary_keys(self) -> tuple[str]:
@@ -101,14 +144,14 @@ class Table:
     def _parse_row(self, row: Mapping[str, Any] | Sequence, *, add_missing_columns: bool, add_column_types: bool, ignore_extra_data: bool):
         if isinstance(row, Mapping):
             if add_missing_columns:
-                with self.con:
-                    for c in row.keys():
-                        if c.lower() not in self.columns:
-                            col_definition = f'"{c.lower()}"'
-                            if add_column_types:
-                                col_definition += f' "{type(row[c]).__name__}"'
-                            self.cur.execute(f""" alter table {self.name} add column {col_definition} """)
-                self.altered_table = True
+                if add_column_types:
+                    cols = {
+                        c: type(row[c]).__name__
+                        for c in row.keys()
+                    }
+                else:
+                    cols = [c for c in row.keys()]
+                self.altered_table = self.add_columns(cols)
             elif not ignore_extra_data:
                 extra_keys = [c for c in row.keys() if c.lower() not in self.columns]
                 if extra_keys:
@@ -130,9 +173,9 @@ class Table:
         If `row` is a `Sequence` with length at most the number of columns, always succeeds. Otherwise, either ignores or raises an exception based on `ignore_extra_data`. Cannot add new columns this way because a name is not provided. """
 
         operation_cols, params = self._parse_row(row, add_missing_columns=add_missing_columns, add_column_types=add_column_types, ignore_extra_data=ignore_extra_data)
-        sql = f""" insert into {self.name} ({_col_str(operation_cols)}) values({",".join("?"*len(params))}) """
+        sql = f""" insert into {self.name} ({cols_joined_str(operation_cols)}) values({",".join("?"*len(params))}) """
         if upsert:
-            sql += f""" on conflict do update set ({_col_str(operation_cols)}) = ({",".join("?"*len(params))}) """
+            sql += f""" on conflict do update set ({cols_joined_str(operation_cols)}) = ({",".join("?"*len(params))}) """
             params = params + params
 
         with self.con:
@@ -158,10 +201,10 @@ class Table:
 
         os.system(f""" sqlite3 "{self.db.db_file}" ".import '{csv_file}' temp_table --csv" """)
 
-        sql = f""" insert into \"{self.name}\" ({_col_str(operation_cols)})
-        select {_col_str(operation_cols)} from temp_table where true """  # where true needed for upsert clause https://sqlite.org/lang_upsert.html 2.2
+        sql = f""" insert into \"{self.name}\" ({cols_joined_str(operation_cols)})
+        select {cols_joined_str(operation_cols)} from temp_table where true """  # where true needed for upsert clause https://sqlite.org/lang_upsert.html 2.2
         if upsert:
-            sql += f""" on conflict do update set ({_col_str(operation_cols)}) = ({",".join(f"excluded.\"{c}\"" for c in operation_cols)}) """
+            sql += f""" on conflict do update set ({cols_joined_str(operation_cols)}) = ({",".join(f"excluded.\"{c}\"" for c in operation_cols)}) """
         else:
             sql += "on conflict do nothing"
 
@@ -176,7 +219,7 @@ class Table:
     def update(self, row: Mapping[str, Any] | Sequence, where: str, *, add_missing_columns: bool = False, add_column_types=True, ignore_extra_data=False):
         """ See `insert`. """
         operation_cols, params = self._parse_row(row, add_missing_columns=add_missing_columns, add_column_types=add_column_types, ignore_extra_data=ignore_extra_data)
-        sql = f""" update {self.name} set ({_col_str(operation_cols)}) = ({",".join("?"*len(params))}) where {where} """
+        sql = f""" update {self.name} set ({cols_joined_str(operation_cols)}) = ({",".join("?"*len(params))}) where {where} """
         with self.con:
             self.cur.execute(sql, params)
 
