@@ -115,23 +115,27 @@ class Table:
     def _cache_columns_and_types(self):
         if self.altered_table:
             with self.con:
-                cols_and_types = tuple(name[0].lower() for name in self.cur.execute(""" select name from pragma_table_info(?) """, (self.name, )).fetchall())
+                cols_and_types = self.cur.execute(""" select name from pragma_table_info(?) """, (self.name, )).fetchall()
             if not cols_and_types:
                 raise TableNotFound(self.name)
-            self._columns = tuple(c[0] for c in cols_and_types)
-            self._column_types = tuple(c[1] for c in cols_and_types)
+            self._columns: tuple[str, ...] = tuple(c[0] for c in cols_and_types)
+            self._column_types: tuple[str, ...] = tuple(c[1] for c in cols_and_types)
 
             self.altered_table = False
 
     @property
-    def columns(self) -> tuple[str]:
+    def columns(self) -> tuple[str, ...]:
         self._cache_columns_and_types()
         return self._columns
 
     @property
-    def column_types(self) -> tuple[tuple[str, str]]:
+    def column_types(self) -> tuple[str, ...]:
         self._cache_columns_and_types()
         return self._column_types
+
+    @property
+    def columns_and_types(self) -> tuple[tuple[str, str], ...]:
+        return tuple(zip(self._columns, self._column_types))
 
     def add_columns(self, columns: Mapping[str, str] | Iterable[str | tuple[str, str]]):
         """ Adds columns, unless they are already in the table. Returns `True` if any new columns were added, `False` otherwise. """
