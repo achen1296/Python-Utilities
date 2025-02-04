@@ -206,8 +206,10 @@ class Table:
 
 
 if __name__ == "__main__":
-    os.remove("test.db")
-    db = Database("test.db")
+    test_db_path = Path("test.db")
+    if test_db_path.exists():
+        os.remove(test_db_path)
+    db = Database(test_db_path)
     t = db.create_table("t", [("a", "int")], ["a"])
     assert t.columns == ("a",), t.columns
     assert t.primary_keys == ("a",), t.primary_keys
@@ -268,4 +270,4 @@ if __name__ == "__main__":
     assert selected == [{"a": 7, "b": '["asdf"]', "c": ["bye", "world"]}], selected
 
     db.con.close()
-    os.remove(db.db_file)
+    os.remove(test_db_path)
