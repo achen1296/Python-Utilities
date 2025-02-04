@@ -27,6 +27,7 @@ sqlite3.register_converter("list", convert_json)
 # all other JSON types (string, number, boolean, and null) are already representable directly in Python, but these are useful to provide for PARSE_COLNAMES conversions
 sqlite3.register_converter("str", lambda b: b.decode())
 sqlite3.register_converter("int", int)
+sqlite3.register_converter("float", float)
 sqlite3.register_converter("bool", bool)
 
 
