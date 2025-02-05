@@ -102,6 +102,9 @@ class ExtraData(Exception):
     pass
 
 
+RowType = Mapping[str, Any] | Sequence | sqlite3.Row
+
+
 class Table:
     # not worrying about SQL injection here
     def __init__(self, db: Database, name: str):
@@ -144,7 +147,7 @@ class Table:
             added_any = False
             existing_cols = self.columns
             for c, t in cols_names_types(columns).items():
-                if c not in existing_cols:
+                if c.lower() not in existing_cols:
                     added_any = True
                     if t:
                         self.cur.execute(f""" alter table "{self.name}" add column {col_str((c, t))} """)
@@ -161,8 +164,8 @@ class Table:
             raise TableNotFound(self.name)
         return cols
 
-    def _parse_row(self, row: Mapping[str, Any] | Sequence, *, add_missing_columns: bool, add_column_types: bool, ignore_extra_data: bool):
-        if isinstance(row, Mapping):
+    def _parse_row(self, row: RowType, *, add_missing_columns: bool, add_column_types: bool, ignore_extra_data: bool):
+        if isinstance(row, Mapping) or isinstance(row, sqlite3.Row):
             if add_missing_columns:
                 if add_column_types:
                     cols = {
@@ -187,7 +190,7 @@ class Table:
             params = list(row[:lc])
         return operation_cols, params
 
-    def insert(self, row: Mapping[str, Any] | Sequence, *, add_missing_columns: bool = False, add_column_types=True, ignore_extra_data=False, upsert=False):
+    def insert(self, row: RowType, *, add_missing_columns: bool = False, add_column_types=True, ignore_extra_data=False, upsert=False):
         """ If `add_missing_columns`, will add keys of a `row` that is a `Mapping` as new columns if one with the same name doesn't exist (SQLite columns are case-insensitive), and if `add_column_types`, will add declared column types using `type(v).__name__`. Else, if `ignore_extra_data`, ignores the additional keys, otherwise raise an exception.
 
         If `row` is a `Sequence` with length at most the number of columns, always succeeds. Otherwise, either ignores or raises an exception based on `ignore_extra_data`. Cannot add new columns this way because a name is not provided. """
@@ -232,11 +235,11 @@ class Table:
             self.cur.execute(sql)
             self.cur.execute("drop table if exists temp_table")
 
-    def upsert(self, row: Mapping[str, Any] | Sequence, *, upsert=True, **kwargs,):
+    def upsert(self, row: RowType, *, upsert=True, **kwargs,):
         """ See `insert`. """
         return self.insert(row, upsert=True, **kwargs)
 
-    def update(self, row: Mapping[str, Any] | Sequence, where: str, where_params=[], *, add_missing_columns: bool = False, add_column_types=True, ignore_extra_data=False):
+    def update(self, row: RowType, where: str, where_params=[], *, add_missing_columns: bool = False, add_column_types=True, ignore_extra_data=False):
         """ See `insert`. """
         operation_cols, params = self._parse_row(row, add_missing_columns=add_missing_columns, add_column_types=add_column_types, ignore_extra_data=ignore_extra_data)
         sql = f""" update {self.name} set ({cols_joined_str(operation_cols)}) = ({",".join("?"*len(params))}) where {where} """
@@ -260,7 +263,7 @@ class Table:
             sql = f""" select {col_str} from {self.name} where {where} """
             return self.cur.execute(sql, where_params).fetchall()
 
-    def delete(self, where: str = "true", where_params = [], ):
+    def delete(self, where: str = "true", where_params=[], ):
         with self.con:
             sql = f""" delete from "{self.name}" where {where} """
             self.cur.execute(sql, where_params)
