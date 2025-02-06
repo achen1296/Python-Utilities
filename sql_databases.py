@@ -4,7 +4,7 @@ import os
 import sqlite3
 from functools import cache
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence, overload
+from typing import Any, Iterable, Mapping, Sequence
 
 sqlite3.enable_callback_tracebacks(True)
 
@@ -93,6 +93,14 @@ class Database:
     def table(self, name: str):
         return Table(self, name)
 
+    def print_table_summary(self):
+        for t in self.tables():
+            table = self.table(t)
+            print(f"Table: {t}")
+            print()
+            print("\t".join(f"\"{c}\"" for c in table.columns))
+            print()
+
 
 class TableNotFound(Exception):
     pass
@@ -179,7 +187,7 @@ class Table:
                 extra_keys = [c for c in row.keys() if c.lower() not in self.columns]
                 if extra_keys:
                     raise ExtraData(extra_keys)
-            operation_cols = [c for c in self.columns if c in row]
+            operation_cols = [c for c in self.columns if c in row.keys()]  # `in row` is keys for `Mapping` but values for `sqlite3.Row`
             params = [row[c] for c in operation_cols]
         else:
             lr = len(row)
@@ -193,7 +201,9 @@ class Table:
     def insert(self, row: RowType, *, add_missing_columns: bool = False, add_column_types=True, ignore_extra_data=False, upsert=False):
         """ If `add_missing_columns`, will add keys of a `row` that is a `Mapping` as new columns if one with the same name doesn't exist (SQLite columns are case-insensitive), and if `add_column_types`, will add declared column types using `type(v).__name__`. Else, if `ignore_extra_data`, ignores the additional keys, otherwise raise an exception.
 
-        If `row` is a `Sequence` with length at most the number of columns, always succeeds. Otherwise, either ignores or raises an exception based on `ignore_extra_data`. Cannot add new columns this way because a name is not provided. """
+        If `row` is a `Sequence` with length at most the number of columns, always succeeds. Otherwise, either ignores or raises an exception based on `ignore_extra_data`. Cannot add new columns this way because a name is not provided.
+
+        Note: `sqlite3.Row` is treated as a `Mapping`, not a `Sequence`. It is designed such that it could be treated as either in many ways. """
 
         operation_cols, params = self._parse_row(row, add_missing_columns=add_missing_columns, add_column_types=add_column_types, ignore_extra_data=ignore_extra_data)
         sql = f""" insert into {self.name} ({cols_joined_str(operation_cols)}) values({",".join("?"*len(params))}) """
