@@ -93,15 +93,8 @@ class Database:
     def table(self, name: str):
         return Table(self, name)
 
-    def print_table_summary(self):
-        for t in self.tables():
-            table = self.table(t)
-            print(f"Table: {t}")
-            print()
-            print("\t".join(
-                f'"{name}"' if not type else f'("{name}", "{type}")'
-                for name, type in zip(table.columns, table.column_types)))
-            print()
+    def create_sql(self) -> list[str]:
+        return [r[0] for r in self.cur.execute(f""" select sql from sqlite_schema where sql is not null """).fetchall()]
 
 
 class TableNotFound(Exception):
