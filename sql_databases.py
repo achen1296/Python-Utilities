@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import re
 import sqlite3
 from datetime import datetime
 from functools import cache
@@ -75,6 +76,50 @@ sqlite3.register_converter("int", int)
 sqlite3.register_converter("integer", int)
 sqlite3.register_converter("float", float)
 sqlite3.register_converter("real", float)
+
+
+def convert_lenient_int(b: bytes):
+    """ Find first instance of text convertbile to int (decimal only) and use that, discarding the rest. """
+    m = re.search(b"(\\+|-)?\\d+", b)
+    if not m:
+        raise ValueError(b)
+    return int(m.group(0))
+
+
+# https://docs.python.org/3/library/functions.html#float
+LENIENT_FLOAT_RE = re.compile(
+    b"""(\\+|-)? # sign
+        ( # value
+            inf(inity)?|nan| # special value keywords
+            (
+                ( \\d*\\.\\d+ | \\d+\\.? ) # digits
+                ( e # optional exponent
+                    (\\+|-)? # exponent sign
+                    \\d+ # exponent digits
+                )?
+            )
+        )
+    """,
+    re.VERBOSE | re.I
+)
+
+
+def convert_lenient_float(b: bytes):
+    """ Find first instance of text convertbile to float and use that, discarding the rest. """
+    m = re.search(LENIENT_FLOAT_RE, b)
+    if not m:
+        raise ValueError(b)
+    return float(m.group(0))
+
+
+sqlite3.register_converter("lenient float", convert_lenient_float)
+sqlite3.register_converter("lenient_float", convert_lenient_float)
+sqlite3.register_converter("lenient real", convert_lenient_float)
+sqlite3.register_converter("lenient_real", convert_lenient_float)
+sqlite3.register_converter("lenient integer", convert_lenient_int)
+sqlite3.register_converter("lenient_integer", convert_lenient_int)
+sqlite3.register_converter("lenient int", convert_lenient_int)
+sqlite3.register_converter("lenient_int", convert_lenient_int)
 
 
 def col_str(column: str | tuple[str, str], table: str | None = None):
