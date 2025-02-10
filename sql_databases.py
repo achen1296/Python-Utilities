@@ -98,7 +98,9 @@ class Database:
             table = self.table(t)
             print(f"Table: {t}")
             print()
-            print("\t".join(f"\"{c}\"" for c in table.columns))
+            print("\t".join(
+                f'"{name}"' if not type else f'("{name}", "{type}")'
+                for name, type in zip(table.columns, table.column_types)))
             print()
 
 
