@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import sqlite3
+from datetime import datetime
 from functools import cache
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -23,12 +24,57 @@ def convert_json(b: bytes):
 
 sqlite3.register_converter("json", convert_json)
 sqlite3.register_converter("dict", convert_json)
+sqlite3.register_converter("object", convert_json)
+sqlite3.register_converter("obj", convert_json)
 sqlite3.register_converter("list", convert_json)
-# all other JSON types (string, number, boolean, and null) are already representable directly in Python, but these are useful to provide for PARSE_COLNAMES conversions
+sqlite3.register_converter("array", convert_json)
+
+
+def adapt_datetime(d: datetime):
+    return d.isoformat()
+
+
+sqlite3.register_adapter(datetime, adapt_datetime)
+
+
+def convert_datetime(b: bytes):
+    return datetime.fromisoformat(b.decode())
+
+
+sqlite3.register_converter("date", convert_datetime)
+sqlite3.register_converter("time", convert_datetime)
+sqlite3.register_converter("datetime", convert_datetime)
+
+
+def adapt_bool(b: bool):
+    return int(b)
+
+
+sqlite3.register_adapter(bool, adapt_bool)
+
+
+def convert_bool(b: bytes):
+    """ Numbers: 0 is false and anything else is true.
+    Text: keywords "true" or "false", case-insensitive with surrounding whitespace stripped, anything else results in `ValueError`. """
+    try:
+        return float(b) != 0.
+    except ValueError:
+        pass
+    b = b.lower().strip()
+    if b == b"true":
+        return True
+    if b == b"false":
+        return False
+    raise ValueError(b)
+
+
+sqlite3.register_converter("bool", convert_bool)
+
 sqlite3.register_converter("str", lambda b: b.decode())
 sqlite3.register_converter("int", int)
+sqlite3.register_converter("integer", int)
 sqlite3.register_converter("float", float)
-sqlite3.register_converter("bool", bool)
+sqlite3.register_converter("real", float)
 
 
 def col_str(column: str | tuple[str, str], table: str | None = None):
