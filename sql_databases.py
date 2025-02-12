@@ -187,6 +187,22 @@ class Database:
     def create_sql(self) -> list[str]:
         return [r[0] for r in self.cur.execute(f""" select sql from sqlite_schema where sql is not null """).fetchall()]
 
+    def synchronize_definition_file(self, db_definition_file: Path | str):
+        # the database file is not expected to be reconstructed often if at all, this code is mostly to document the intent of matching the saved table definitions in git
+        db_definition_file = Path(db_definition_file)
+        tables = self.tables()
+        if db_definition_file.exists():
+            with open(db_definition_file) as f:
+                for line in f:
+                    m = re.match("create table \"(.*?)\"", line, re.I)
+                    assert m
+                    t = m.group(1)
+                    if t not in tables:
+                        self.cur.execute(line)
+        with open(db_definition_file, "w") as f:
+            for sql in self.create_sql():
+                print(sql, file=f)
+
 
 class TableNotFound(Exception):
     pass
