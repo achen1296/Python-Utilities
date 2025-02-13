@@ -78,12 +78,24 @@ def remove_duplicates_in_place(l: list) -> list:
     return l
 
 
-def random_from(lst: Iterable) -> Any:
-    if not isinstance(lst, list):
-        lst = list(lst)
-    if len(lst) == 0:
-        return None
-    return lst[random.randrange(0, len(lst))]
+def random_from[T](it: Iterable[T]) -> T:
+    """ If `it` is a `Sequence`, it will be faster -- the length is known in advance and an arbitrary element can be indexed.
+
+    If not, then will still correctly return any element from `it` without needing to know its length in advance, but this requires more `random` calls. Additionally, `it` will be consumed completely. """
+    if isinstance(it, Sequence):
+        # ValueError if empty
+        return it[random.randrange(0, len(it))]
+    else:
+        i = -1
+        selected: T
+        for i, e in enumerate(it):
+            denom = i+1
+            if random.random() < 1/denom:
+                selected = e
+        if i >= 0:
+            return selected  # type: ignore ; `selected` is bound (guaranteed to bind to first element)
+        else:
+            raise ValueError()
 
 
 def count(lst: Iterable[Hashable], bucket: Callable[[Any], Hashable] = lambda x: x, initial_counts: dict[Hashable, int] | None = None) -> dict[Hashable, int]:
