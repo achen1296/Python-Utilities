@@ -1,3 +1,6 @@
+import re
+
+
 def get_int_input(prompt: str = "", err_prompt: str = "Please input a valid integer"):
     while True:
         try:
@@ -20,3 +23,12 @@ def get_int_input_in_range(range: int | tuple[int, int], prompt: str = "", err_p
             return i
         else:
             print(err_prompt)
+
+
+def get_y_n_input(prompt: str):
+    while True:
+        v = input(prompt)
+        if not re.fullmatch("\\s*(y(es)?|no?)\\s*", v, re.I):
+            print("Answer yes/no or just y/n")
+            continue
+        return bool(re.fullmatch("\\s*y(es)?\\s*", v))
