@@ -1,0 +1,7 @@
+This is a collection of self-made Python utilities I have built up over several years of using the language for many different projects. A lot of them use or are wrappers for other libraries which you will have to install yourself (which you can usually determine from the `import` statements). Some of them rely on specific executables being present which you will also have to install yourself/be on the right operating system to use (look out for use of `os.system` or `subprocess.run`).
+
+I offer no guarantees that everything is 100% correct, is done in the most optimal way, will work on your operating system (I use Windows), or is not redundant with an established library I didn't find (or wanted to try making myself anyway).
+
+Not set up to be used with `pip` or any other package installer, as there isn't a single coherent purpose for the files, and for personal use I usually just include the cloned repository in my [`PYTHONPATH`](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH) and put `python_startup.py` in my [`PYTHONSTARTUP`](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONSTARTUP), or less often just copy-paste the code if something using it is supposed to be independent.
+
+Please credit me if you use anything, including a link to my GitHub profile or this repository. See [license.md](license.md).
