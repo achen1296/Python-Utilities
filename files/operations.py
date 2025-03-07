@@ -1,3 +1,5 @@
+# (c) Andrew Chen (https://github.com/achen1296)
+
 # Functions for writing files
 
 import io

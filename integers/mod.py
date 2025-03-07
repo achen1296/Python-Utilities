@@ -1,3 +1,5 @@
+# (c) Andrew Chen (https://github.com/achen1296)
+
 def gcd(a: int, b: int) -> tuple[int, int, int]:
     prev_x, x = 1, 0
     prev_y, y = 0, 1

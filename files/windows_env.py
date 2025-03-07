@@ -1,3 +1,5 @@
+# (c) Andrew Chen (https://github.com/achen1296)
+
 """ Common Windows environment variables referring to file locations """
 
 import os

@@ -1,3 +1,5 @@
+# (c) Andrew Chen (https://github.com/achen1296)
+
 import re
 from io import StringIO
 from typing import Iterable, Sequence

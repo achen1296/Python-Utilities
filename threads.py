@@ -1,3 +1,5 @@
+# (c) Andrew Chen (https://github.com/achen1296)
+
 from abc import ABCMeta, abstractmethod
 from queue import Empty, Full, Queue
 from threading import Condition, Lock, Thread

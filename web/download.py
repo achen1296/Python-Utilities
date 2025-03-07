@@ -1,3 +1,5 @@
+# (c) Andrew Chen (https://github.com/achen1296)
+
 import time
 from pathlib import Path
 from urllib.parse import ParseResult, urlparse, urlunparse

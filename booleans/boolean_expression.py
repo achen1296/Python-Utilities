@@ -1,3 +1,5 @@
+# (c) Andrew Chen (https://github.com/achen1296)
+
 import itertools
 import re
 from abc import ABC, abstractmethod

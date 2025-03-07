@@ -1,3 +1,5 @@
+# (c) Andrew Chen (https://github.com/achen1296)
+
 # en.wikipedia.org/wiki/ANSI_escape_code
 # learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
 # all of these functions print directly to the console because they are not supposed to be used anywhere else anyway
