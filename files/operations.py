@@ -1,9 +1,6 @@
-import glob
-import hashlib
+# Functions for writing files
+
 import io
-import itertools
-import os
-import platform
 import re
 import shutil
 import subprocess
@@ -16,13 +13,13 @@ from zipfile import ZipFile
 
 from more_itertools import consume
 
-PathLike = str | os.PathLike
-
-WINDOWS = platform.system() == "Windows"
+from .consts import *
+from .stats import *
+from .walk import *
 
 
 def create_file(path: PathLike, binary=False, **open_kwargs):
-    """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use os.makedirs). open_kwargs passed to open(), the result of which is returned. """
+    """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use `os.makedirs` / `path.mkdir(..., parents=True))`. open_kwargs passed to open(), the result of which is returned. """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if binary:
@@ -183,80 +180,6 @@ def absolutize_link(link: PathLike):
         link.symlink_to(new_target)
 
 
-def yield_file(f: Path, _):
-    yield f
-
-
-def walk(root: PathLike = ".", *,
-         file_action: Callable[[Path, int],
-                               Iterable | None] | None = yield_file,
-         skip_dir: Callable[[Path, int], bool] | None = None,
-         dir_action: Callable[[Path, int], Iterable | None] | None = None,
-         dir_post_action: Callable[[Path, int], Iterable | None] | None = None,
-         symlink_action: Callable[[Path, int], Iterable | None] | None = None,
-         not_exist_action: Callable[[Path, int],
-                                    Iterable | None] | None = None,
-         error_action: Callable[[Path, int, Exception],
-                                Iterable | None] | None = None,
-         side_effects: bool = False,
-         ignore_hidden: bool = False,
-         ) -> Iterable[Path]:
-    """ For directories, dir_action is called first. Then skip_dir is called, and if returns a truthy value nothing else happens to the directory. Otherwise, the contents are recursively walked over before dir_post_action is called.
-
-    If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks.
-
-    The second argument to each action is the depth from the root, which has depth 0.
-
-    For all actions (skip_dir is not an action), if the return value is not None, it is yielded from -- so it must be iterable. This is to support using this function as a generator. However, this means that if it is intended to be used only for side effects, the generator must be consumed -- specify side_effects = True, which will also result in a None return value. """
-
-    def walk_recursive(root: Path, depth: int):
-        try:
-            if ignore_hidden and hidden(root):
-                return
-            if symlink_action is not None and root.is_symlink():
-                if (symlink_result := symlink_action(root, depth)) is not None:
-                    yield from symlink_result
-            elif not root.exists() and not root.is_symlink():
-                # check for symlinks again to make broken symlinks to fall through to the file action
-                if not_exist_action is not None and (not_exist_result := not_exist_action(root, depth)) is not None:
-                    yield from not_exist_result
-            elif root.is_file() or (root.is_symlink() and not root.exists()):
-                if file_action is not None and (file_result := file_action(root, depth)) is not None:
-                    yield from file_result
-            else:
-                # assert root.is_dir()
-                if dir_action is not None and (dir_result := dir_action(root, depth)) is not None:
-                    yield from dir_result
-                if skip_dir is None or not skip_dir(root, depth):
-                    for f in root.iterdir():
-                        yield from walk_recursive(f, depth+1)
-                    if dir_post_action is not None and (dir_post_result := dir_post_action(root, depth)) is not None:
-                        yield from dir_post_result
-        except Exception as x:
-            if error_action is not None:
-                error_action(root, depth, x)
-            else:
-                raise
-
-    gen = walk_recursive(Path(root), 0)
-    if side_effects:
-        consume(gen)
-        return []
-    else:
-        return gen
-
-
-WALK_ACTIONS = [a+"_action" for a in ["file", "dir",
-                                      "dir_post", "symlink", "not_exist", "error"]] + ["side_effects"]
-
-
-def prune_walk_kwargs(kwargs):
-    """ Remove _action kwargs and also side_effects, since these are usually set specially by functions using walk. """
-    for w in WALK_ACTIONS:
-        if w in kwargs:
-            del kwargs[w]
-
-
 def delete(file: PathLike, not_exist_ok: bool = False, *, output: bool = False, ignore_errors: bool = False, **kwargs):
     """ Deletes files directly. Recursively deletes directory contents and then the directory itself. Works on symlinks, deleting the link without following it (leaves the link's destination intact). """
 
@@ -301,6 +224,38 @@ def delete(file: PathLike, not_exist_ok: bool = False, *, output: bool = False, 
     prune_walk_kwargs(kwargs)
     walk(file, file_action=file_action, dir_action=dir_action, dir_post_action=dir_post_action,
          symlink_action=symlink_action, not_exist_action=not_exist_action, side_effects=True, **kwargs)
+
+
+def delete_empty(root: PathLike = ".", output=True, ignore_errors=False):
+    """ Returns the number of empty directories deleted """
+    count = 0
+
+    def delete_empty_recursive(root: Path, depth: int) -> bool:
+        """ Returns whether the root argument was or became empty and was deleted """
+        try:
+            nonlocal count
+            if root.is_file() or root.is_symlink():
+                return False
+            empty = True
+            for f in root.iterdir():
+                if not delete_empty_recursive(f, depth+1):
+                    empty = False
+            if empty:
+                if output:
+                    print("\t"*depth + str(root))
+                root.rmdir()
+                count += 1
+            return empty
+        except:
+            if not ignore_errors:
+                raise
+            if output:
+                print("\tError on "*depth + str(root))
+            return False
+
+    root = Path(root)
+    delete_empty_recursive(root, 0)
+    return count
 
 
 class FileMismatchException(Exception):
@@ -550,187 +505,6 @@ def unzip(zip_path: PathLike, files: Iterable[PathLike] | None = None,  output_d
         zip.extractall(output_dir,  files)
 
 
-def long_names(root: PathLike = ".", **kwargs) -> Iterable[Path]:
-    """ Returns a set of files whose absolute paths are >= 260 characters, which means they are too long for some Windows applications. Not > 260 because, as the page linked below describes, Windows includes the NUL character at the end in the count, while Python strings do not.
-
-    docs.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation """
-    def file_action(f: Path, d: int):
-        if len(str(f)) >= 260:
-            yield f
-
-    prune_walk_kwargs(kwargs)
-    return walk(Path(root).resolve(), file_action=file_action, **kwargs)
-
-
-def re_split(file: PathLike, separator: str = "\\s*\n\\s*", *, exclude_empty: bool = True, encoding="utf8", empty_on_not_exist: bool = False, ** open_kwargs):
-    """Like re.split() but does not load the whole file as a string all at once."""
-    if not Path(file).exists() and empty_on_not_exist:
-        return
-    unprocessed = ""
-    with open(file, encoding=encoding, **open_kwargs) as f:
-        for line in f:
-            unprocessed += line
-            seps = list(re.finditer(separator, unprocessed))
-            # no separators found yet
-            if len(seps) == 0:
-                continue
-            # read lines until either the last separator does not reach the end of the string or, if there is a separator reaching the end of the string, there are at least two separators, in which case the second-last one is used as the split instead of the last one, so that the regular expression is allowed to be as greedy as possible
-            last = seps[-1]
-            if last.end() == len(unprocessed):
-                if len(seps) < 2:
-                    continue
-                else:
-                    last = seps[-2]
-            # use the normal re.split function in case the line introduced more than one additional separator
-            for s in re.split(separator, unprocessed[:last.start()]):
-                if exclude_empty and s == "":
-                    continue
-                yield s
-            unprocessed = unprocessed[last.end():]
-        # yield what is left after the whole file is read
-        for s in re.split(separator, unprocessed):
-            if exclude_empty and s == "":
-                continue
-            yield s
-
-
-def id(file: PathLike):
-    return os.stat(file).st_ino
-
-
-BYTE = 1
-KB = KILOBYTE = 1E3
-MB = MEGABYTE = 1E6
-GB = GIGABYTE = 1E9
-TB = TERABYTE = 1E12
-
-
-def size(root: PathLike = ".", unit: float = BYTE, follow_symlinks: bool = False):
-    """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively. The result is divided by the argument to unit. For convenience, constants for bytes, KB, MB, GB, and TB have been specified. """
-    def size_recursive(path: Path):
-        if path.is_symlink():
-            if follow_symlinks:
-                target = path.readlink()
-                if target.is_absolute():
-                    return size_recursive(target)
-                else:
-                    return size_recursive(path.parent.joinpath(target))
-            else:
-                try:
-                    return os.stat(path).st_size
-                except:
-                    # e.g. FileNotFoundError for a broken symbolic link
-                    return 0
-        elif path.is_file():
-            try:
-                return os.stat(path).st_size
-            except:
-                return 0
-        else:
-            return sum(
-                (size_recursive(f) for f in path.iterdir())
-            )
-    return size_recursive(Path(root))/unit
-
-
-# base 10, following SI units: kilo, mega, giga, tera, peta, exa, zetta, yotta, ronna, quetta
-SIZE_UNITS_10 = [" bytes", "KB", "MB", "GB",
-                 "TB", "PB", "EB", "ZB", "YB", "RB", "QB"]
-# base-2 versions: kibi, mebi, gibi, tebi, pebi, exbi, zebi, yobi, robi, quebi
-SIZE_UNITS_2 = [" bytes", "KiB", "MiB", "GiB",
-                "TiB", "PiB", "EiB", "ZiB", "YiB", "RiB", "QiB"]
-
-
-def format_size(size_bytes: int | float, base_2=False):
-    if base_2:
-        divisor = 1024
-    else:
-        divisor = 1000
-    u = 0
-    while size_bytes > divisor:
-        size_bytes /= divisor
-        u += 1
-    if base_2:
-        return f"{size_bytes:.3f} {SIZE_UNITS_2[u]}"
-    else:
-        return f"{size_bytes:.3f} {SIZE_UNITS_10[u]}"
-
-
-def count(root: PathLike = "."):
-    """Counts files recursively. Does not follow symlinks, they are counted as one file instead."""
-    def count_recursive(path: Path):
-        if path.is_symlink() or path.is_file():
-            return 1
-        else:
-            return sum(
-                (count_recursive(f) for f in path.iterdir())
-            )
-    return count_recursive(Path(root))
-
-
-def hash(file: PathLike, *, hash_function: str = "MD5", size: int = -1, hex: bool = True) -> str | bytes:
-    """ Hash with the specified function (default MD5). """
-    with open(file, "rb") as f:
-        h = hashlib.new(hash_function, f.read(size), usedforsecurity=False)
-        return h.hexdigest() if hex else h.digest()
-
-
-def is_empty(root: PathLike = ".") -> bool:
-    """ Considers a directory empty if all of its subdirectories are empty. Always returns False for a file. """
-    def is_empty_recursive(root: Path):
-        if root.is_file():
-            return False
-        for f in root.iterdir():
-            if not is_empty_recursive(f):
-                return False
-        return True
-
-    root = Path(root)
-    return is_empty_recursive(root)
-
-
-def delete_empty(root: PathLike = ".", output=True, ignore_errors=False):
-    """ Returns the number of empty directories deleted """
-    count = 0
-
-    def delete_empty_recursive(root: Path, depth: int) -> bool:
-        """ Returns whether the root argument was or became empty and was deleted """
-        try:
-            nonlocal count
-            if root.is_file() or root.is_symlink():
-                return False
-            empty = True
-            for f in root.iterdir():
-                if not delete_empty_recursive(f, depth+1):
-                    empty = False
-            if empty:
-                if output:
-                    print("\t"*depth + str(root))
-                root.rmdir()
-                count += 1
-            return empty
-        except:
-            if not ignore_errors:
-                raise
-            if output:
-                print("\tError on "*depth + str(root))
-            return False
-
-    root = Path(root)
-    delete_empty_recursive(root, 0)
-    return count
-
-
-def list_files(root: PathLike = ".", *, skip_file: Callable[[PathLike, int], bool] | None = None, skip_dir: Callable[[PathLike, int], bool] | None = None, **kwargs) -> Iterable[Path]:
-
-    def file_action(p: Path, i: int):
-        if skip_file is None or not skip_file(p, i):
-            yield p
-
-    prune_walk_kwargs(kwargs)
-    return walk(root, file_action=file_action, skip_dir=skip_dir, **kwargs)
-
-
 def flatten(root: PathLike = ".", *, output=True, **kwargs):
     """ Moves all files in subfolders so they are directly inside the root folder, and then deletes the leftover empty subfolders. """
 
@@ -786,125 +560,8 @@ def regex_rename(find: str | re.Pattern[str], replace: str | Callable[[str | re.
     return move_by_dict(moves, output=output)
 
 
-def text_search(query: str, root: PathLike = ".", output_errors=False, pre_context: int = 2, post_context: int = 2, **kwargs) -> Iterable[tuple[Path, tuple[int, int], list[str]]]:
-    """ Search for text in files. Intended to be used on the command line, and will not find text that spans in between lines. Yields additional lines around the one with the query text specified as pre_context and post_context. """
-    def file_action(p: Path, i: int):
-        context: list[str] = []
-        context_length = pre_context + post_context + 1
-        delayed_yield: list[int] = []
-        line_num = 1
-        with open(p, encoding="utf8") as f:
-            for line in f:
-                context.append(line)
-                if len(context) > context_length:
-                    context.pop(0)
-                if query.lower() in line.lower():
-                    delayed_yield.append(post_context+1)
-                for i in range(0, len(delayed_yield)):
-                    delayed_yield[i] -= 1
-                if len(delayed_yield) > 0 and delayed_yield[0] <= 0:
-                    # make a copy of the context to yield, otherwise always produces the last few lines
-                    yield p, (max(line_num - context_length+1, 1), line_num), [l for l in context]
-                    delayed_yield.pop(0)
-                line_num += 1
-        line_num -= 1
-        if len(delayed_yield) > 0:
-            yield p, (max(line_num - context_length+1, 1), line_num), context
-
-    def error_action(p: Path, i: int, e: Exception):
-        if output_errors:
-            print("error on " + str(p))
-            print(e)
-
-    prune_walk_kwargs(kwargs)
-    return walk(root, file_action=file_action, error_action=error_action, **kwargs)
-
-
-def search(name_query: str, root: PathLike = ".", output_errors=False, **kwargs) -> Iterable[Path]:
-    def name(p: Path, i: int):
-        if name_query.lower() in p.name.lower():
-            yield p
-
-    def error_action(p: Path, i: int, e: Exception):
-        if output_errors:
-            print("error on " + str(p))
-
-    prune_walk_kwargs(kwargs)
-    return walk(root, file_action=name, dir_action=name, error_action=error_action, **kwargs)
-
-
-def find_ascii(file: PathLike, length_threshold: int) -> Iterable[tuple[int, bytearray]]:
-    """ Returns runs of bytes representing printable ASCII characters (32-126) at least as long as the length threshold, along with their indices in the file. """
-    def is_ascii(b: bytes):
-        return all((32 <= i <= 126 for i in b))
-
-    with open(file, "rb") as f:
-        ascii_streak = bytearray()
-        bytes_read = 0
-        while True:
-            b = f.read(1)
-            if len(b) == 0:
-                # EOF
-                break
-            if is_ascii(b):
-                ascii_streak += b
-            else:
-                if len(ascii_streak) >= length_threshold:
-                    yield bytes_read, ascii_streak
-                ascii_streak = bytearray()
-            bytes_read += 1
-
-
-def gitignored_files(gitignore_file: PathLike = ".gitignore", root: PathLike = ".") -> set[str]:
-    gitignore_file = Path(gitignore_file)
-    root = Path(root)
-
-    ignored_files: set[str] = set()
-
-    with open(gitignore_file) as gitignore:
-        for line in gitignore:
-            line = line.removesuffix("\n")
-            if len(line) > 0 and line[0] == "!":
-                # .gitignore re-includes these files
-                line = line[1:]
-                for g in glob.glob(line, root_dir=root, recursive=True):
-                    g = g.replace("/", os.sep)
-                    for path in [g]+[str(p) for p in Path(g).parents]:
-                        ignored_files -= {path}
-            else:
-                # these files are ignored
-                ignored_files |= {g.replace("/", os.sep)
-                                  for g in glob.glob(line, root_dir=root, recursive=True)}
-
-    return ignored_files
-
-
-def _last_common_ancestor_2(p1: Path | None, p2: Path | None):
-    if p1 is None or p2 is None:
-        return None
-    for par in itertools.chain([p1], p1.parents):
-        if par == p2 or par in p2.parents:
-            return par
-    return None
-
-
-def last_common_ancestor(*ps: Path):
-    if len(ps) == 0:
-        return None
-    lca = ps[0]
-    for p in ps[1:]:
-        lca = _last_common_ancestor_2(lca, p)
-    return lca
-
-
 if WINDOWS:
     import msvcrt
-    import winreg
-
-    from windows_env import *
-
-    LONG_PATH_PREFIX = "\\\\?\\"
-    """ Prefix to allow reading paths >= 260 characters on Windows  """
 
     class LockFile:
         """ Based on Thomas Lux's answer on https://stackoverflow.com/questions/489861/locking-a-file-in-python """
@@ -943,27 +600,3 @@ if WINDOWS:
     def open_locked(file: Path, *args, **kwargs) -> LockFile:
         """ Only prevents multiple open instances if this function is used every time a given file is opened instead of only the builtin open. Still prevents external accesses (e.g. via the file explorer). """
         return LockFile(file, *args, **kwargs)
-
-    def absolute_with_env(path: PathLike) -> Path:
-        path: str = str(path)
-        path = winreg.ExpandEnvironmentStrings(path)
-        return Path(path).absolute()
-
-    def resolve_with_env(path: PathLike) -> Path:
-        path: str = str(path)
-        path = winreg.ExpandEnvironmentStrings(path)
-        return Path(path).resolve()
-
-    def with_env(path: PathLike) -> Path:
-        path: str = str(path)
-        path = winreg.ExpandEnvironmentStrings(path)
-        return Path(path)
-
-if WINDOWS:
-    import stat
-
-    def hidden(file: PathLike):
-        return os.stat(file).st_file_attributes & stat.FILE_ATTRIBUTE_HIDDEN != 0
-else:
-    def hidden(file: PathLike):
-        Path(file).name.startswith(".")

@@ -3,7 +3,7 @@ import random
 import re
 from io import StringIO
 from pathlib import Path
-from typing import (Any, Callable, Hashable, Iterable, Self, Sequence, Sized,
+from typing import (Any, Callable, Hashable, Iterable, Literal, Self, Sequence, Sized,
                     SupportsIndex)
 
 import numpy as np
@@ -12,7 +12,7 @@ import files
 from file_backed_data import FileBackedData
 
 
-def read_file_lists(filename: files.PathLike, *, list_separator="\\s*\n\\s*", list_item_separator: str = "\\s*,\\s*", comment: str = "\\s*#", encoding="utf8", empty_on_not_exist: bool = False) -> Iterable[str]:
+def read_file_lists(filename: files.PathLike, *, list_separator="\\s*\n\\s*", list_item_separator: str = "\\s*,\\s*", comment: str = "\\s*#", encoding="utf8", empty_on_not_exist: bool = False) -> Iterable[list[str]]:
     """Read a file as a list (technically a generator) of lists. Use comment=None for no comments."""
     for list_str in files.re_split(filename, list_separator, encoding=encoding, empty_on_not_exist=empty_on_not_exist):
         if comment and re.match(comment, list_str):
@@ -98,7 +98,7 @@ def random_from[T](it: Iterable[T]) -> T:
             raise ValueError()
 
 
-def count(lst: Iterable[Hashable], bucket: Callable[[Any], Hashable] = lambda x: x, initial_counts: dict[Hashable, int] | None = None) -> dict[Hashable, int]:
+def count[T:Hashable](lst: Iterable[T], bucket: Callable[[Any], T] = lambda x: x, initial_counts: dict[T, int] | None = None) -> dict[T, int]:
     counts = initial_counts or {}
     for i in lst:
         b = bucket(i)
@@ -106,8 +106,8 @@ def count(lst: Iterable[Hashable], bucket: Callable[[Any], Hashable] = lambda x:
     return counts
 
 
-def histogram(counts: dict, file: files.PathLike = None, *, sort_by="count", bar_char="-", encoding="utf8", **open_kwargs) -> str:
-    """ Pass in a dictionary as returned by count(). If file is specified, the result is written to that file. Whether or not it is specified, the result is also returned. sort_by can be a Callable key argument for sorted() on counts.keys(), "count", or False, which causes the order of iteration over the dict to be used. """
+def histogram[T:Hashable](counts: dict[T, int], file: files.PathLike | None = None, *, sort_by: Callable | Literal[False] | Literal["count"] = "count", bar_char="-", encoding="utf8", **open_kwargs) -> str:
+    """ Pass in a dictionary as returned by count(). If file is specified, the result is written to that file. Whether or not it is specified, the result is also returned. sort_by can be a Callable key argument for sorted() on counts.keys(), `"count"`, or `False`, which causes the arbitrary order of iteration over the dict to be used. """
     if sort_by is False:
         sorted_keys = counts.keys()
     elif sort_by == "count":
@@ -151,11 +151,11 @@ class FileBackedList[T](FileBackedData, list):
 
 
 class TriangularArray[T]:
-    """ Represents a square 2D array that is symmetrical, i.e. where swapping the indices points to the same information, without actually duplicating values. Can be expand()ed but not contracted (copy the values to a new, smaller one instead if desired).
+    """ Represents a square 2D array that is symmetrical, i.e. where swapping the indices points to the same information, without actually duplicating values. Can be `expand`ed but not contracted (copy the values to a new, smaller one instead if desired).
 
     Note that it behaves differently from an actual 2D array in that:
-    - len() will return the side length, not the number of elements
-    - iter() will return an iterator that produces r(ow index), c(olumn index), v(alue) tuples, not rows
+    - `len` will return the side length, not the number of elements
+    - `iter` will return an iterator that produces `r`(ow index), `c`(olumn index), `v`(alue) tuples, not rows
     """
 
     @staticmethod

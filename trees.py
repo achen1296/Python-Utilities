@@ -1,6 +1,5 @@
 import math
 import random
-from typing import TYPE_CHECKING
 
 import lists
 
@@ -148,6 +147,7 @@ class KDTree():
                     return root
                 else:
                     # split
+                    split_index = -1
                     max_spread = -math.inf
                     for c in range(0, self.dimensions):
                         c_list = [d.coords[c] for d in root.data]
@@ -155,6 +155,7 @@ class KDTree():
                         if spread > max_spread:
                             max_spread = spread
                             split_index = c
+                    assert split_index >= 0
                     # sort by rotated coordinate list so that split_index is first
                     root.data.sort(key=lambda d: rotate_coords(
                         d.coords, split_index))

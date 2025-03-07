@@ -3,7 +3,7 @@ from queue import Empty, Full, Queue
 from threading import Condition, Lock, Thread
 from typing import Iterable, Sequence, override
 
-import mod
+from integers import mod
 
 
 class IterAheadThread[T](Thread):
@@ -89,7 +89,7 @@ class Loadable[T](metaclass=ABCMeta):
         return self.value_when_loaded
 
 
-class BidirectionalLoadUnloadThread[T](Thread):
+class LoadWindowThread[T](Thread):
     """ Wraps a `Sequence` (instead of an `Iterable`, to be able to go backwards) of `Loadable` objects (create a subclass). Items up to a certain distance away from the current item will be loaded in advance. Items up to a certain *larger* distance away will be kept, and the rest unloaded. The keep-loaded distance must of course be larger, and should be a reasonable amount larger to account for typical back-and-forth indexing, so that doing so does not unnecessarily unload items that will be reloaded soon. For example, can be used for viewing a list of images back and forth, to load and unload the image data.
 
     Similar to `IterAheadThread`, starts automatically when any item retrieval method is called, but must be started explicitly to have results prepared in advance of the first call.
@@ -229,7 +229,7 @@ if __name__ == "__main__":
         def value_when_loaded(self):
             return self._value
 
-    t = BidirectionalLoadUnloadThread([IntLoadable(i) for i in range(0, 50)], cycle=True, forward_load_distance=5, forward_keep_distance=10, backward_load_distance=5, backward_keep_distance=10)
+    t = LoadWindowThread([IntLoadable(i) for i in range(0, 50)], cycle=True, forward_load_distance=5, forward_keep_distance=10, backward_load_distance=5, backward_keep_distance=10)
     t.start()
 
     time.sleep(10)

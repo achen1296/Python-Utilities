@@ -34,8 +34,8 @@ import files
 import ftp
 import images
 import integers
+from integers import mod
 import lists
-import mod
 import polynomials
 import quaternions
 import sets

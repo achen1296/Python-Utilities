@@ -1,4 +1,4 @@
-def egcd(a: int, b: int) -> tuple[int, int, int]:
+def gcd(a: int, b: int) -> tuple[int, int, int]:
     prev_x, x = 1, 0
     prev_y, y = 0, 1
     while b != 0:
@@ -10,7 +10,7 @@ def egcd(a: int, b: int) -> tuple[int, int, int]:
 
 
 def inverse(i: int, N: int) -> int:
-    x, y, g = egcd(i, N)
+    x, y, g = gcd(i, N)
     return x % N
 
 

@@ -2,6 +2,8 @@ from typing import Iterable
 
 import lists
 
+import mod
+
 
 def primes(max: int | None = None):
     # this is fast enough for "small" numbers (e.g. on order of millions)
@@ -83,7 +85,7 @@ def factor(x: int) -> list[int]:
     for p in ps:
         while x % p == 0:
             factors.append(p)
-            x /= p
+            x //= p
         if x == 1:
             break
 
