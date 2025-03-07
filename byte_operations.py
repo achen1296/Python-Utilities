@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import random
-
+import secrets
 
 def hex_to_ints(hex: str) -> list[int]:
     return [b for b in bytes.fromhex(hex)]
@@ -40,7 +39,7 @@ def xor(*int_lists: list[int]) -> list[int]:
 def random_bytes(length: int):
     b = bytearray(length)
     for i in range(0, length):
-        b[i] = random.randint(0, 255)
+        b[i] = secrets.randbits(8)
     return b
 
 
