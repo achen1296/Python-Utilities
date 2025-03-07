@@ -4,7 +4,7 @@ from typing import Iterable
 
 import lists
 
-import mod
+from . import mod
 
 
 def primes(max: int | None = None):
