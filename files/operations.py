@@ -273,7 +273,9 @@ def mirror(src: PathLike, dst: PathLike, *, output: bool = False, deleted_file_a
         if src.is_symlink() != dst.is_symlink():
             raise FileMismatchException(
                 f"One of {src} and {dst} is a symlink, the other is not")
-        if src.is_dir() != dst.is_dir():
+        if not src.is_symlink() and src.is_dir() != dst.is_dir():
+            # don't check for file vs. dir in case they are both symlinks,
+            # since broken symlinks are always counted as files
             raise FileMismatchException(
                 f"One of {src} and {dst} is a file, the other a directory")
     if src.is_symlink():
