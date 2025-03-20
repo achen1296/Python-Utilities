@@ -182,7 +182,7 @@ def absolutize_link(link: PathLike):
         link.symlink_to(new_target)
 
 
-def delete(file: PathLike, not_exist_ok: bool = False, *, output: bool = False, ignore_errors: bool = False, **kwargs):
+def delete(file: PathLike, not_exist_ok: bool = True, *, output: bool = False, ignore_errors: bool = False, **kwargs):
     """ Deletes files directly. Recursively deletes directory contents and then the directory itself. Works on symlinks, deleting the link without following it (leaves the link's destination intact). """
 
     def remove_respect_ignore_errors(file: Path):
@@ -236,7 +236,7 @@ def delete_empty(root: PathLike = ".", output=True, ignore_errors=False):
         """ Returns whether the root argument was or became empty and was deleted """
         try:
             nonlocal count
-            if root.is_file() or root.is_symlink():
+            if root.is_symlink() or root.is_file():  # check symlink first in case of broken ones
                 return False
             empty = True
             for f in root.iterdir():
@@ -290,6 +290,11 @@ def mirror(src: PathLike, dst: PathLike, *, output: bool = False, deleted_file_a
                 print(f"{output_prefix}Creating symbolic link <\
                     {src}> -> <{dst}>")
             shutil.copy2(src, dst, follow_symlinks=False)
+    elif not src.exists():
+        # top level deleted
+        if output:
+            print(f"{output_prefix}<{dst}> was deleted")
+        deleted_file_action(dst)
     elif src.is_file():
         # copy file if newer
         # round to decrease precision to seconds (different file systems may save different precision)
