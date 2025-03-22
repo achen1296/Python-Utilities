@@ -9,7 +9,7 @@ import files
 from file_backed_data import FileBackedData
 
 
-def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\\s*>\\s*", value_list_separator: str = "\\s*\\|\\s*", comment: str = "\\s*#", all_lists: bool = False, key_transform: Callable[[str], Any] | None = None, value_transform: Callable[[str], Any] | None = None) -> dict:
+def read_iterable_dict(iterable_dict: Iterable[str], *, key_value_separator: str = "\\s*>\\s*", value_list_separator: str = "\\s*\\|\\s*", comment: str = "\\s*#", all_lists: bool = False, key_transform: Callable[[str], Any] | None = None, value_transform: Callable[[str], Any] | None = None) -> dict[str, str | list[str]]:
     """ Reads a dictionary from a list of string entries.
 
     By default each is interpreted as key>value or key>val1|val2|...
