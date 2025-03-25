@@ -164,12 +164,20 @@ def cols_joined_str(columns: Mapping[str, str] | Iterable[str | tuple[str, str]]
     return ",".join(cols_strs(columns, table=table))
 
 
+class Row(sqlite3.Row):
+    def __repr__(self):
+        return repr(dict(**self))
+
+    def __str__(self):
+        return str(dict(**self))
+
+
 class Database:
     def __init__(self, db_file: str | Path):
         self.db_file = Path(db_file)
         self.con = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         self.cur = self.con.cursor()
-        self.con.row_factory = sqlite3.Row
+        self.con.row_factory = Row
 
     def tables(self) -> list[str]:
         with self.con:
