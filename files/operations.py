@@ -20,10 +20,13 @@ from .stats import *
 from .walk import *
 
 
+def make_parents(path: PathLike):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+
+
 def create_file(path: PathLike, binary=False, **open_kwargs):
     """ The last piece of the path is assumed to be a file, even if it doesn't have an extension (otherwise use `os.makedirs` / `path.mkdir(..., parents=True))`. open_kwargs passed to open(), the result of which is returned. """
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    make_parents(path)
     if binary:
         mode = "wb"
     else:
@@ -32,12 +35,14 @@ def create_file(path: PathLike, binary=False, **open_kwargs):
 
 
 def copy(src: PathLike, dst: PathLike, *, output=False, **kwargs):
+    make_parents(dst)
     shutil.copy2(src, dst, **kwargs)
     if output:
         print(f"Copied <{src}> -> <{dst}>")
 
 
 def move(src: PathLike, dst: PathLike, *, output=False, **kwargs):
+    make_parents(dst)
     shutil.move(src, dst, **kwargs)
     if output:
         print(f"Moved <{src}> -> <{dst}>")
@@ -60,7 +65,7 @@ def __file_action_by_dict(planned_actions: dict[PathLike, PathLike], action_call
                             print(
                                 f"Warning: {dst} exists and is being overwritten with {src}")
                         delete(dst_path)
-                    dst_path.parent.mkdir(parents=True, exist_ok=True)
+                    make_parents(dst_path)
                     action_callable(src, dst, **action_kwargs)
                     if output:
                         print(f"{action_past_tense} <{src}> -> <{dst}>")
@@ -441,11 +446,11 @@ def two_way(path1: PathLike, path2: PathLike, *, output: bool = False, output_pr
         if path1.exists():
             names |= {f.name for f in path1.iterdir()}
         else:
-            path1.mkdir(parents=True, exist_ok=True)
+            make_parents(path1)
         if path2.exists():
             names |= {f.name for f in path2.iterdir()}
         else:
-            path2.mkdir(parents=True, exist_ok=True)
+            make_parents(path2)
         for n in names:
             count += two_way(path1.joinpath(n), path2.joinpath(n), output=output,
                              output_prefix=output_prefix+"    ")
