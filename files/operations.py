@@ -13,8 +13,6 @@ from pathlib import Path
 from typing import Callable, Iterable
 from zipfile import ZipFile
 
-from more_itertools import consume
-
 from .consts import *
 from .stats import *
 from .walk import *

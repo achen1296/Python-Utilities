@@ -54,6 +54,13 @@ class JSONFile[DataType]:
     def __enter__(self) -> DataType:
         return self.data
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def close(self):
+        # currently just flushes, but might do something different in the future...
+        self.flush()
+
+    def flush(self):
         with open(self.file, "w") as f:
             json.dump(self.data, f, indent="\t")
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
