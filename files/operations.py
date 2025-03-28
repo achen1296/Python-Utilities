@@ -257,7 +257,8 @@ def delete_empty(root: PathLike = ".", output=True, ignore_errors=False):
             if not ignore_errors:
                 raise
             if output:
-                print("\tError on "*depth + str(root))
+                print("\t"*depth + "Error on " + str(root))
+                traceback.print_exc()
             return False
 
     root = Path(root)
