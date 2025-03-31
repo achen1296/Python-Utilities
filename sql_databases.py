@@ -178,6 +178,7 @@ class Database:
         self.con = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         self.cur = self.con.cursor()
         self.con.row_factory = Row
+        self.con.create_function("regexp", 2, lambda p, s: bool(re.search(p, s, re.I)), deterministic=True)
 
     def tables(self) -> list[str]:
         with self.con:
