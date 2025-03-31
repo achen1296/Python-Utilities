@@ -172,14 +172,19 @@ class Row(sqlite3.Row):
         return str(dict(**self))
 
 
+def _add_connection_features(con: sqlite3.Connection):
+    con.row_factory = Row
+    con.create_function("regexp", 2, lambda p, s: bool(re.search(p, s, re.I)), deterministic=True)
+
+
 class Database:
     def __init__(self, db_file: str | Path):
         self.db_file = Path(db_file)
         self.con = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
         self.cur = self.con.cursor()
-        self.con.row_factory = Row
-        self.con.create_function("regexp", 2, lambda p, s: bool(re.search(p, s, re.I)), deterministic=True)
+        _add_connection_features(self.con)
 
+    @property
     def tables(self) -> list[str]:
         with self.con:
             return [name[0].lower() for name in self.cur.execute(""" select name from sqlite_schema where type = 'table' """).fetchall()]
@@ -201,7 +206,7 @@ class Database:
     def synchronize_definition_file(self, db_definition_file: Path | str):
         # the database file is not expected to be reconstructed often if at all, this code is mostly to document the intent of matching the saved table definitions in git
         db_definition_file = Path(db_definition_file)
-        tables = self.tables()
+        tables = self.tables
         if db_definition_file.exists():
             with open(db_definition_file) as f:
                 for line in f:
@@ -236,6 +241,8 @@ class Table:
 
         self.altered_table = True
         self.columns  # evaluate for existence check
+
+        _add_connection_features(self.con)
 
     def _cache_columns_and_types(self):
         if self.altered_table:
