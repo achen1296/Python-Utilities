@@ -210,7 +210,7 @@ class Database:
         if db_definition_file.exists():
             with open(db_definition_file) as f:
                 for line in f:
-                    m = re.match("create table \"(.*?)\"", line, re.I)
+                    m = re.match("create table \"?(.*?)\"? ?\\(", line, re.I)
                     assert m
                     t = m.group(1)
                     if t not in tables:
