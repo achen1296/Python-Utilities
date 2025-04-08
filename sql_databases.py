@@ -145,14 +145,14 @@ def col_name_type(column: str | tuple[str, str]) -> tuple[str, str]:
 def cols_strs(columns: Mapping[str, str] | Iterable[str | tuple[str, str]], table: str | None = None) -> list:
     """ `columns`: `Iterable` of either just the column name or `tuple` of the column's name and declared type, or `Mapping` of column name and type. """
     if isinstance(columns, Mapping):
-        return [col_str((c, columns[c]), table=table) for c in columns]
+        return [col_str((c, columns[c]), table=table) for c in columns]  # type:ignore
     else:
         return [col_str(c, table=table) for c in columns]
 
 
-def cols_names_types(columns: Mapping[str, str] | Iterable[str | tuple[str, str]]) -> dict[str, str]:
+def cols_names_types(columns: Mapping[str, str] | Iterable[str | tuple[str, str]]) -> Mapping[str, str]:
     if isinstance(columns, Mapping):
-        return columns
+        return columns  # type:ignore
     else:
         return {
             c: t
