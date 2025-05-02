@@ -1,7 +1,5 @@
 # (c) Andrew Chen (https://github.com/achen1296)
 
-from __future__ import annotations
-
 import secrets
 
 def hex_to_ints(hex: str) -> list[int]:
