@@ -43,7 +43,7 @@ def walk[T](root: PathLike = ".", *,
 
     The second argument to each action is the depth from the root, which has depth 0.
 
-    For all actions (skip_dir is not an action), if the return value is not None, it is yielded from -- so it must be iterable. This is to support using this function as a generator. However, this means that if it is intended to be used only for side effects, the generator must be consumed -- specify side_effects = True, which will also result in a None return value. """
+    For all actions (skip_dir is not an action), if the return value is not None, it is yielded from -- so it must be iterable. This is to support using this function as a generator. However, this means that if it is intended to be used only for side effects, the generator must be consumed -- specify side_effects = True, which will also result in an empty return value. """
 
     def walk_recursive(root: Path, depth: int):
         try:
