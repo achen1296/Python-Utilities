@@ -18,8 +18,12 @@ from .stats import *
 from .walk import *
 
 
+def make_dir(path: PathLike):
+    Path(path).mkdir(parents=True, exist_ok=True)
+
+
 def make_parents(path: PathLike):
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    make_parents(Path(path).parent)
 
 
 def create_file(path: PathLike, binary=False, **open_kwargs):
