@@ -23,7 +23,7 @@ def make_dir(path: PathLike):
 
 
 def make_parents(path: PathLike):
-    make_parents(Path(path).parent)
+    make_dir(Path(path).parent)
 
 
 def create_file(path: PathLike, binary=False, **open_kwargs):
