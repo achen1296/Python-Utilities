@@ -32,9 +32,14 @@ def create_file(path: PathLike, binary=False, **open_kwargs):
     return open(path, mode, **open_kwargs)
 
 
-def copy(src: PathLike, dst: PathLike, *, output=False, **kwargs):
+def copy(src: PathLike, dst: PathLike, *, output=False):
     make_parents(dst)
-    shutil.copy2(src, dst, **kwargs)
+    src = Path(src)
+    dst = Path(dst)
+    if src.is_dir():
+        shutil.copytree(src, dst, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True)
+    else:
+        shutil.copy2(src, dst, follow_symlinks=False)
     if output:
         print(f"Copied <{src}> -> <{dst}>")
 
