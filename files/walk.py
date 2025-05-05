@@ -30,6 +30,8 @@ def walk[T](root: PathLike = ".", *,
             dir_action: Callable[[Path, int], Iterable[T] | None] | None = None,
             dir_post_action: Callable[[Path, int], Iterable[T] | None] | None = None,
             symlink_action: Callable[[Path, int], Iterable[T] | None] | None = None,
+            other_action: Callable[[Path, int],
+                                   Iterable[T] | None] | None = None,
             not_exist_action: Callable[[Path, int],
                                        Iterable[T] | None] | None = None,
             error_action: Callable[[Path, int, Exception],
@@ -37,13 +39,19 @@ def walk[T](root: PathLike = ".", *,
             side_effects: bool = False,
             ignore_hidden: bool = False,
             ) -> Iterable[T]:
-    """ For directories, dir_action is called first. Then skip_dir is called, and if returns a truthy value nothing else happens to the directory. Otherwise, the contents are recursively walked over before dir_post_action is called.
+    """ For directories, `dir_action` is called first. Then `skip_dir` is called, and if returns a truthy value nothing else happens to the directory. Otherwise, the contents are recursively walked over before `dir_post_action` is called.
 
-    If symlink_action is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If symlink_action is specified, then only that will be used on symlinks.
+    If `symlink_action` is not specified, symlinks are treated like the kind of file it points to (or as a file if the link is broken). If `symlink_action` is specified, then only that will be used on symlinks.
+
+    `other_action` is used for everything that is not a regular file, directory, or symlink. If not specified the default is to use `file_action`.
+
+    `not_exist_action` should only ever be called on `root` if it does not exist, not any lower down.
 
     The second argument to each action is the depth from the root, which has depth 0.
 
     For all actions (skip_dir is not an action), if the return value is not None, it is yielded from -- so it must be iterable. This is to support using this function as a generator. However, this means that if it is intended to be used only for side effects, the generator must be consumed -- specify side_effects = True, which will also result in an empty return value. """
+
+    other_action = other_action or file_action
 
     def walk_recursive(root: Path, depth: int):
         try:
@@ -59,8 +67,7 @@ def walk[T](root: PathLike = ".", *,
             elif root.is_file() or (root.is_symlink() and not root.exists()):
                 if file_action is not None and (file_result := file_action(root, depth)) is not None:
                     yield from file_result
-            else:
-                # assert root.is_dir()
+            elif root.is_dir():
                 if dir_action is not None and (dir_result := dir_action(root, depth)) is not None:
                     yield from dir_result
                 if skip_dir is None or not skip_dir(root, depth):
@@ -68,6 +75,9 @@ def walk[T](root: PathLike = ".", *,
                         yield from walk_recursive(f, depth+1)
                     if dir_post_action is not None and (dir_post_result := dir_post_action(root, depth)) is not None:
                         yield from dir_post_result
+            else:
+                if other_action is not None and (other_result := other_action(root, depth)) is not None:
+                    yield from other_result
         except Exception as x:
             if error_action is not None:
                 error_action(root, depth, x)
