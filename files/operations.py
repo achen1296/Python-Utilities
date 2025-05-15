@@ -36,14 +36,15 @@ def create_file(path: PathLike, binary=False, **open_kwargs):
     return open(path, mode, **open_kwargs)
 
 
-def copy(src: PathLike, dst: PathLike, *, output=False):
+def copy(src: PathLike, dst: PathLike, *, symlinks=True, output=False):
+    """ If `symlinks`, copy symlinks as symlinks (including dangling), otherwise copy the source. """
     make_parents(dst)
     src = Path(src)
     dst = Path(dst)
     if src.is_dir():
-        shutil.copytree(src, dst, symlinks=True, ignore_dangling_symlinks=True, dirs_exist_ok=True)
+        shutil.copytree(src, dst, symlinks=symlinks, ignore_dangling_symlinks=symlinks, dirs_exist_ok=True)
     else:
-        shutil.copy2(src, dst, follow_symlinks=False)
+        shutil.copy2(src, dst, follow_symlinks=not symlinks)
     if output:
         print(f"Copied <{src}> -> <{dst}>")
 
