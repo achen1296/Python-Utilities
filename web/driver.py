@@ -67,10 +67,8 @@ def chrome_driver(profile: files.PathLike, *, executable_path: files.PathLike | 
     # disable (almost all) logs
     options.add_argument("--log-level=3")
     if executable_path:
-        driver = webdriver.Chrome(
-            executable_path=executable_path, options=options)
-    else:
-        driver = webdriver.Chrome(options=options)
+        options.binary_location=str(executable_path)
+    driver = webdriver.Chrome(options=options)
     driver.implicitly_wait(2)
     driver.set_page_load_timeout(15)
     return driver
