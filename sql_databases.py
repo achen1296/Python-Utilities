@@ -242,7 +242,7 @@ class Table:
         self.altered_table = True
         self.columns  # evaluate for existence check
 
-        _add_connection_features(self.con)
+        # _add_connection_features(self.con) # already done by db __init__
 
     def _cache_columns_and_types(self):
         if self.altered_table:
