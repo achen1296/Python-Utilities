@@ -273,7 +273,7 @@ class Table:
         """ Adds columns, unless they are already in the table. Returns `True` if any new columns were added, `False` otherwise. """
         with self.con:
             added_any = False
-            existing_cols = self.columns
+            existing_cols = [c.lower() for c in self.columns]
             for c, t in cols_names_types(columns).items():
                 if c.lower() not in existing_cols:
                     added_any = True
@@ -294,6 +294,8 @@ class Table:
 
     def _parse_row(self, row: RowType, *, add_missing_columns: bool, add_column_types: bool, ignore_extra_data: bool):
         if isinstance(row, Mapping) or isinstance(row, sqlite3.Row):
+            keys = row.keys()
+            lower_columns = [c.lower() for c in self.columns]
             if add_missing_columns:
                 if add_column_types:
                     cols = {
@@ -301,13 +303,16 @@ class Table:
                         for c in row.keys()
                     }
                 else:
-                    cols = [c for c in row.keys()]
+                    cols = [c for c in keys]
                 self.altered_table = self.add_columns(cols)
             elif not ignore_extra_data:
-                extra_keys = [c for c in row.keys() if c.lower() not in self.columns]
+                extra_keys = [c for c in keys if c.lower() not in lower_columns]
                 if extra_keys:
                     raise ExtraData(extra_keys)
-            operation_cols = [c for c in self.columns if c in row.keys()]  # `in row` is keys for `Mapping` but values for `sqlite3.Row`
+
+            # `in row` is keys for `Mapping` but values for `sqlite3.Row`
+            # need to use the case of the keys as they are in `row` for retrieving them below
+            operation_cols = [c for c in keys if c.lower() in lower_columns]
             params = [row[c] for c in operation_cols]
         else:
             lr = len(row)
@@ -335,7 +340,7 @@ class Table:
             self.cur.execute(sql, params)
 
     def import_csv(self, csv_file: Path | str, *, add_missing_columns: bool = False, ignore_extra_data=False, upsert=False):
-        """ Cannot add types to columns this way, as CSV reader would of course always produce string values. """
+        """ Cannot add types to columns this way, as CSV reader would of course always produce string values. Returns count of entries added. """
         with open(csv_file, encoding="utf-8-sig") as f:  # encoding handles byte order mark
             reader = csv.reader(f)
             try:
@@ -350,20 +355,25 @@ class Table:
             operation_cols, _ = self._parse_row({c: v for c, v in zip(csv_cols, first_row)}, add_missing_columns=add_missing_columns, add_column_types=False, ignore_extra_data=ignore_extra_data)  # update columns and get columns to operate on
 
         with self.con:
-            self.cur.execute(""" drop table if exists temp_table """)
+            self.cur.execute(""" drop table if exists csv_temp_table """)
 
-        os.system(f""" sqlite3 "{self.db.db_file}" ".import '{csv_file}' temp_table --csv" """)
+        os.system(f""" sqlite3 "{self.db.db_file}" ".import '{csv_file}' csv_temp_table --csv" """)
 
         sql = f""" insert into \"{self.name}\" ({cols_joined_str(operation_cols)})
-        select {cols_joined_str(operation_cols)} from temp_table where true """  # where true needed for upsert clause https://sqlite.org/lang_upsert.html 2.2
+        select {cols_joined_str(operation_cols)} from csv_temp_table where true """  # where true needed for upsert clause https://sqlite.org/lang_upsert.html 2.2
         if upsert:
             sql += f""" on conflict do update set ({cols_joined_str(operation_cols)}) = ({",".join(f"excluded.\"{c}\"" for c in operation_cols)}) """
         else:
             sql += "on conflict do nothing"
 
         with self.con:
-            self.cur.execute(sql)
-            self.cur.execute("drop table if exists temp_table")
+            try:
+                self.cur.execute(sql)
+            finally:
+                count: int = self.cur.execute("select count(*) from csv_temp_table").fetchone()[0]
+                self.cur.execute("drop table if exists csv_temp_table")
+
+        return count
 
     def upsert(self, row: RowType, *, upsert=True, **kwargs,):
         """ See `insert`. """
