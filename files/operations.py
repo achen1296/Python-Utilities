@@ -88,7 +88,7 @@ def move_by_dict(planned_moves: dict[PathLike, PathLike], **move_kwargs) -> int:
 
 def copy_by_dict(planned_copies: dict[PathLike, PathLike], **copy_kwargs) -> int:
     """Returns the number of items copied."""
-    return __file_action_by_dict(planned_copies, shutil.copy2, "Copied", **copy_kwargs)
+    return __file_action_by_dict(planned_copies, copy, "Copied", **copy_kwargs)
 
 
 def remove_forbidden_chars(name: str, name_only=False):
