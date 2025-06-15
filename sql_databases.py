@@ -339,6 +339,10 @@ class Table:
         with self.con:
             self.cur.execute(sql, params)
 
+    def upsert(self, row: RowType, *, upsert=True, **kwargs,):
+        """ See `insert`. `upsert` argument is just to absorb accidentally including this argument, always passed as `True` to `insert`. """
+        return self.insert(row, upsert=True, **kwargs)
+
     def import_csv(self, csv_file: Path | str, *, add_missing_columns: bool = False, ignore_extra_data=False, upsert=False):
         """ Cannot add types to columns this way, as CSV reader would of course always produce string values. Returns count of entries added. """
         with open(csv_file, encoding="utf-8-sig") as f:  # encoding handles byte order mark
@@ -366,18 +370,15 @@ class Table:
         else:
             sql += "on conflict do nothing"
 
+        count = 0
         with self.con:
             try:
                 self.cur.execute(sql)
+                count = self.cur.execute("select count(*) from csv_temp_table").fetchone()[0]
             finally:
-                count: int = self.cur.execute("select count(*) from csv_temp_table").fetchone()[0]
                 self.cur.execute("drop table if exists csv_temp_table")
 
         return count
-
-    def upsert(self, row: RowType, *, upsert=True, **kwargs,):
-        """ See `insert`. """
-        return self.insert(row, upsert=True, **kwargs)
 
     def update(self, row: RowType, where: str, where_params=[], *, add_missing_columns: bool = False, add_column_types=True, ignore_extra_data=False):
         """ See `insert`. """
