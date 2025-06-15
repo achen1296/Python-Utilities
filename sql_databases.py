@@ -360,18 +360,16 @@ class Table:
 
         with self.con:
             self.cur.execute(""" drop table if exists csv_temp_table """)
+            os.system(f""" sqlite3 "{self.db.db_file}" ".import '{csv_file}' csv_temp_table --csv" """)
 
-        os.system(f""" sqlite3 "{self.db.db_file}" ".import '{csv_file}' csv_temp_table --csv" """)
+            sql = f""" insert into \"{self.name}\" ({cols_joined_str(operation_cols)})
+                select {cols_joined_str(operation_cols)} from csv_temp_table where true """  # where true needed for upsert clause https://sqlite.org/lang_upsert.html 2.2
+            if upsert:
+                sql += f""" on conflict do update set ({cols_joined_str(operation_cols)}) = ({",".join(f"excluded.\"{c}\"" for c in operation_cols)}) """
+            else:
+                sql += "on conflict do nothing"
 
-        sql = f""" insert into \"{self.name}\" ({cols_joined_str(operation_cols)})
-        select {cols_joined_str(operation_cols)} from csv_temp_table where true """  # where true needed for upsert clause https://sqlite.org/lang_upsert.html 2.2
-        if upsert:
-            sql += f""" on conflict do update set ({cols_joined_str(operation_cols)}) = ({",".join(f"excluded.\"{c}\"" for c in operation_cols)}) """
-        else:
-            sql += "on conflict do nothing"
-
-        count = 0
-        with self.con:
+            count = 0
             try:
                 self.cur.execute(sql)
                 count = self.cur.execute("select count(*) from csv_temp_table").fetchone()[0]
