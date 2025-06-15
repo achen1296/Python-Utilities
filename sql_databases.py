@@ -178,9 +178,9 @@ def _add_connection_features(con: sqlite3.Connection):
 
 
 class Database:
-    def __init__(self, db_file: str | Path):
+    def __init__(self, db_file: str | Path, timeout=60.):
         self.db_file = Path(db_file)
-        self.con = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+        self.con = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES, timeout=timeout)
         self.cur = self.con.cursor()
         _add_connection_features(self.con)
 
