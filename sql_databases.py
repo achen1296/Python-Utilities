@@ -271,17 +271,17 @@ class Table:
 
     def add_columns(self, columns: Mapping[str, str] | Iterable[str | tuple[str, str]]):
         """ Adds columns, unless they are already in the table. Returns `True` if any new columns were added, `False` otherwise. """
-        with self.con:
-            added_any = False
-            existing_cols = [c.lower() for c in self.columns]
-            for c, t in cols_names_types(columns).items():
-                if c.lower() not in existing_cols:
-                    added_any = True
+        added_any = False
+        existing_cols = [c.lower() for c in self.columns]
+        for c, t in cols_names_types(columns).items():
+            if c.lower() not in existing_cols:
+                added_any = True
+                with self.con:
                     if t:
                         self.cur.execute(f""" alter table "{self.name}" add column {col_str((c, t))} """)
                     else:
                         self.cur.execute(f""" alter table "{self.name}" add column {col_str(c)} """)
-            return added_any
+        return added_any
 
     @property
     @cache  # primary keys cannot be changed except by recreating the table
