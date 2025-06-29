@@ -211,10 +211,11 @@ class Database:
             with open(db_definition_file) as f:
                 for line in f:
                     m = re.match("create table \"?(.*?)\"? ?\\(", line, re.I)
-                    assert m
-                    t = m.group(1)
-                    if t not in tables:
-                        self.cur.execute(line)
+                    if m:
+                        # otherwise could be e.g. a trigger or index
+                        t = m.group(1)
+                        if t not in tables:
+                            self.cur.execute(line)
         with open(db_definition_file, "w") as f:
             for sql in self.create_sql():
                 print(sql, file=f)
