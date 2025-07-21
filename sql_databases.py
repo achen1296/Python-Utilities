@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sqlite3
+import time
 from datetime import datetime
 from functools import cache
 from pathlib import Path
@@ -352,16 +353,18 @@ class Table:
                 csv_cols = next(reader)
             except StopIteration:
                 # empty file
-                return
+                return 0
             try:
                 first_row = next(reader)
             except StopIteration:
-                return  # CSV has header only, no data
+                return 0 # CSV has header only, no data
             operation_cols, _ = self._parse_row({c: v for c, v in zip(csv_cols, first_row)}, add_missing_columns=add_missing_columns, add_column_types=False, ignore_extra_data=ignore_extra_data)  # update columns and get columns to operate on
 
         with self.con:
             self.cur.execute(""" drop table if exists csv_temp_table """)
-            os.system(f""" sqlite3 "{self.db.db_file}" ".import '{csv_file}' csv_temp_table --csv" """)
+            while (err := os.system(f""" sqlite3 "{self.db.db_file}" ".import '{csv_file}' csv_temp_table --csv" """)) != 0:
+                print(f"CSV import returned error code {err}, retrying after 5 seconds")
+                time.sleep(5)
 
             sql = f""" insert into \"{self.name}\" ({cols_joined_str(operation_cols)})
                 select {cols_joined_str(operation_cols)} from csv_temp_table where true """  # where true needed for upsert clause https://sqlite.org/lang_upsert.html 2.2
@@ -370,7 +373,7 @@ class Table:
             else:
                 sql += "on conflict do nothing"
 
-            count = 0
+            count: int = 0
             try:
                 self.cur.execute(sql)
                 count = self.cur.execute("select count(*) from csv_temp_table").fetchone()[0]
