@@ -182,8 +182,8 @@ class Database:
     def __init__(self, db_file: str | Path, timeout=60.):
         self.db_file = Path(db_file)
         self.con = sqlite3.connect(self.db_file, detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES, timeout=timeout)
-        self.cur = self.con.cursor()
         _add_connection_features(self.con)
+        self.cur = self.con.cursor()
 
     @property
     def tables(self) -> list[str]:
