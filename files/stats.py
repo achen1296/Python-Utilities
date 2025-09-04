@@ -56,9 +56,17 @@ def size(root: PathLike = ".", unit: float = BYTE, follow_symlinks: bool = False
             except:
                 return 0
         else:
-            return sum(
-                (size_recursive(f) for f in path.iterdir())
-            )
+            try:
+                fs = list(path.iterdir())
+            except:
+                # e.g. PermissionError
+                return 0
+            else:
+                return sum(
+                    (
+                        size_recursive(f) for f in fs
+                    )
+                )
     return size_recursive(Path(root))/unit
 
 
@@ -91,9 +99,17 @@ def count(root: PathLike = "."):
         if path.is_symlink() or path.is_file():
             return 1
         else:
-            return sum(
-                (count_recursive(f) for f in path.iterdir())
-            )
+            try:
+                fs = list(path.iterdir())
+            except:
+                # e.g. PermissionError
+                return 0
+            else:
+                return sum(
+                    (
+                        count_recursive(f) for f in fs
+                    )
+                )
     return count_recursive(Path(root))
 
 
