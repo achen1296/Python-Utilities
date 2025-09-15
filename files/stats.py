@@ -36,7 +36,7 @@ TB = TERABYTE = 1E12
 
 def size(root: PathLike = ".", unit: float = BYTE, follow_symlinks: bool = False):
     """File size in bytes, using os.stat. If path is a folder, sums up the size of all files contained in it recursively. The result is divided by the argument to unit. For convenience, constants for bytes, KB, MB, GB, and TB have been specified. """
-    def size_recursive(path: Path):
+    def size_recursive(path: Path) -> float:
         if path.is_symlink():
             if follow_symlinks:
                 target = path.readlink()
