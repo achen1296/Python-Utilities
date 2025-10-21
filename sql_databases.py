@@ -5,7 +5,6 @@ import json
 import os
 import re
 import sqlite3
-import time
 from datetime import datetime
 from functools import cache
 from pathlib import Path
@@ -249,27 +248,68 @@ class Table:
     def _cache_columns_and_types(self):
         if self.altered_table:
             with self.con:
-                cols_and_types = self.cur.execute(""" select name, type from pragma_table_info(?) """, (self.name, )).fetchall()
+                cols_and_types = self.cur.execute(""" select name, type, hidden from pragma_table_xinfo(?) """, (self.name, )).fetchall()
             if not cols_and_types:
                 raise TableNotFound(self.name)
-            self._columns: tuple[str, ...] = tuple(c[0] for c in cols_and_types)
-            self._column_types: tuple[str, ...] = tuple(c[1] for c in cols_and_types)
+            # hidden == 0 are ordinary columns
+            # 1 for hidden -- only these do not appear when using "select * from ..." thus they are the only ones excluded from "star columns"
+            # 2/3 for dynamic/stored generated columns
+            self._columns_and_types = tuple((c[0], c[1]) for c in cols_and_types if c[2] == 0)
+            self._star_columns_and_types = tuple((c[0], c[1]) for c in cols_and_types if c[2] != 1)
+            self._all_columns_and_types = tuple((c[0], c[1]) for c in cols_and_types)
 
             self.altered_table = False
 
     @property
     def columns(self) -> tuple[str, ...]:
+        """ Does not include hidden and generated columns """
         self._cache_columns_and_types()
-        return self._columns
+        return tuple(c[0] for c in self._columns_and_types)
 
     @property
     def column_types(self) -> tuple[str, ...]:
+        """ Does not include hidden and generated columns """
         self._cache_columns_and_types()
-        return self._column_types
+        return tuple(c[1] for c in self._columns_and_types)
 
     @property
     def columns_and_types(self) -> tuple[tuple[str, str], ...]:
-        return tuple(zip(self._columns, self._column_types))
+        """ Does not include hidden and generated columns """
+        self._cache_columns_and_types()
+        return self._columns_and_types
+
+    @property
+    def star_columns(self) -> tuple[str, ...]:
+        """ Only those columns which appear when using "select * from ...", which are ordinary and generated columns but not hidden columns"""
+        self._cache_columns_and_types()
+        return tuple(c[0] for c in self._star_columns_and_types)
+
+    @property
+    def star_column_types(self) -> tuple[str, ...]:
+        """ Only those columns which appear when using "select * from ...", which are ordinary and generated columns but not hidden columns"""
+        self._cache_columns_and_types()
+        return tuple(c[1] for c in self._star_columns_and_types)
+
+    @property
+    def star_columns_and_types(self) -> tuple[tuple[str, str], ...]:
+        """ Only those columns which appear when using "select * from ...", which are ordinary and generated columns but not hidden columns"""
+        self._cache_columns_and_types()
+        return self._star_columns_and_types
+
+    @property
+    def all_columns(self) -> tuple[str, ...]:
+        self._cache_columns_and_types()
+        return tuple(c[0] for c in self._all_columns_and_types)
+
+    @property
+    def all_column_types(self) -> tuple[str, ...]:
+        self._cache_columns_and_types()
+        return tuple(c[1] for c in self._all_columns_and_types)
+
+    @property
+    def all_columns_and_types(self) -> tuple[tuple[str, str], ...]:
+        self._cache_columns_and_types()
+        return self._all_columns_and_types
 
     def add_columns(self, columns: Mapping[str, str] | Iterable[str | tuple[str, str]]):
         """ Adds columns, unless they are already in the table. Returns `True` if any new columns were added, `False` otherwise. """
@@ -296,8 +336,8 @@ class Table:
 
     def _parse_row(self, row: RowType, *, add_missing_columns: bool, add_column_types: bool, ignore_extra_data: bool):
         if isinstance(row, Mapping) or isinstance(row, sqlite3.Row):
+            lower_columns: list[str] | None = None
             keys = row.keys()
-            lower_columns = [c.lower() for c in self.columns]
             if add_missing_columns:
                 if add_column_types:
                     cols = {
@@ -308,10 +348,13 @@ class Table:
                     cols = [c for c in keys]
                 self.altered_table = self.add_columns(cols)
             elif not ignore_extra_data:
+                lower_columns = [c.lower() for c in self.columns]
                 extra_keys = [c for c in keys if c.lower() not in lower_columns]
                 if extra_keys:
                     raise ExtraData(extra_keys)
 
+            if lower_columns is None:
+                lower_columns = [c.lower() for c in self.columns]
             # `in row` is keys for `Mapping` but values for `sqlite3.Row`
             # need to use the case of the keys as they are in `row` for retrieving them below
             operation_cols = [c for c in keys if c.lower() in lower_columns]
@@ -392,12 +435,11 @@ class Table:
         return iter(self.select())
 
 
+DATABASE_IN_MEMORY = ":memory:"
+
 if __name__ == "__main__":
-    test_db_path = Path("test.db")
-    if test_db_path.exists():
-        os.remove(test_db_path)
-    db = Database(test_db_path)
-    t = db.create_table("t", [("a", "int")], ["a"])
+    test_db = Database(DATABASE_IN_MEMORY)
+    t = test_db.create_table("t", [("a", "int")], ["a"])
     assert t.columns == ("a",), t.columns
     assert t.primary_keys == ("a",), t.primary_keys
 
@@ -456,5 +498,4 @@ if __name__ == "__main__":
     selected = [dict(**r) for r in t.select(where="a=7", as_types={"c": "list"})]
     assert selected == [{"a": 7, "b": '["asdf"]', "c": ["bye", "world"]}], selected
 
-    db.con.close()
-    os.remove(test_db_path)
+    test_db.con.close()
