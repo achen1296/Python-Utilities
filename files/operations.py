@@ -10,7 +10,7 @@ import time
 import traceback
 import zipfile
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Any, Callable, Generator, Iterable
 from zipfile import ZipFile
 
 from .consts import *
@@ -241,25 +241,35 @@ def delete(file: PathLike, not_exist_ok: bool = True, *, output: bool = False, i
          symlink_action=symlink_action, not_exist_action=not_exist_action, side_effects=True, **kwargs)
 
 
-def delete_empty(root: PathLike = ".", output=True, ignore_errors=False):
-    """ Returns the number of empty directories deleted """
-    count = 0
+def find_empty(root: PathLike = ".", output=True, ignore_errors=False, minimal=False) -> Generator[Path, Any, bool]:
+    """ For this function, an "empty" directory is one that contains no files, only other empty directories (or nothing). In other words, it is empty if and only if there are no files anywhere in the tree below it. Depth-first search, making it suitable for deletion (see `delete_empty`).
 
-    def delete_empty_recursive(root: Path, depth: int) -> bool:
-        """ Returns whether the root argument was or became empty and was deleted """
+    If `minimal=True`, then will not output the children of empty directories (which are by definition empty too). """
+    def find_empty_recursive(root: Path, depth: int) -> Generator[Path, Any, bool]:
+        """ Returns whether the root argument is empty """
         try:
-            nonlocal count
             if root.is_symlink() or root.is_file():  # check symlink first in case of broken ones
                 return False
             empty = True
-            for f in root.iterdir():
-                if not delete_empty_recursive(f, depth+1):
-                    empty = False
+            empty_children = []  # only needed for minimal mode
+            for child in root.iterdir():
+                if not minimal:
+                    child_empty: bool = yield from find_empty_recursive(child, depth+1)
+                else:
+                    gen = find_empty_recursive(child, depth+1)
+                    while True: # will only ever iterate once (child not empty) or twice (child empty)
+                        try:
+                            empty_children.append(next(gen))
+                        except StopIteration as x:
+                            child_empty = x.value
+                            break
+                empty = empty and child_empty
             if empty:
                 if output:
                     print("\t"*depth + str(root))
-                root.rmdir()
-                count += 1
+                yield root
+            elif minimal:
+                yield from empty_children # didn't yield these earlier
             return empty
         except:
             if not ignore_errors:
@@ -270,7 +280,24 @@ def delete_empty(root: PathLike = ".", output=True, ignore_errors=False):
             return False
 
     root = Path(root)
-    delete_empty_recursive(root, 0)
+    return (yield from find_empty_recursive(root, 0))
+
+
+def delete_empty(root: PathLike = ".", output=True, ignore_errors=False):
+    """ Returns the number of empty directories deleted """
+    count = 0
+    for d in find_empty(root, output=output, ignore_errors=ignore_errors):
+        try:
+            d.rmdir()
+        except:
+            if not ignore_errors:
+                raise
+            if output:
+                print("Error on " + str(root))
+                traceback.print_exc()
+        else:
+            count += 1
+
     return count
 
 
