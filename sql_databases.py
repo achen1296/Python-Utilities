@@ -177,6 +177,18 @@ def _add_connection_features(con: sqlite3.Connection):
     con.create_function("regexp", 2, lambda p, s: bool(re.search(p, s, re.I)), deterministic=True)
 
 
+def fetch_rows(db: "Database | Table | sqlite3.Connection", sql: str):
+    if isinstance(db, Database) or isinstance(db, Table):
+        con = db.con
+    else:
+        con = db
+    # create a new cursor to ensure it's not used for something else, interrupting the query
+    cur = con.cursor()
+    cur.execute(sql)
+    while (row := cur.fetchone()) is not None:
+        yield row
+
+
 class Database:
     def __init__(self, db_file: str | Path, timeout=60.):
         self.db_file = Path(db_file)
