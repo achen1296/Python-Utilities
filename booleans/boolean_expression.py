@@ -3,7 +3,7 @@
 import itertools
 import re
 from abc import ABC, abstractmethod
-from typing import Iterable, Literal
+from typing import Callable, Iterable, Literal
 
 
 class BooleanExpressionException(Exception):
@@ -67,22 +67,27 @@ class BooleanExpression(ABC):
         return [t for t in tokens if t != ""]
 
     @staticmethod
-    def compile(expression: str | list[str],
+    def compile(
+        expression: str | list[str],
 
-                true_names: list[str | re.Pattern] = [re.compile("true", re.I)],
-                false_names: list[str | re.Pattern] = [re.compile("false", re.I)],
+        *,
 
-                group_pairs: dict[str, str] = DEFAULT_GROUP_PAIRS,
+        true_names: list[str | re.Pattern] = [re.compile("true", re.I)],
+        false_names: list[str | re.Pattern] = [re.compile("false", re.I)],
 
-                not_chars: str = DEFAULT_NOT_CHARS,
+        group_pairs: dict[str, str] = DEFAULT_GROUP_PAIRS,
 
-                and_chars: str = DEFAULT_AND_CHARS,
-                or_chars: str = DEFAULT_OR_CHARS,
+        not_chars: str = DEFAULT_NOT_CHARS,
 
-                string_pairs: dict[str, str] = DEFAULT_STRING_PAIRS,
+        and_chars: str = DEFAULT_AND_CHARS,
+        or_chars: str = DEFAULT_OR_CHARS,
 
-                implicit_binary: Literal['or'] | Literal['and'] | None = "or",
-                ):
+        string_pairs: dict[str, str] = DEFAULT_STRING_PAIRS,
+
+        implicit_binary: Literal['or'] | Literal['and'] | None = "or",
+
+        compiled_var: Callable[[str], "BooleanExpression"] | None = None
+    ):
         """ `true_names` and `false_names` are lists of regular expression strings. If any of them match, the variable is instead interpreted as a constant. Defaults are of course "true" and "false", case-insensitive.
 
         `group_pairs` should be a dictionary of start chars mapping to end chars. All others should be strings (treated as lists of single chars).
@@ -95,7 +100,11 @@ class BooleanExpression(ABC):
         - explicit and/or (left to right)
 
         This means that either and or or can be made higher priority all the time by only ever using one of them explicitly.
+
+        `compiled_var` is `BooleanVar` by default, but you can slot in another subclass of `BooleanExpression` to be used in its place with different matching behavior than string comparison.
         """
+
+        compiled_var = compiled_var or BooleanVar  # cannot refer to this at function definition time
 
         all_operators = list(itertools.chain(
             group_pairs.keys(), group_pairs.values(), not_chars, and_chars, or_chars))
@@ -172,7 +181,7 @@ class BooleanExpression(ABC):
                 for fn in false_names:
                     if re.fullmatch(fn, t):
                         return BooleanConstant(False), i+1
-                return BooleanVar(t), i+1
+                return compiled_var(t), i+1
 
         e, i = _compile(0, end_char)
         if i < len(tokens):
