@@ -24,17 +24,21 @@ class IterAheadThread[T](Thread):
         self.queue_put_timeout = queue_put_timeout
         self.is_shut_down = False
         self.stop_iteration = False
+        self.empty_after_stop = False
 
     def __iter__(self):
         return self
 
     def __next__(self):
+        if self.empty_after_stop:
+            raise StopIteration
         if not self.is_alive() and not self.stop_iteration:
             self.start()
         try:
             return self.queue.get(timeout=self.queue_get_timeout)
         except Empty:
             if self.stop_iteration:
+                self.empty_after_stop = True # skip the timeout before raising StopIteration next time
                 raise StopIteration
             else:
                 raise
