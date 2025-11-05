@@ -21,7 +21,7 @@ class IterAheadThread[T](Thread):
         self.iterator = iter(iterable)
         self.queue: Queue[T] = Queue(queue_size)
         self.queue_get_timeout = queue_get_timeout
-        self.queue_put_timeout = queue_put_timeout
+        self.queue_put_timeout: float = queue_put_timeout
         self.is_shut_down = False
         self.stop_iteration = False
         self.empty_after_stop = False
@@ -38,7 +38,7 @@ class IterAheadThread[T](Thread):
             return self.queue.get(timeout=self.queue_get_timeout)
         except Empty:
             if self.stop_iteration:
-                self.empty_after_stop = True # skip the timeout before raising StopIteration next time
+                self.empty_after_stop = True  # skip the get attempt before raising StopIteration next time
                 raise StopIteration
             else:
                 raise
@@ -50,6 +50,7 @@ class IterAheadThread[T](Thread):
                 next_value = next(self.iterator)
             except StopIteration:
                 self.stop_iteration = True
+                self.queue_get_timeout = 0.  # if no more items waiting is useless; in particular, prevents an unnecessary timeout on the final get call that will raise Empty and then check self.stop_iteration
                 break
 
             while not self.is_shut_down:
