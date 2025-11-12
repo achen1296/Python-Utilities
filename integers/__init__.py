@@ -4,7 +4,7 @@ from typing import Iterable
 
 import lists
 
-from . import mod
+from .mod import gcd # gcd is not calculated with a mod argument but is used by other functions
 
 
 def primes(max: int | None = None):

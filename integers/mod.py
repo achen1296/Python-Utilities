@@ -1,6 +1,7 @@
 # (c) Andrew Chen (https://github.com/achen1296)
 
-def gcd(a: int, b: int) -> tuple[int, int, int]:
+def _gcd(a: int, b: int) -> tuple[int, int, int]:
+    # https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm for modular inverse
     prev_x, x = 1, 0
     prev_y, y = 0, 1
     while b != 0:
@@ -10,9 +11,11 @@ def gcd(a: int, b: int) -> tuple[int, int, int]:
         prev_y, y = y, prev_y-q*y
     return (prev_x, prev_y, a)
 
+def gcd(a:int, b:int):
+    return _gcd(a, b)[2]
 
 def inverse(i: int, N: int) -> int:
-    x, y, g = gcd(i, N)
+    x, y, g = _gcd(i, N)
     return x % N
 
 
