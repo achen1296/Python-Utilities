@@ -5,7 +5,7 @@
 import hashlib
 import itertools
 import re
-from typing import Iterable
+from typing import Iterable, Literal, overload
 
 from .consts import *
 from .walk import *
@@ -67,7 +67,11 @@ def size(root: PathLike = ".", unit: float = BYTE, follow_symlinks: bool = False
                         size_recursive(f) for f in fs
                     )
                 )
-    return size_recursive(Path(root))/unit
+    size = size_recursive(Path(root))
+    if unit == 1:
+        return size  # don't convert to float (by using /)
+    else:
+        return size/unit
 
 
 # base 10, following SI units: kilo, mega, giga, tera, peta, exa, zetta, yotta, ronna, quetta
