@@ -20,7 +20,7 @@ class StdinReaderThread(Thread):
             self.input_queue.put(sys.stdin.readline())
 
 
-class StdioMiddleman(metaclass=ABCMeta):
+class StdioWrapper(metaclass=ABCMeta):
     process: asyncio.subprocess.Process
 
     @classmethod
