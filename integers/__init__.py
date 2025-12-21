@@ -4,7 +4,7 @@ from typing import Iterable
 
 import lists
 
-from .mod import gcd # gcd is not calculated with a mod argument but is used by other functions
+from .mod import gcd  # gcd is not calculated with a mod argument but is used by other functions in that file
 
 
 def primes(max: int | None = None):
@@ -139,3 +139,23 @@ def int_input(prompt: str, min: int | None = None, max: int | None = None, defau
                 "" if min is None else f"at least {min}",
                 "" if max is None else f"at most {max}"
             ])}")
+
+
+def close_integer_ratios(x: float, *, threshold=0.1, max_ints=20):
+    num = 1
+    denom = 1
+
+    lower_bound = x * (1 - threshold)
+    upper_bound = x * (1 + threshold)
+
+    while num <= max_ints and denom <= max_ints:
+        frac = num/denom
+
+        if lower_bound <= frac <= upper_bound and gcd(num, denom) == 1:
+            # check gcd to avoid redundant results
+            yield (num, denom)
+
+        if frac < x:
+            num += 1
+        else:
+            denom += 1
