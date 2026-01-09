@@ -171,6 +171,15 @@ class Row(sqlite3.Row):
     def __str__(self):
         return str(dict(**self))
 
+    def __contains__(self, value):
+        return value in self.keys()
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
 
 def _add_connection_features(con: sqlite3.Connection):
     con.row_factory = Row
