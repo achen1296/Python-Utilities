@@ -205,6 +205,16 @@ class Database:
         _add_connection_features(self.con)
         self.cur = self.con.cursor()
 
+    def close(self):
+        """ This might be needed for long-running programs. """
+        self.con.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     @property
     def tables(self) -> list[str]:
         with self.con:
