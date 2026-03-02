@@ -5,7 +5,7 @@ import json
 import os
 import re
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 from functools import cache
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -33,11 +33,12 @@ sqlite3.register_converter("list", convert_json)
 sqlite3.register_converter("array", convert_json)
 
 
-def adapt_datetime(d: datetime):
+def adapt_datetime(d: datetime | date):
     return d.isoformat()
 
 
 sqlite3.register_adapter(datetime, adapt_datetime)
+sqlite3.register_adapter(date, adapt_datetime)
 
 
 def convert_datetime(b: bytes):
