@@ -22,11 +22,6 @@ class DownloadException(Exception):
 
 def download_url(url: str, dst: files.PathLike | None = None, *, output=True, chunk_size=8192, **get_kwargs):
     """ If file = None, the name is inferred from the last piece of the URL path. get_kwargs passed to requests.get. Returns destination file Path. """
-    url_parsed = urlparse(url)
-    # remove query, parameters, and fragment, since these are unnecessary (and can even alter the downloaded file, such as by reducing the image resolution)
-    url_parsed = ParseResult(scheme=url_parsed.scheme, netloc=url_parsed.netloc,
-                             path=url_parsed.path, params='', query='', fragment='')
-    url = urlunparse(url_parsed)
     if dst is None:
         dst = url_filename(url)
     else:
