@@ -1,0 +1,3 @@
+[submodule "Python-SQLite-Wrapper"]
+	path = Python-SQLite-Wrapper
+	url = ../Python-SQLite-Wrapper
