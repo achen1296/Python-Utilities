@@ -325,6 +325,7 @@ def mirror(src: PathLike, dst: PathLike, *, output: bool = False, deleted_file_a
                 if output:
                     print(f"{output_prefix}Updating symbolic link <\
                         {src}> -> <{dst}>")
+                os.remove(dst)
                 shutil.copy2(src, dst, follow_symlinks=False)
         else:
             if output:
