@@ -11,7 +11,6 @@ from selenium.common.exceptions import (ElementClickInterceptedException,
                                         NoSuchWindowException,
                                         StaleElementReferenceException,
                                         TimeoutException)
-from selenium.types import WaitExcTypes
 from selenium.webdriver import FirefoxOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -59,7 +58,9 @@ def tor_driver(**kwargs) -> webdriver.Firefox:
     return driver
 
 
-def chrome_driver(profile: files.PathLike, *, executable_path: files.PathLike | None = None, user_data_dir: files.PathLike = os.environ['LOCALAPPDATA']+"\\Google\\Chrome\\User Data") -> webdriver.Chrome:
+def chrome_driver(profile: files.PathLike, *, executable_path: files.PathLike | None = None, user_data_dir: files.PathLike |None= None) -> webdriver.Chrome:
+    if not user_data_dir:
+        user_data_dir = os.environ['LOCALAPPDATA']+"\\Google\\Chrome\\User Data"
     options = webdriver.ChromeOptions()
     options.add_argument(
         f"user-data-dir={user_data_dir}")
@@ -75,20 +76,20 @@ def chrome_driver(profile: files.PathLike, *, executable_path: files.PathLike | 
 
 
 @overload
-def wait_element(driver: WebDriver, css_selector: str, *, all: Literal[False] = False, timeout: int = 10, index: int = 0, ignored_exceptions: WaitExcTypes =
+def wait_element(driver: WebDriver, css_selector: str, *, all: Literal[False] = False, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[type[Exception]] =
                  (ElementNotInteractableException,
                   NoSuchElementException, StaleElementReferenceException)) -> WebElement | None:
     pass
 
 
 @overload
-def wait_element(driver: WebDriver, css_selector: str, *, all: Literal[True] = True, timeout: int = 10, index: int = 0, ignored_exceptions: WaitExcTypes =
+def wait_element(driver: WebDriver, css_selector: str, *, all: Literal[True] = True, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[type[Exception]] =
                  (ElementNotInteractableException,
                   NoSuchElementException, StaleElementReferenceException)) -> Iterable[WebElement] | None:
     pass
 
 
-def wait_element(driver: WebDriver, css_selector: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: WaitExcTypes =
+def wait_element(driver: WebDriver, css_selector: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[type[Exception]] =
                  (ElementNotInteractableException,
                   NoSuchElementException, StaleElementReferenceException)
                  ) -> WebElement | Iterable[WebElement] | None:
@@ -118,7 +119,7 @@ def wait_url(driver: WebDriver, url_contains: str, timeout: int = 10):
         expected_conditions.url_contains(url=url_contains))
 
 
-def find_and_get_attribute(driver: WebDriver, css_selector: str, attribute: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: WaitExcTypes =
+def find_and_get_attribute(driver: WebDriver, css_selector: str, attribute: str, *, all: bool = False, timeout: int = 10, index: int = 0, ignored_exceptions: Iterable[type[Exception]] =
                            (ElementNotInteractableException,
                             NoSuchElementException, StaleElementReferenceException)
                            ) -> str | Iterable[str | None] | None:
@@ -144,7 +145,7 @@ def find_and_get_attribute(driver: WebDriver, css_selector: str, attribute: str,
         raise last_exc
 
 
-def find_and_click(driver: WebDriver, css_selector: str, *, timeout: int = 10,  index: int = 0, ignored_exceptions: WaitExcTypes = (ElementClickInterceptedException, ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
+def find_and_click(driver: WebDriver, css_selector: str, *, timeout: int = 10,  index: int = 0, ignored_exceptions: Iterable[type[Exception]] = (ElementClickInterceptedException, ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
     """ Replaces the TimeoutException with the last Exception raised by trying to find element(s) and click. """
     last_exc = None
 
@@ -167,7 +168,7 @@ def find_and_click(driver: WebDriver, css_selector: str, *, timeout: int = 10,  
         raise last_exc
 
 
-def find_and_send_keys(driver: WebDriver, css_selector: str, *keys, timeout: int = 10, index: int = 0,  ignored_exceptions: WaitExcTypes = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
+def find_and_send_keys(driver: WebDriver, css_selector: str, *keys, timeout: int = 10, index: int = 0,  ignored_exceptions: Iterable[type[Exception]] = (ElementNotInteractableException, NoSuchElementException, StaleElementReferenceException)):
     """ Replaces the TimeoutException with the last Exception raised by trying to find element(s) and send keys. """
     last_exc = None
 
