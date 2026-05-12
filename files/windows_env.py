@@ -23,6 +23,7 @@ SYSTEM_DRIVE = Path(os.environ["SYSTEMDRIVE"] + "/")
 SYSTEM_ROOT = Path(os.environ["SYSTEMROOT"])
 TEMP = Path(os.environ["TEMP"])
 USER_PROFILE = Path(os.environ["USERPROFILE"])
+HOME = USER_PROFILE
 
 ENVIRONMENT_NAME = {
     APP_DATA: "APPDATA",
@@ -41,20 +42,21 @@ ENVIRONMENT_NAME = {
 }
 
 
-__all__ = ['APP_DATA',
-           'COMMON_PROGRAM_FILES_x86',
-           'COMMON_PROGRAM_FILES',
-           'HOME_DRIVE',
-           'LOCAL_APP_DATA',
-           'PROGRAM_DATA',
-           'PROGRAM_FILES',
-           'PROGRAM_FILES_x86',
-           'PUBLIC',
-           'SYSTEM_DRIVE',
-           'SYSTEM_ROOT',
-           'TEMP',
-           'USER_PROFILE',
-           ]
+__all__ = [
+    "APP_DATA",
+    "COMMON_PROGRAM_FILES_x86",
+    "COMMON_PROGRAM_FILES",
+    "HOME_DRIVE",
+    "LOCAL_APP_DATA",
+    "PROGRAM_DATA",
+    "PROGRAM_FILES",
+    "PROGRAM_FILES_x86",
+    "PUBLIC",
+    "SYSTEM_DRIVE",
+    "SYSTEM_ROOT",
+    "TEMP",
+    "USER_PROFILE",
+]
 
 
 def __dir__():
