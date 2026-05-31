@@ -20,7 +20,7 @@ from itertools import combinations, permutations
 from pathlib import Path
 from pprint import pprint
 from socket import socket as Socket
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import quote, unquote, urlparse, urlencode
 
 import numpy as np
 import requests
